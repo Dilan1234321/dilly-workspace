@@ -366,8 +366,14 @@ async def download_generated_resume(
     base = f"{safe_name}_{safe_company}_Resume"
 
     if fmt == "pdf":
-        from projects.dilly.api.ats_resume_builder import build_ats_pdf
-        pdf_bytes = build_ats_pdf(sections, ats)
+        try:
+            from projects.dilly.api.ats_resume_builder import build_ats_pdf
+            pdf_bytes = build_ats_pdf(sections, ats)
+        except Exception as _e:
+            import sys as _sys, traceback as _tb
+            _sys.stderr.write(f"[pdf_build_error] resume_id={resume_id} ats={ats} sections_len={len(sections) if isinstance(sections, list) else 'N/A'} error={type(_e).__name__}: {_e}\n")
+            _tb.print_exc(file=_sys.stderr)
+            raise HTTPException(status_code=500, detail=f"PDF build failed: {type(_e).__name__}: {str(_e)[:200]}")
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -376,8 +382,14 @@ async def download_generated_resume(
             },
         )
     else:
-        from projects.dilly.api.ats_resume_docx import build_ats_docx
-        docx_bytes = build_ats_docx(sections, ats)
+        try:
+            from projects.dilly.api.ats_resume_docx import build_ats_docx
+            docx_bytes = build_ats_docx(sections, ats)
+        except Exception as _e:
+            import sys as _sys, traceback as _tb
+            _sys.stderr.write(f"[docx_build_error] resume_id={resume_id} ats={ats} sections_len={len(sections) if isinstance(sections, list) else 'N/A'} error={type(_e).__name__}: {_e}\n")
+            _tb.print_exc(file=_sys.stderr)
+            raise HTTPException(status_code=500, detail=f"DOCX build failed: {type(_e).__name__}: {str(_e)[:200]}")
         return Response(
             content=docx_bytes,
             media_type=(

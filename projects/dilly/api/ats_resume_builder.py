@@ -323,6 +323,8 @@ def _render_experiences(
     """Render experience entries (professional, research, volunteer, etc.)."""
     entries = section.get("experiences") or []
     for entry in entries:
+        if not isinstance(entry, dict):
+            continue
         company = (entry.get("company") or "").strip()
         role = (entry.get("role") or "").strip()
         date = (entry.get("date") or "").strip()
@@ -378,6 +380,8 @@ def _render_projects(section: dict, styles: dict, elements: list, ats_system: st
     """Render project entries."""
     projects = section.get("projects") or []
     for proj in projects:
+        if not isinstance(proj, dict):
+            continue
         name = (proj.get("name") or "").strip()
         date = (proj.get("date") or "").strip()
         location = (proj.get("location") or "").strip()

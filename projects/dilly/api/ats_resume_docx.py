@@ -233,6 +233,8 @@ def _render_education(doc: Document, section: dict, ats_system: str) -> None:
 def _render_experiences(doc: Document, section: dict, ats_system: str) -> None:
     entries = section.get("experiences") or []
     for entry in entries:
+        if not isinstance(entry, dict):
+            continue
         company = (entry.get("company") or "").strip()
         role = (entry.get("role") or "").strip()
         date = (entry.get("date") or "").strip()
@@ -258,6 +260,8 @@ def _render_experiences(doc: Document, section: dict, ats_system: str) -> None:
 def _render_projects(doc: Document, section: dict, ats_system: str) -> None:
     projects = section.get("projects") or []
     for proj in projects:
+        if not isinstance(proj, dict):
+            continue
         name = (proj.get("name") or "").strip()
         date = (proj.get("date") or "").strip()
         location = (proj.get("location") or "").strip()

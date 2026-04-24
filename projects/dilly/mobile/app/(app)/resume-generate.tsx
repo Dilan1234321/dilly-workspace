@@ -332,6 +332,9 @@ export default function ResumeGenerateScreen() {
         const res = await FileSystem.downloadAsync(url, destPath, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
+        if (res?.status && res.status >= 300) {
+          throw new Error(`Server returned ${res.status} — try again.`);
+        }
         localUri = res?.uri || null;
       } else if (FileSystem && typeof FileSystem.writeAsStringAsync === 'function') {
         // Manual fallback: fetch, base64-encode, write.
