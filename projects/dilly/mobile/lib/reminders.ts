@@ -18,14 +18,34 @@
  * Android placeholder: the public interface is identical; the
  * implementation returns early on Android. When an Android equivalent
  * (Google Tasks or local notifications) is added, swap the body here.
+ *
+ * expo-calendar is lazy-loaded (dynamic import) to prevent a native
+ * crash on app startup. A top-level static import of expo-calendar
+ * caused startup crashes in builds ~86 and was hotfixed in ccdff51.
+ * Never revert to a static import here.
  */
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Calendar from 'expo-calendar';
 
 const PREF_KEY = 'dilly_sync_reminders_v1';
 const ID_MAP_KEY = 'dilly_reminder_id_map_v1';
+
+// ── Lazy-load expo-calendar ──────────────────────────────────────────
+// Static import at module level caused native crash on startup (see
+// commit ccdff51). Dynamic import defers native module access until
+// the function is first called — after the bridge is fully initialized.
+
+let _Cal: any = null;
+async function Cal(): Promise<any> {
+  if (_Cal) return _Cal;
+  try {
+    _Cal = await import('expo-calendar');
+    return _Cal;
+  } catch {
+    return null;
+  }
+}
 
 // ── Preference ──────────────────────────────────────────────────────
 
@@ -49,7 +69,9 @@ export async function setRemindersSyncEnabled(val: boolean): Promise<void> {
 export async function requestRemindersPermission(): Promise<boolean> {
   if (Platform.OS !== 'ios') return false;
   try {
-    const { status } = await Calendar.requestRemindersPermissionsAsync();
+    const C = await Cal();
+    if (!C) return false;
+    const { status } = await C.requestRemindersPermissionsAsync();
     return status === 'granted';
   } catch {
     return false;
@@ -59,7 +81,9 @@ export async function requestRemindersPermission(): Promise<boolean> {
 export async function getRemindersPermission(): Promise<boolean> {
   if (Platform.OS !== 'ios') return false;
   try {
-    const { status } = await Calendar.getRemindersPermissionsAsync();
+    const C = await Cal();
+    if (!C) return false;
+    const { status } = await C.getRemindersPermissionsAsync();
     return status === 'granted';
   } catch {
     return false;
@@ -108,11 +132,14 @@ export async function syncReminderForEvent(
   if (map[key]) return map[key];
 
   try {
+    const C = await Cal();
+    if (!C) return null;
+
     // Parse the date. Default reminder time: 9 AM on the deadline day.
     const [y, m, d] = date.split('-').map(Number);
     const dueDate = new Date(y, m - 1, d, 9, 0, 0);
 
-    const id = await Calendar.createReminderAsync(null, {
+    const id = await C.createReminderAsync(null, {
       title: `Dilly: ${title}`,
       dueDate,
       alarms: [{ relativeOffset: -60 * 24 }], // 24 h before
@@ -140,7 +167,9 @@ export async function deleteReminderForEvent(
   const id = map[key];
   if (!id) return;
   try {
-    await Calendar.deleteReminderAsync(id);
+    const C = await Cal();
+    if (!C) return;
+    await C.deleteReminderAsync(id);
     delete map[key];
     await saveIdMap(map);
   } catch {}
