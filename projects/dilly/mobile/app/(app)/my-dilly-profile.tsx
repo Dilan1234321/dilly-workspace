@@ -344,6 +344,7 @@ const MY_DILLY_LOADING_TEXTS = [
 ];
 
 function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
+  const theme = useResolvedTheme();
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   const [textIdx, setTextIdx] = useState(0);
 
@@ -362,14 +363,14 @@ function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
   }, [pulseAnim]);
 
   return (
-    <View style={[d.container, { paddingTop: insetTop }]}>
+    <View style={[d.container, { paddingTop: insetTop, backgroundColor: theme.surface.bg }]}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
         <DillyFace size={120} mood="writing" accessory="pencil" />
         <Animated.Text
           style={{
             fontSize: 16,
             fontWeight: '600',
-            color: colors.t2,
+            color: theme.surface.t2,
             marginTop: 24,
             opacity: pulseAnim,
             textAlign: 'center',

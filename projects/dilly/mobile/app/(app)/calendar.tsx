@@ -12,7 +12,7 @@ import {
   Platform,
   RefreshControl,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
@@ -830,9 +830,9 @@ export default function CalendarScreen() {
   // avoid a redundant CTA — the user can always unsubscribe via
   // Settings → Calendar → Account, which is where iOS owns the state.
   const [calSubscribed, setCalSubscribed] = useState(false);
-  useEffect(() => {
-    (async () => setCalSubscribed(await isCalendarSubscribed()))();
-  }, []);
+  useFocusEffect(useCallback(() => {
+    isCalendarSubscribed().then(setCalSubscribed);
+  }, []));
 
   // Current month view
   const now = new Date();
@@ -1111,33 +1111,47 @@ export default function CalendarScreen() {
             <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
           <Text style={[cs.navTitle, { color: theme.surface.t1 }]}>Calendar</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {/* Subscribe to Dilly's feed calendar — hidden once the
-                user has subscribed so we don't show a redundant CTA.
-                Unsubscribe lives in Settings → Dilly Calendar.
-                iOS owns the actual subscription state; this flag is
-                a local UX hint, refreshed on mount. */}
-            {!calSubscribed && (
-              <TouchableOpacity
-                onPress={async () => {
-                  await openSubscribeToDillyCalendar();
-                  setCalSubscribed(true);
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="cloud-download-outline" size={18} color={GOLD} />
-              </TouchableOpacity>
-            )}
-            {/* Top-right plus button removed. Users said it was
-                redundant with the bottom-right FAB and the swipe-
-                on-day "add event" affordance; just one + on this
-                page is cleaner. */}
-          </View>
+          <View />
         </View>
       </FadeInView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[cs.scroll, { paddingBottom: insets.bottom + 40 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
+
+        {/* Dilly Calendar sync card */}
+        {!calSubscribed ? (
+          <AnimatedPressable
+            style={[cs.calSyncCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+            onPress={async () => {
+              await openSubscribeToDillyCalendar();
+              setCalSubscribed(await isCalendarSubscribed());
+            }}
+            scaleDown={0.97}
+          >
+            <View style={[cs.calSyncIconWrap, { backgroundColor: theme.accent }]}>
+              <Ionicons name="calendar-outline" size={18} color="#FFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[cs.calSyncTitle, { color: theme.surface.t1 }]}>Add to your calendar app</Text>
+              <Text style={[cs.calSyncSub, { color: theme.surface.t2 }]}>
+                Every Dilly deadline auto-syncs. Tap once, stays forever.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={14} color={theme.accent} />
+          </AnimatedPressable>
+        ) : (
+          <View style={[cs.calSyncCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+            <View style={[cs.calSyncIconWrap, { backgroundColor: theme.accent }]}>
+              <Ionicons name="checkmark" size={18} color="#FFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[cs.calSyncTitle, { color: theme.surface.t1 }]}>Built in to your phone</Text>
+              <Text style={[cs.calSyncSub, { color: theme.surface.t2 }]}>
+                Dilly deadlines sync automatically. Remove in Settings.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Build-78: Interview Countdown Hero (≤7 days to interview)
             replaces the generic ThisWeekCard when an interview is imminent */}
@@ -1593,4 +1607,16 @@ const cs = StyleSheet.create({
     fontSize: 11, color: colors.t3, textAlign: 'center',
     lineHeight: 16, marginTop: 6, paddingHorizontal: 20,
   },
+
+  // Calendar sync card
+  calSyncCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 14,
+  },
+  calSyncIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  calSyncTitle: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
+  calSyncSub: { fontSize: 12, lineHeight: 16 },
 });

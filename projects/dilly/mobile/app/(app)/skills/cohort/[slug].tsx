@@ -348,12 +348,6 @@ function LibraryRow({ video, theme, onPress }: {
         <Text style={[styles.libMeta, { color: theme.surface.t3 }]} numberOfLines={1}>
           {video.channel_title}{ago ? ` · ${ago}` : ''}
         </Text>
-        {video.quality_score && video.quality_score >= 0.8 ? (
-          <View style={[styles.signal, { borderColor: theme.accentBorder }]}>
-            <Ionicons name="sparkles" size={9} color={theme.accent} />
-            <Text style={[styles.signalText, { color: theme.accent }]}>high signal</Text>
-          </View>
-        ) : null}
       </View>
     </TouchableOpacity>
   );
