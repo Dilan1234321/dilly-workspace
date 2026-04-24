@@ -99,6 +99,52 @@ function categoryLabel(cat: string): string {
   return map[cat] || cat;
 }
 
+// ── Score a single fact against the JD ───────────────────────────────────
+// Returns both the numeric strength and a short human-readable reason
+// ("matched: typescript, full stack") so the client can render why Dilly
+// weighted a particular fact for this specific role. Keeping the two return
+// values together means scoreCandidate and "top fact matches" can't drift.
+function scoreFactForRole(fact: any, lowerRole: string): { strength: number; reasons: string[] } {
+  const factText = `${fact.category} ${fact.label} ${fact.value}`.toLowerCase();
+  let strength = 0;
+  const reasons: string[] = [];
+
+  if (fact.category === "achievement") {
+    strength += 4;
+    reasons.push("achievement signal");
+  }
+  if (["project_detail", "project"].includes(fact.category) &&
+      (lowerRole.includes("engineer") || lowerRole.includes("data") || lowerRole.includes("build"))) {
+    strength += 8;
+    reasons.push("shipped project evidence");
+  }
+
+  const skillKws = ["python", "typescript", "javascript", "react", "data", "sql", "c programming", "full stack", "fullstack", "backend"];
+  for (const kw of skillKws) {
+    if (factText.includes(kw) && lowerRole.includes(kw)) {
+      strength += 5;
+      reasons.push(`${kw} keyword`);
+    }
+  }
+  if ((factText.includes("founder") || factText.includes("freelance") || factText.includes("entrepreneur")) &&
+      (lowerRole.includes("startup") || lowerRole.includes("founding") || lowerRole.includes("generalist"))) {
+    strength += 12;
+    reasons.push("founding-team shape");
+  }
+  if ((factText.includes("memory management") || factText.includes(" c ") || factText.includes("systems")) &&
+      lowerRole.includes("system")) {
+    strength += 12;
+    reasons.push("systems-level depth");
+  }
+  if ((factText.includes("model") || factText.includes("predict") || factText.includes("data")) &&
+      lowerRole.includes("data")) {
+    strength += 8;
+    reasons.push("data-work signal");
+  }
+
+  return { strength, reasons };
+}
+
 // ── Score candidate for a role ─────────────────────────────────────────────
 function scoreCandidate(profile: any, roleText: string): number {
   const lower = roleText.toLowerCase();
@@ -108,22 +154,7 @@ function scoreCandidate(profile: any, roleText: string): number {
   score += Math.min(profile.factCount * 2, 40);
 
   for (const fact of (profile.facts || [])) {
-    const factText = `${fact.category} ${fact.label} ${fact.value}`.toLowerCase();
-
-    if (fact.category === "achievement") score += 4;
-    if (["project_detail", "project"].includes(fact.category) &&
-        (lower.includes("engineer") || lower.includes("data") || lower.includes("build"))) score += 8;
-
-    const skillKws = ["python", "typescript", "javascript", "react", "data", "sql", "c programming", "full stack", "fullstack", "backend"];
-    for (const kw of skillKws) {
-      if (factText.includes(kw) && lower.includes(kw)) score += 5;
-    }
-    if ((factText.includes("founder") || factText.includes("freelance") || factText.includes("entrepreneur")) &&
-        (lower.includes("startup") || lower.includes("founding") || lower.includes("generalist"))) score += 12;
-    if ((factText.includes("memory management") || factText.includes(" c ") || factText.includes("systems")) &&
-        lower.includes("system")) score += 12;
-    if ((factText.includes("model") || factText.includes("predict") || factText.includes("data")) &&
-        lower.includes("data")) score += 8;
+    score += scoreFactForRole(fact, lower).strength;
   }
 
   const trackLower = (profile.track || "").toLowerCase();
@@ -131,6 +162,36 @@ function scoreCandidate(profile: any, roleText: string): number {
   if (trackLower.includes("software") && (lower.includes("engineer") || lower.includes("system"))) score += 15;
 
   return score;
+}
+
+// ── Top fact matches for THIS role ─────────────────────────────────────────
+// Same scoring function as scoreCandidate, but surfaces the individual facts
+// that contributed most. The client uses this to render a "why Dilly ranked
+// this candidate here, for this role" block on each card — turns an opaque
+// ranking into a visible evidence map.
+function topMatchesForRole(profile: any, roleText: string, limit = 3): Array<{
+  label: string;
+  value: string;
+  category: string;
+  strength: number;
+  reason: string;
+}> {
+  const lower = roleText.toLowerCase();
+  const scored = (profile.facts || [])
+    .map((f: any) => {
+      const { strength, reasons } = scoreFactForRole(f, lower);
+      return {
+        label: f.label,
+        value: f.value,
+        category: f.category,
+        strength,
+        reason: reasons.length > 0 ? `matched: ${reasons.join(", ")}` : "",
+      };
+    })
+    .filter((m: any) => m.strength > 0)
+    .sort((a: any, b: any) => b.strength - a.strength)
+    .slice(0, limit);
+  return scored;
 }
 
 // ── Build payload for the frontend ─────────────────────────────────────────
@@ -171,6 +232,7 @@ function buildPayload(profile: any, roleText: string): any {
     projects: projects.map((f: any) => ({ label: f.label, value: f.value })),
     skills,
     allFacts: profile.facts.map((f: any) => ({ ...f, categoryLabel: categoryLabel(f.category) })),
+    topMatches: topMatchesForRole(profile, roleText, 3),
     liveFromDB: true,
   };
 }

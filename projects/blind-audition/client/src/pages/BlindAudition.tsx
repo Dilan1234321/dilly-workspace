@@ -24,6 +24,18 @@ type ProfileFact = {
   categoryLabel?: string;
 };
 
+// Surfaces the specific facts that contributed most to Dilly's ranking of a
+// candidate for THIS role. The card renders these as a compact evidence block
+// so recruiters see why someone landed at #1 without having to expand every
+// fact list and reason about it themselves.
+type TopMatch = {
+  label: string;
+  value: string;
+  category: string;
+  strength: number;
+  reason: string;
+};
+
 type Candidate = {
   id: string;
   email: string;
@@ -40,6 +52,7 @@ type Candidate = {
   projects: { label: string; value: string }[];
   skills: string[];
   allFacts: ProfileFact[];
+  topMatches?: TopMatch[];
 };
 
 type RecruiterInfo = {
@@ -718,6 +731,36 @@ function BlindCard({
 
         {/* Dilly narrative */}
         <p className="text-sm text-zinc-700 leading-relaxed">{candidate.dillyNarrative}</p>
+
+        {/* Role-specific top matches — why Dilly ranked this candidate here */}
+        {candidate.topMatches && candidate.topMatches.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-zinc-100">
+            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+              Why Dilly ranked them here, for this role
+            </p>
+            <ul className="space-y-1.5">
+              {candidate.topMatches.map((m, i) => (
+                <li key={i} className="flex gap-2 text-xs text-zinc-700 leading-relaxed">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="flex-shrink-0 text-emerald-500 mt-0.5"
+                    aria-hidden
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>
+                    <span className="font-medium text-zinc-800">{m.label}:</span> {m.value}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Expandable facts */}
