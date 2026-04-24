@@ -64,7 +64,13 @@ def _get_db():
 
 
 def ensure_discovered_boards_table() -> None:
-    """Idempotent CREATE. Called before every discover_*() run."""
+    """Idempotent CREATE. Called before every discover_*() run.
+
+    PostgreSQL disallows function calls (e.g. COALESCE) inside a
+    table-level UNIQUE constraint — those need a unique INDEX. That's
+    why the initial version 500'd on import. We now build the table
+    with a plain schema and enforce uniqueness via a separate unique
+    expression index that handles the NULL-collapse correctly."""
     conn = _get_db()
     try:
         with conn.cursor() as cur:
@@ -79,13 +85,19 @@ def ensure_discovered_boards_table() -> None:
                     site_path TEXT,
                     found_at TIMESTAMPTZ DEFAULT now(),
                     last_seen_at TIMESTAMPTZ DEFAULT now(),
-                    job_count_sample INTEGER DEFAULT 0,
-                    UNIQUE (vendor, slug, COALESCE(wd_number, ''), COALESCE(site_path, ''))
+                    job_count_sample INTEGER DEFAULT 0
                 )
                 """
             )
             cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_discovered_boards_vendor ON discovered_boards (vendor)"
+                "CREATE INDEX IF NOT EXISTS idx_discovered_boards_vendor "
+                "ON discovered_boards (vendor)"
+            )
+            # Unique index with expressions — the proper way to enforce
+            # uniqueness across (vendor, slug, nullable cols).
+            cur.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_discovered_boards_key "
+                "ON discovered_boards (vendor, slug, COALESCE(wd_number, ''), COALESCE(site_path, ''))"
             )
         conn.commit()
     finally:
