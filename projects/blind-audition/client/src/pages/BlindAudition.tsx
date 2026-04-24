@@ -178,7 +178,37 @@ function DillyLogo() {
 
 // ─── Intro Screen ─────────────────────────────────────────────────────────────
 
+// Tiny pulsing dot to signal "live data" next to the stat. Deliberately quiet.
+function LiveDot() {
+  return (
+    <span className="relative inline-flex w-1.5 h-1.5" aria-hidden>
+      <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
+      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+    </span>
+  );
+}
+
 function IntroScreen({ onStart }: { onStart: () => void }) {
+  // Pull the live fact count from /api/health so the "real data" claim is
+  // verifiable in the UI itself, not just asserted in copy. The endpoint is
+  // fast (single SELECT COUNT) and tolerant of DB failure.
+  const { data: health } = useQuery<{
+    ok: boolean;
+    live: boolean;
+    totalFacts?: number;
+  }>({
+    queryKey: ["/api/health"],
+    queryFn: async () => {
+      const r = await fetch("/api/health");
+      return r.json();
+    },
+    retry: 0,
+    staleTime: 60_000, // Don't re-fetch every render — once per minute is plenty.
+  });
+
+  const liveFactCount =
+    health?.live && typeof health.totalFacts === "number" ? health.totalFacts : null;
+
   return (
     <motion.div
       className="flex flex-col items-center justify-center min-h-screen px-6 text-center"
@@ -199,10 +229,27 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
         Their profiles were built by talking to an AI, not uploading a resume.
       </p>
 
-      <p className="text-sm text-zinc-400 max-w-sm leading-relaxed mb-10">
+      <p className="text-sm text-zinc-400 max-w-sm leading-relaxed mb-8">
         You see what the conversations revealed. Names hidden until you decide.
         When you find someone worth reaching out to, Dilly drafts the intro.
       </p>
+
+      {liveFactCount !== null && (
+        <motion.div
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 border border-zinc-200 rounded-full mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          data-testid="live-fact-count"
+        >
+          <LiveDot />
+          <span className="text-xs font-medium text-zinc-700">
+            Live from production ·{" "}
+            <span className="font-bold tabular-nums text-zinc-900">{liveFactCount}</span>{" "}
+            fact{liveFactCount === 1 ? "" : "s"} across 3 profiles
+          </span>
+        </motion.div>
+      )}
 
       <button
         onClick={onStart}
