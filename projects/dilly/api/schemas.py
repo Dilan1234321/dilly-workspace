@@ -26,11 +26,13 @@ class OkMessageResponse(BaseModel):
 
 class AuthSendCodeRequest(BaseModel):
     email: str = Field(..., min_length=1, description="Email address")
-    user_type: str = Field(default="student", description="'student' or 'general'")
+    user_type: str = Field(default="student", description="'student' or 'general' (legacy)")
+    intent: str = Field(default="student", description="'student' or 'recruiter'")
 
 class AuthVerifyCodeRequest(BaseModel):
-    email: str = Field(..., min_length=1, description=".edu email")
+    email: str = Field(..., min_length=1, description=".edu or work email")
     code: str = Field(..., min_length=1, description="6-digit verification code")
+    intent: str = Field(default="student", description="'student' or 'recruiter' — must match what was sent at send-code")
 
 class FamilyAddStudentRequest(BaseModel):
     family_add_token: str = Field(..., min_length=1, description="Token from family invite link")
