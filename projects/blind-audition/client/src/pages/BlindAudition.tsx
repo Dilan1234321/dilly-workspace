@@ -61,6 +61,22 @@ type RecruiterInfo = {
   email: string;
 };
 
+// Records of prior interest a recruiter expressed through the Blind Audition.
+// Server-side row in the `recruiter_interests` table, exposed through
+// GET /api/blind-audition/interests?recruiter_email=... — shows returning
+// recruiters that Dilly remembers who they flagged.
+type SavedInterest = {
+  id: number;
+  recruiter_name: string;
+  recruiter_company: string;
+  recruiter_email: string;
+  candidate_email: string;
+  candidate_display_name: string;
+  role_label: string;
+  role_description: string | null;
+  unlocked_at: string;
+};
+
 type UnlockResult = {
   candidate: { name: string; email: string; major: string; track: string };
   intro_message: string;
@@ -372,16 +388,104 @@ function RecruiterSetupScreen({
   );
 }
 
+// ─── Saved Interests Block ────────────────────────────────────────────────────
+//
+// Shows a returning recruiter the candidates they have previously expressed
+// interest in through the Blind Audition. Fires only when an email was
+// provided in the setup screen — email is optional, so this block is quiet
+// for first-time or anonymous recruiters. Turns the audition from a one-shot
+// demo into an ongoing workflow: Dilly remembers who you flagged.
+function SavedInterestsBlock({ recruiterEmail }: { recruiterEmail: string }) {
+  const { data, isLoading, isError } = useQuery<{ interests: SavedInterest[] }>({
+    queryKey: ["/api/blind-audition/interests", recruiterEmail],
+    queryFn: async () => {
+      const r = await fetch(
+        `/api/blind-audition/interests?recruiter_email=${encodeURIComponent(recruiterEmail)}`,
+      );
+      return r.json();
+    },
+    enabled: recruiterEmail.length > 3 && recruiterEmail.includes("@"),
+    staleTime: 60_000,
+    retry: 0,
+  });
+
+  const interests = data?.interests ?? [];
+
+  // Don't render anything if loading/empty/errored — returning nothing is the
+  // right empty state here. A "no history yet" card would just be visual noise
+  // for first-time recruiters, which is the majority of users.
+  if (isLoading || isError || interests.length === 0) return null;
+
+  return (
+    <motion.div
+      className="mt-8 border border-zinc-200 rounded-2xl overflow-hidden"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.15 }}
+      data-testid="saved-interests-block"
+    >
+      <div className="px-5 pt-4 pb-3 border-b border-zinc-100 bg-zinc-50">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest">
+          Dilly remembers
+        </p>
+        <p className="text-sm font-semibold text-zinc-900 mt-1">
+          You&apos;ve flagged{" "}
+          <span className="tabular-nums">{interests.length}</span>{" "}
+          candidate{interests.length === 1 ? "" : "s"} previously
+        </p>
+      </div>
+      <ul className="divide-y divide-zinc-100">
+        {interests.slice(0, 6).map((i) => {
+          const when = (() => {
+            const d = new Date(i.unlocked_at);
+            if (isNaN(d.getTime())) return "";
+            const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+            if (days === 0) return "today";
+            if (days === 1) return "yesterday";
+            if (days < 7) return `${days} days ago`;
+            return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          })();
+          return (
+            <li
+              key={i.id}
+              className="px-5 py-3 flex items-center gap-3 text-sm"
+            >
+              <div className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center text-xs font-bold text-zinc-700 flex-shrink-0">
+                {i.candidate_display_name.slice(-1) || "?"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-zinc-900 truncate">
+                  {i.candidate_display_name || i.candidate_email}
+                </p>
+                <p className="text-xs text-zinc-500 truncate">
+                  {i.role_label || "—"} · {when}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {interests.length > 6 && (
+        <div className="px-5 py-3 border-t border-zinc-100 bg-zinc-50 text-xs text-zinc-500 text-center">
+          +{interests.length - 6} more
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Role Select Screen ───────────────────────────────────────────────────────
 
 function RoleSelectScreen({
   roles,
   onSelectRole,
   error,
+  recruiterEmail,
 }: {
   roles: RolePreset[];
   onSelectRole: (role: RolePreset) => void;
   error?: string | null;
+  recruiterEmail: string;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [customJD, setCustomJD] = useState("");
@@ -478,6 +582,8 @@ function RoleSelectScreen({
             {showCustom ? "Use a preset role" : "Paste my own JD"}
           </button>
         </div>
+
+        <SavedInterestsBlock recruiterEmail={recruiterEmail} />
       </div>
     </motion.div>
   );
@@ -1214,6 +1320,7 @@ export default function BlindAudition() {
               roles={roles}
               onSelectRole={handleRoleSelect}
               error={searchError}
+              recruiterEmail={recruiter?.email ?? ""}
             />
           </motion.div>
         )}
