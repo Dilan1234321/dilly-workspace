@@ -2,6 +2,10 @@
 Shared dependencies for Dilly API routers.
 Use these for auth, rate limiting, and recruiter checks.
 All raises use api.errors so the response has a stable `code` for the frontend.
+
+Recruiter auth: use require_recruiter(request) on Blind Audition / recruiter
+endpoints.  It validates a Dilly session AND checks account_type == 'recruiter'.
+Non-recruiters (students) get a 403 with code RECRUITER_ONLY.
 """
 import os
 import threading
@@ -111,19 +115,25 @@ def get_recruiter_key(request: Request) -> str:
     return key
 
 
-def require_recruiter(request: Request) -> None:
-    """Recruiter endpoints are currently open (no API key required). To require a key, set RECRUITER_API_KEY and uncomment the check below."""
-    return
-    # When you want to lock down recruiter access, uncomment:
-    # key = (os.environ.get("RECRUITER_API_KEY") or "").strip()
-    # if not key:
-    #     raise errors.service_unavailable("Recruiter API not configured.")
-    # header_key = (request.headers.get("x-recruiter-api-key") or "").strip()
-    # auth = request.headers.get("authorization") or ""
-    # if auth.lower().startswith("bearer "):
-    #     header_key = header_key or auth[7:].strip()
-    # if not header_key or header_key != key:
-    #     raise errors.unauthorized("Invalid or missing recruiter API key.")
+def require_recruiter(request: Request) -> dict:
+    """Require a valid Dilly session with account_type == 'recruiter'.
+
+    Returns the user dict on success.
+    Raises 401 if not signed in, 403 if signed in but not a recruiter account.
+    """
+    user = bearer_user(request)
+    if not user:
+        raise errors.unauthorized("Sign in with your recruiter account to access this resource.")
+    if (user.get("account_type") or "student") != "recruiter":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "RECRUITER_ONLY",
+                "message": "This endpoint requires a recruiter account. "
+                           "Sign up at app.hellodilly.com as a recruiter to get access.",
+            },
+        )
+    return user
 
 
 # ---------------------------------------------------------------------------

@@ -18,6 +18,24 @@ from projects.dilly.api.schemas import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _serialize_user(user: dict) -> dict:
+    """Build the user dict returned from /auth/verify-code and /auth/me."""
+    if not user:
+        return {}
+    out = {
+        "email": user.get("email"),
+        "subscribed": user.get("subscribed", False),
+        "account_type": user.get("account_type", "student"),
+    }
+    if out["account_type"] == "recruiter":
+        out["company_name"] = user.get("company_name")
+        out["company_domain"] = user.get("company_domain")
+        out["company_verified_at"] = user.get("company_verified_at")
+        out["company_logo_url"] = user.get("company_logo_url")
+        out["company_jobs_count"] = user.get("company_jobs_count")
+    return out
+
+
 def _stripe_configured() -> bool:
     return bool(
         os.environ.get("STRIPE_SECRET_KEY", "").strip()
@@ -65,20 +83,33 @@ async def send_magic_link(request: Request, body: AuthSendCodeRequest):
 
 @router.post("/send-verification-code", responses=ERROR_RESPONSES)
 async def send_verification_code(request: Request, body: AuthSendCodeRequest):
-    """Send a 6-digit verification code. Students need .edu, general users can use any email."""
+    """Send a 6-digit verification code.
+
+    intent='student'   — requires a .edu address (existing behaviour).
+    intent='recruiter' — requires a non-free-provider work email; rejects
+                         gmail, yahoo, hotmail, outlook, icloud, etc.
+    """
     deps.rate_limit(request, "send-code", max_requests=5, window_sec=300)
     email = (body.email or "").strip().lower()
-    user_type = (body.user_type or "student").strip().lower()
-    is_general = user_type == "general"
+    intent = (body.intent or body.user_type or "student").strip().lower()
 
-    if not is_general:
+    from projects.dilly.api.company_enrichment import is_free_email
+
+    if intent == "recruiter":
+        if not email or "@" not in email or "." not in email:
+            raise errors.validation_error("Enter a valid work email address.")
+        if re.search(r"\.edu\s*$", email):
+            raise errors.validation_error("Use a work email to sign up as a recruiter, not a .edu address.")
+        if is_free_email(email):
+            raise errors.validation_error(
+                "Please use your work email to sign up as a recruiter. "
+                "Free email providers (Gmail, Yahoo, etc.) are not accepted."
+            )
+    else:
         # Student path: require .edu (any .edu domain, no school whitelist)
         if not re.search(r"\.edu\s*$", email):
             raise errors.validation_error("Use your .edu email to sign up as a student.")
-    else:
-        # General path: basic email validation only
-        if not email or "@" not in email or "." not in email:
-            raise errors.validation_error("Enter a valid email address.")
+
     try:
         from projects.dilly.api.auth_store import create_verification_code
         from projects.dilly.api.email_sender import send_verification_email
@@ -88,7 +119,7 @@ async def send_verification_code(request: Request, body: AuthSendCodeRequest):
         sent, code_for_dev = send_verification_email(email, code, school)
     except ValueError as e:
         raise errors.validation_error(str(e))
-    out = {"ok": True, "message": "Verification code sent"}
+    out = {"ok": True, "message": "Verification code sent", "intent": intent}
     if deps.is_dev_allowed():
         out["dev_code"] = code
     elif not sent:
@@ -98,51 +129,76 @@ async def send_verification_code(request: Request, body: AuthSendCodeRequest):
 
 @router.post("/verify-code", responses=ERROR_RESPONSES)
 async def auth_verify_code(request: Request, body: AuthVerifyCodeRequest):
-    """Verify 6-digit code and sign in. Returns session token and user."""
+    """Verify 6-digit code and sign in. Returns session token and user.
+
+    Pass the same intent ('student' or 'recruiter') that was used at send-code
+    time. For recruiter accounts the response also includes company fields.
+    """
     deps.rate_limit(request, "verify-code", max_requests=10, window_sec=300)
     email = (body.email or "").strip().lower()
     code = (body.code or "").strip()
+    intent = (body.intent or "student").strip().lower()
+    account_type = "recruiter" if intent == "recruiter" else "student"
+
     from projects.dilly.api.schools import get_school_from_email
     from projects.dilly.api.auth_store import (
         verify_verification_code,
         create_session,
         get_session,
+        update_company_fields,
     )
     if not verify_verification_code(email, code):
         raise errors.validation_error("Invalid or expired code. Request a new one.")
-    session_token = create_session(email)
+    session_token = create_session(email, account_type=account_type)
     try:
         from projects.dilly.api.profile_store import ensure_profile_exists
         ensure_profile_exists(email)
     except Exception:
         pass
-    # Guarantee a students row exists from the moment email is verified
-    try:
-        import psycopg2, os as _os
-        _pw = _os.environ.get("DILLY_DB_PASSWORD", "")
-        if not _pw:
-            try: _pw = open(_os.path.expanduser("~/.dilly_db_pass")).read().strip()
-            except: pass
-        _school_info = get_school_from_email(email) or {}
-        _conn = psycopg2.connect(
-            host=_os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
-            database="dilly", user="dilly_admin", password=_pw, sslmode="require"
-        )
-        _cur = _conn.cursor()
-        _cur.execute(
-            """INSERT INTO students (email, school, school_id)
-               VALUES (%s, %s, %s)
-               ON CONFLICT (email) DO NOTHING""",
-            (email, _school_info.get("name") or "", _school_info.get("id") or "")
-        )
-        _conn.commit()
-        _conn.close()
-    except Exception:
-        pass
+
+    if account_type == "recruiter":
+        # Enrich company info immediately — best-effort, never blocks login
+        try:
+            from projects.dilly.api.company_enrichment import enrich_recruiter
+            enrichment = enrich_recruiter(email)
+            update_company_fields(
+                email,
+                company_domain=enrichment.get("company_domain"),
+                company_name=enrichment.get("company_name"),
+                company_logo_url=enrichment.get("company_logo_url"),
+                company_jobs_count=enrichment.get("company_jobs_count"),
+            )
+        except Exception:
+            pass
+    else:
+        # Guarantee a students row exists from the moment email is verified
+        try:
+            import psycopg2, os as _os
+            _pw = _os.environ.get("DILLY_DB_PASSWORD", "")
+            if not _pw:
+                try: _pw = open(_os.path.expanduser("~/.dilly_db_pass")).read().strip()
+                except: pass
+            _school_info = get_school_from_email(email) or {}
+            _conn = psycopg2.connect(
+                host=_os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+                database="dilly", user="dilly_admin", password=_pw, sslmode="require"
+            )
+            _cur = _conn.cursor()
+            _cur.execute(
+                """INSERT INTO students (email, school, school_id)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (email) DO NOTHING""",
+                (email, _school_info.get("name") or "", _school_info.get("id") or "")
+            )
+            _conn.commit()
+            _conn.close()
+        except Exception:
+            pass
+
     user = get_session(session_token)
     return {
         "token": session_token,
-        "user": {"email": user["email"], "subscribed": user["subscribed"]},
+        "user": _serialize_user(user),
     }
 
 
@@ -168,17 +224,22 @@ async def auth_verify(request: Request, token: str = ""):
     user = get_session(session_token)
     return {
         "token": session_token,
-        "user": {"email": user["email"], "subscribed": user["subscribed"]},
+        "user": _serialize_user(user),
     }
 
 
 @router.get("/me")
 async def auth_me(request: Request):
-    """Return current user if valid Bearer token."""
+    """Return current user if valid Bearer token.
+
+    Includes account_type for all users. Recruiter accounts also include
+    company_name, company_domain, company_verified_at, company_logo_url,
+    company_jobs_count.
+    """
     user = deps.bearer_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not signed in.")
-    return {"email": user["email"], "subscribed": user["subscribed"]}
+    return _serialize_user(user)
 
 
 @router.post("/logout")
