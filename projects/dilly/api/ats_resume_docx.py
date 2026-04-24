@@ -80,20 +80,20 @@ def _format_date_for_ats(date_str: str, ats_system: str) -> str:
 def _configure_base_styles(doc: Document) -> None:
     """Set the default body font + margins once up front."""
     style = doc.styles["Normal"]
-    style.font.name = "Times New Roman"
+    style.font.name = "Calibri"
     style.font.size = Pt(10.5)
-    # Make sure the East-Asia font slot also points at Times so mixed
-    # text doesn't fall back to Calibri on some renderers.
+    # Pin all font slots to Calibri so no run ever falls back to a different
+    # face on Taleo/iCIMS renderers that key on the East-Asia slot.
     rpr = style.element.get_or_add_rPr()
     for tag in ("w:rFonts",):
         existing = rpr.find(qn(tag))
         if existing is not None:
             rpr.remove(existing)
     rFonts = rpr.makeelement(qn("w:rFonts"), {
-        qn("w:ascii"): "Times New Roman",
-        qn("w:hAnsi"): "Times New Roman",
-        qn("w:cs"): "Times New Roman",
-        qn("w:eastAsia"): "Times New Roman",
+        qn("w:ascii"): "Calibri",
+        qn("w:hAnsi"): "Calibri",
+        qn("w:cs"): "Calibri",
+        qn("w:eastAsia"): "Calibri",
     })
     rpr.append(rFonts)
 

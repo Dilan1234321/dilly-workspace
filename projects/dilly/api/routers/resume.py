@@ -3387,12 +3387,21 @@ ATS FORMATTING (specific to this company's parser):
 Return ONLY valid JSON — a JSON array of resume section objects matching this exact schema:
 [
   {{"key": "contact", "label": "Contact", "contact": {{"name": "", "email": "", "phone": "", "location": "", "linkedin": ""}}}},
+  {{"key": "summary", "label": "Summary", "simple": {{"id": "", "lines": ["<2-3 sentence professional summary — include only when the user's path requires it>"]}}}} ,
   {{"key": "education", "label": "Education", "education": {{"id": "", "university": "", "major": "", "minor": "", "graduation": "", "location": "", "honors": "", "gpa": ""}}}},
   {{"key": "professional_experience", "label": "Experience", "experiences": [{{"id": "", "company": "", "role": "", "date": "", "location": "", "bullets": [{{"id": "", "text": ""}}]}}]}},
   {{"key": "projects", "label": "Projects", "projects": [{{"id": "", "name": "", "date": "", "location": "", "tech": "", "bullets": [{{"id": "", "text": ""}}]}}]}},
-  {{"key": "skills", "label": "Skills", "simple": {{"id": "", "lines": [""]}}}}
+  {{"key": "skills", "label": "Skills", "simple": {{"id": "", "lines": ["<category>: skill1, skill2, skill3"]}}}},
+  {{"key": "certifications", "label": "Certifications", "simple": {{"id": "", "lines": ["Cert Name, Issuer, Year"]}}}}
 ]
-Include only sections that have content. Do not include markdown, explanations, or any text outside the JSON array."""
+
+SKILLS SECTION FORMAT — critical for ATS parsing:
+- Each line is one category cluster: "Languages: Python, SQL, R" or "Frameworks: React, FastAPI, Django"
+- Individual skills comma-separated within a line — never written as a prose sentence
+- Use short noun phrases only ("Data Visualization", not "I am experienced in data visualization")
+- Every JD keyword the candidate legitimately has must appear as its own entry, verbatim
+
+Include only sections that have content. Omit summary unless the candidate's path specifically requires one. Do not include markdown, explanations, or any text outside the JSON array."""
 
     # Add gaps instruction if applicable
     if readiness == 'gaps':
@@ -3486,6 +3495,64 @@ Include only sections that have content. Do not include markdown, explanations, 
         keyword_coverage_pct = int(cov.get("coverage_pct") or 0)
         missing_keywords = list(cov.get("missing_keywords") or [])
         keyword_warning = cov.get("warning")
+
+        # ── Keyword injection pass ─────────────────────────────────────
+        # If first-pass coverage is below 75% and there are ≥2 missing
+        # keywords, do a cheap targeted second pass: ask Haiku to bridge
+        # gaps using only evidence already in the resume (no invention).
+        # We only accept the result if coverage actually improves.
+        if keyword_coverage_pct < 75 and len(missing_keywords) >= 2 and job_description:
+            try:
+                _inject_prompt = (
+                    f"The resume has {keyword_coverage_pct}% keyword coverage for this JD.\n"
+                    f"Missing JD keywords: {', '.join(missing_keywords[:8])}.\n\n"
+                    "Without inventing any experience:\n"
+                    "1. Where a missing keyword is adjacent to something already in the resume, "
+                    "add it with bridge language (e.g. 'Docker (container orchestration)').\n"
+                    "2. If the candidate clearly has a skill (visible in their bullets/role) "
+                    "but the Skills section omits it, add it to Skills.\n"
+                    "3. Never add a keyword the resume gives zero evidence for.\n"
+                    "Return the complete updated JSON array, same schema as input.\n\n"
+                    f"Current resume JSON:\n{json.dumps(sections)}\n\n"
+                    f"Job description:\n{job_description[:2000]}"
+                )
+                _inject_res = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=4096,
+                    system=(
+                        "You are a resume keyword optimizer. Follow the instructions exactly. "
+                        "Return ONLY a valid JSON array, no explanation."
+                    ),
+                    messages=[{"role": "user", "content": _inject_prompt}],
+                )
+                try:
+                    from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+                    log_from_anthropic_response(
+                        email, FEATURES.RESUME_KW_CHECK, _inject_res,
+                        metadata={"pass": "keyword_injection"},
+                    )
+                except Exception:
+                    pass
+                _ir = _inject_res.content[0].text
+                _ijs = _ir.find('[')
+                _ije = _ir.rfind(']') + 1
+                if _ijs >= 0:
+                    _inject_sections = json.loads(_ir[_ijs:_ije])
+                    _inject_sections = _strip_em(_inject_sections)
+                    _inject_cov = check_keyword_coverage(_inject_sections, job_description)
+                    # Accept only if coverage improved (never downgrade)
+                    if _inject_cov.get("coverage_pct", 0) >= keyword_coverage_pct:
+                        sections = _inject_sections
+                        keyword_coverage_pct = int(_inject_cov.get("coverage_pct") or 0)
+                        missing_keywords = list(_inject_cov.get("missing_keywords") or [])
+                        keyword_warning = _inject_cov.get("warning")
+                        # Re-verify PDF with the upgraded sections
+                        pdf_bytes = await asyncio.to_thread(build_ats_pdf, sections, job_ats)
+                        _v2 = await asyncio.to_thread(verify_ats_compatibility, pdf_bytes, sections)
+                        ats_parse_score = int(_v2.get("score") or 0)
+                        ats_parse_issues = list(_v2.get("issues") or [])
+            except Exception:
+                pass  # Never block on injection failure; original sections stand
     except Exception as _e:
         # Never block the response on a verification failure.
         import traceback as _tb
@@ -3576,8 +3643,8 @@ def _get_ats_formatting(ats: str) -> str:
         'lever': (
             "ATS: Lever (proprietary parser).\n"
             + BASELINE + "\n"
-            "- Format each experience entry as: 'Company Name — Role Title' "
-            "on one line. Lever's parser looks for this em-dash/hyphen pattern.\n"
+            "- Format each experience entry as: 'Company Name - Role Title' "
+            "on one line. Lever's parser looks for this hyphen-separated pattern.\n"
             "- KEYWORD STRATEGY: Lever favors bullet-level keyword match over "
             "Skills list stuffing. Put the most important JD keywords inside "
             "the bullets for your most recent role."
