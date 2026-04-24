@@ -42,6 +42,7 @@ import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
 import WinsCard from '../../components/WinsCard';
 import DillyFooter from '../../components/DillyFooter';
+import ConnectMyDillySection from '../../components/connect/ConnectMyDillySection';
 import DillyCardEditor, { type CardData } from '../../components/DillyCard';
 import { DillyFace } from '../../components/DillyFace';
 import InlinePopup, { type PopupAction } from '../../components/InlinePopup';
@@ -1976,6 +1977,12 @@ function SeekerProfileScreen() {
           <Text style={{ fontSize: 12, color: colors.t3, textAlign: 'center', lineHeight: 17 }}>
             Talked to Dilly? Pull down to refresh and see new things on your profile.
           </Text>
+        </View>
+
+        {/* Connect recruiter-activity section — gated by CONNECT_FEATURE_ENABLED.
+            Renders null when flag is false; no-op on existing builds. */}
+        <View style={{ paddingHorizontal: 20 }}>
+          <ConnectMyDillySection />
         </View>
 
         <DillyFooter />
