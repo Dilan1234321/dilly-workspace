@@ -367,6 +367,60 @@ def crawl_internships(token: str = "", sync: bool = False):
     return {"ok": True, "mode": "async", "message": "Crawl running in background. Check job counts via /v2/internships/feed or wait ~15 min."}
 
 
+@router.get("/discover-boards", summary="Probe candidate slugs against Greenhouse/Lever/Ashby/Workday, persist hits")
+def discover_boards_cron(
+    token: str = "",
+    vendor: str = "all",
+    limit: int = 0,
+):
+    """Run ATS slug discovery. Persists every hit to discovered_boards
+    so the next crawl picks them up. Candidate list lives in
+    api/ingest/candidate_slugs.py (~800 slugs today).
+
+    Query params:
+      - vendor: 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'all' (default)
+      - limit:  max slugs to probe per vendor (0 = no cap)
+
+    Greenhouse ~3 min per 1k probes; Workday ~8 min (up to 16 variants
+    per slug). Runs SYNC — caller waits for completion.
+    """
+    _require_cron_secret(token)
+    from projects.dilly.api.ingest.candidate_slugs import CANDIDATE_SLUGS
+    from projects.dilly.api.ingest.slug_discovery import (
+        discover_greenhouse, discover_lever, discover_ashby, discover_workday,
+    )
+
+    cap = int(limit) if limit and int(limit) > 0 else None
+    v = (vendor or "all").lower().strip()
+    results: list[dict] = []
+    if v in ("greenhouse", "all"):
+        results.append(discover_greenhouse(CANDIDATE_SLUGS, limit=cap))
+    if v in ("lever", "all"):
+        results.append(discover_lever(CANDIDATE_SLUGS, limit=cap))
+    if v in ("ashby", "all"):
+        results.append(discover_ashby(CANDIDATE_SLUGS, limit=cap))
+    if v in ("workday", "all"):
+        # Workday discovery is slow — default to 200 unless user overrides
+        wd_cap = cap or 200
+        results.append(discover_workday(CANDIDATE_SLUGS, limit=wd_cap))
+    return {"ok": True, "results": results}
+
+
+@router.get("/ingest-quality-sweep", summary="Dedup + stale + spam + reclassify the internships table")
+def ingest_quality_sweep(token: str = ""):
+    """Run the full ingest quality pipeline:
+      1. Fingerprint dedup (cross-source same-job merge)
+      2. Stale pruning (posted_date > 45 days -> expired)
+      3. Spam filter (MLM / scam patterns -> spam)
+      4. Level classifier sweep (fill job_type=NULL/'other' rows)
+
+    Idempotent. Run daily or after a big crawl."""
+    _require_cron_secret(token)
+    from projects.dilly.api.ingest.quality_pipeline import run_all
+    stats = run_all()
+    return {"ok": True, "stats": stats}
+
+
 @router.get("/crawl-niche-sources", summary="Scrape NSF REU + USAJobs into internships table")
 def crawl_niche_sources(token: str = ""):
     """Run the niche-source ingester (NSF REU for pre-health/science research,

@@ -115,7 +115,7 @@ def _remote_from(loc: str | None, description: str) -> bool:
 THE_MUSE_URL = "https://www.themuse.com/api/public/jobs"
 
 
-def fetch_themuse(max_pages: int = 200) -> list[dict]:
+def fetch_themuse(max_pages: int = 2500) -> list[dict]:
     out: list[dict] = []
     for page in range(max_pages):
         try:
@@ -392,20 +392,41 @@ JOBICY_URL = "https://jobicy.com/api/v2/remote-jobs"
 
 
 def fetch_jobicy() -> list[dict]:
-    try:
-        resp = requests.get(
-            JOBICY_URL,
-            params={"count": 100},
-            headers={"User-Agent": USER_AGENT},
-            timeout=TIMEOUT,
-        )
-        payload = resp.json() if resp.status_code == 200 else {}
-    except Exception as e:
-        logger.warning("[jobicy] %s", e)
-        return []
-
+    """Jobicy doesn't paginate by page number — they use a single
+    `count` param capped at 500 per call. We fetch twice with different
+    tag filters to get broader coverage (remote-ok + tech + marketing
+    + finance + design span different cohorts). ~1.5-3k unique jobs."""
     out: list[dict] = []
-    for r in (payload.get("jobs") or []):
+    seen_ids: set[str] = set()
+    for tag in ("", "dev", "design", "marketing", "finance", "hr"):
+        try:
+            params = {"count": 500}
+            if tag:
+                params["tag"] = tag
+            resp = requests.get(
+                JOBICY_URL,
+                params=params,
+                headers={"User-Agent": USER_AGENT},
+                timeout=TIMEOUT,
+            )
+            payload = resp.json() if resp.status_code == 200 else {}
+        except Exception as e:
+            logger.warning("[jobicy %s] %s", tag or "default", e)
+            continue
+
+        for r in (payload.get("jobs") or []):
+            if not isinstance(r, dict):
+                continue
+            ext_id = str(r.get("id") or "")
+            if ext_id in seen_ids:
+                continue
+            seen_ids.add(ext_id)
+            out.append(r)
+    # Re-process as the original loop expected (done at end so the
+    # rest of this function can keep its shape).
+    _jobicy_rows = out
+    out = []
+    for r in _jobicy_rows:
         if not isinstance(r, dict):
             continue
         title = (r.get("jobTitle") or r.get("title") or "").strip()

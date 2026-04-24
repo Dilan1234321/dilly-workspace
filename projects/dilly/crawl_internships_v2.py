@@ -1095,6 +1095,42 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.3)
 
+    # ── Discovered boards (from the discovery cron) ──────────────────
+    # Run /cron/discover-boards once to populate. After that every
+    # /cron/crawl-internships picks them up automatically here without
+    # needing to hand-edit GREENHOUSE_COMPANIES / LEVER_COMPANIES / etc.
+    # Hits are de-duped against the hand-curated maps above, so a slug
+    # that already exists in both places only crawls once per run.
+    try:
+        from projects.dilly.api.ingest.slug_discovery import list_discovered
+        already_seen = {
+            "greenhouse": set(GREENHOUSE_COMPANIES.keys()),
+            "lever": set(LEVER_COMPANIES.keys()),
+            "ashby": set(ASHBY_COMPANIES.keys()),
+        }
+        for vendor, crawler_fn in (
+            ("greenhouse", crawl_greenhouse),
+            ("lever", crawl_lever),
+            ("ashby", crawl_ashby),
+        ):
+            rows = list_discovered(vendor)
+            rows = [r for r in rows if r["slug"] not in already_seen[vendor]]
+            if not rows:
+                continue
+            print(f"\n[{vendor} discovered] Crawling {len(rows)} newly-found boards...")
+            for r in rows:
+                slug = r["slug"]
+                name = r.get("display_name") or slug.replace("-", " ").title()
+                try:
+                    jobs = crawler_fn(slug, name)
+                    new = write_listings(conn, jobs, name, vendor, "Tech")
+                    total_found += len(jobs); total_new += new
+                except Exception as e:
+                    print(f"  {slug} ERROR: {e}")
+                time.sleep(0.25)
+    except Exception as e:
+        print(f"[discovered-boards] load failed: {e}")
+
     # ── Multi-company feeds (RemoteOK, WWR, Built In) ───────────────
     # Each call returns jobs from MANY different companies at once.
     # write_multi_company_feed groups by company and inserts in batches.
