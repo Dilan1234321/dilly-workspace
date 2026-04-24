@@ -124,10 +124,13 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     (
         "experience",
         re.compile(
-            r"\b(?:i (?:work|worked|am working|just started|am|used to work) (?:at|for|with)|"
-            r"i'?m (?:at|with|on a team at)|working (?:at|for)) "
+            r"\b(?:i (?:work|worked|am working|just started|am|used to work|interned|did an internship) (?:at|for|with)|"
+            r"i'?m (?:at|with|on a team at|a [a-z ]{3,40}? at)|"
+            r"working (?:at|for)|"
+            r"my (?:internship|job|role|internships|role|work) (?:at|with)|"
+            r"(?:internship|internships) at) "
             r"([A-Za-z][A-Za-z0-9&'.,\- ]{1,50}?)"
-            r"(?=\s*(?:,|;|\.)|\s+(?:as|in|on|doing|where|right now|currently|$))",
+            r"(?=\s*(?:,|;|\.)|\s+(?:as|in|on|doing|where|right now|currently|last|this|$))",
             re.IGNORECASE,
         ),
         "Works at {v}",
@@ -180,6 +183,21 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "Built {v}",
     ),
     (
+        "project",
+        # "(I'm | been) working on a project <building | about | that ...>"
+        # catches casual in-progress project mentions that aren't caught
+        # by the built/shipped verbs above.
+        re.compile(
+            r"\b(?:i'?m|been|i'?ve been|currently)\s+working on (?:a |my |an )?"
+            r"(?:project |side project |app |thing |tool )?"
+            r"(?:building |creating |making |called )?"
+            r"([A-Za-z0-9 '\-]{3,80}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:that|which|with|for|using|in|as|$))",
+            re.IGNORECASE,
+        ),
+        "Working on {v}",
+    ),
+    (
         "skill",
         # Lookahead now accepts "," / ";" with no preceding whitespace so
         # lists like "I know Python, SQL, and React" capture the first item.
@@ -228,7 +246,7 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(
             r"\b(?:my goal|i want|i'?d like|my plan|i'?m trying|i hope|i'?m hoping) "
             r"(?:is to|to) ([A-Za-z0-9 ,&'.\-]{5,80}?)"
-            r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|\.|$))",
+            r"(?=\s*(?:[.,;])|\s+(?:before|by|so|because|and|$))",
             re.IGNORECASE,
         ),
         "Goal: {v}",
@@ -236,12 +254,68 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     (
         "goal",
         re.compile(
-            r"\bi'?m trying to (?:land|get|find|break into|transition to|pivot to) "
+            r"\bi'?m (?:trying to|thinking about|planning to) "
+            r"(?:land|get|find|break into|transition to|pivot to|go into|move into|switch to) "
             r"([A-Za-z0-9 ,&'.\-]{3,70}?)"
             r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|at|right now|currently|\.|$))",
             re.IGNORECASE,
         ),
         "Trying to {v}",
+    ),
+    (
+        "goal",
+        re.compile(
+            r"\bi (?:want to|would like to|hope to|plan to) "
+            r"(?:go into|move into|get into|transition to|pivot to|switch to|work in|break into) "
+            r"([A-Za-z0-9 ,&'.\-]{3,70}?)"
+            r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|at|eventually|one day|$|\.))",
+            re.IGNORECASE,
+        ),
+        "Wants to enter {v}",
+    ),
+    (
+        "rejection",
+        re.compile(
+            r"\b(?:i (?:got|was) (?:rejected|denied|turned down) (?:from|by)|"
+            r"rejected (?:from|by)|didn'?t get (?:the|an) offer from) "
+            r"([A-Z][A-Za-z0-9&'.,\- ]{1,40}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:last|this|yesterday|for|after|$))",
+            re.IGNORECASE,
+        ),
+        "Rejected from {v}",
+    ),
+    (
+        "skill",
+        # Captures "used X", "I used X and Y", "used kafka and scala"
+        # when described inside a project/experience narrative.
+        re.compile(
+            r"\b(?:used|we used|team used|stack was|built with|using|with) "
+            r"([A-Za-z0-9 +#./\-]{2,40}?)"
+            r"(?=\s*(?:,|;)|\s+(?:and|plus|for|to|in|on|\.|$))",
+            re.IGNORECASE,
+        ),
+        "Worked with {v}",
+    ),
+    (
+        "skill",
+        # "my experience with X and Y" / "experience in X"
+        re.compile(
+            r"\bmy experience (?:with|in|using) "
+            r"([A-Za-z0-9 +#./\-]{2,50}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:and|plus|is|has|because|for|$))",
+            re.IGNORECASE,
+        ),
+        "Skill: {v}",
+    ),
+    (
+        "achievement",
+        re.compile(
+            r"\bi (?:shipped|delivered|launched|grew|increased|reduced|cut|raised) "
+            r"([A-Za-z0-9 ,&'.\-%]{3,80}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:in|by|from|to|for|$))",
+            re.IGNORECASE,
+        ),
+        "{v}",
     ),
     (
         "location_pref",
@@ -323,9 +397,15 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
     # the skill verb (know / use / work with / ...). Captures the span
     # from the verb until the first period or end-of-string.
     skill_list_rx = re.compile(
-        r"\bi (?:know|use|work with|am good at|have experience with|"
-        r"am proficient in|taught myself|self.taught in|am learning|picked up) "
-        r"([A-Za-z0-9 +#./\-,]{2,120}?)(?:\.|$)",
+        r"\b(?:i (?:know|use|work with|am good at|have experience with|"
+        r"am proficient in|taught myself|self.taught in|am learning|picked up)|"
+        r"used|we used|team used|built with|my experience (?:with|in|using)) "
+        # Tight terminator list: end on punctuation, or on connector
+        # words that clearly signal the end of the skill list (is, was,
+        # for, because, etc.). Prevents capturing "distributed systems
+        # and pytorch is what I want to highlight" as the whole list.
+        r"([A-Za-z0-9 +#./\-,]{2,120}?)"
+        r"(?:\.|,\s+(?:but|so|which|and then)|\s+(?:is|was|because|for|to help|in order|since|$)|$)",
         re.IGNORECASE,
     )
 
