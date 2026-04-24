@@ -63,6 +63,13 @@ All targeted at `projects/blind-audition/`. Pushed to `origin/recruiter-v2`.
 - [x] **Mobile polish on the ranking card + ReflectionPanel** — `f4bc014`. Card header gets `min-w-0`/`truncate`/`whitespace-nowrap` so long names don't push the fit pill off screen. ReflectionPanel name column drops from `w-28` to `w-24` on mobile, count column hides the "facts" suffix at small widths.
 - [x] **"Try a different role" after reveal** — `c07b7b9`. Button at the bottom of the revealed view steps the stage machine back to role-select with recruiter info preserved. Same candidates re-scored against the new JD. The single move that viscerally proves the profile-first thesis — same person, different role, different ranking.
 
+### 2026-04-24 — Autonomous-loop batch 3
+All at `projects/blind-audition/client/src/pages/BlindAudition.tsx`.
+
+- [x] **0-fact candidates become "the before picture"** — `26154aa`. Gabriel's empty profile was reading as a demo bug. ReflectionPanel now surfaces an inset callout naming the empty candidate(s) as the deliberate control: "without Dilly, every candidate above is Gabriel." Turns the empty profile into the sharpest proof of the thesis instead of dead weight.
+- [x] **"Last grew Nd ago" freshness signal** — `8df28bc`. `lastGrewRelative()` folds `max(created_at)` into a relative phrase shown next to the depth note. Reinforces the live-from-production claim at the card level. Hidden when no timestamps exist (seed fallback).
+- [x] **Cache invalidation + meaningful custom-JD labels** — `668a823`. On successful interest, invalidates the saved-interests query scoped to recruiter email so the "Dilly remembers" block reflects the just-unlocked candidate on the next visit. Also derives a proper label from the first sentence of a pasted custom JD (trimmed to 60 chars) so "Custom Role" no longer appears in saved-interests history.
+
 ### Deferred / nice-to-have (next batch candidates)
 - **Saved-interests panel** — `/api/blind-audition/interests?recruiter_email=...` already exists server-side; build the client surface so returning recruiters see their candidate history.
 - **Mobile polish pass** on the full flow — verify ≤390px, fix any overflow/stacking in the role-select grid and the ReflectionPanel bars.
