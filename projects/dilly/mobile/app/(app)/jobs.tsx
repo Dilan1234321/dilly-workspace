@@ -405,12 +405,15 @@ export default function JobsScreen() {
 
     // City filter (multi-select)
     if (selectedCities.length > 0) {
-      const cityLower = selectedCities.map(c => c.toLowerCase().trim());
+      // Strip ", ST" state suffix so "San Francisco, CA" matches location_city "San Francisco"
+      const cityLower = selectedCities.map(c =>
+        c.toLowerCase().trim().replace(/,\s*[a-z]{2}$/, '').trim()
+      );
       result = result.filter(l => {
         const loc = (l.location || l.location_city || '').toLowerCase();
         const mode = (l.work_mode || '').toLowerCase();
         if (mode === 'remote' || loc.includes('remote')) return true;
-        return cityLower.some(c => loc.includes(c));
+        return cityLower.some(c => loc.includes(c) || c.includes(loc));
       });
     }
 
