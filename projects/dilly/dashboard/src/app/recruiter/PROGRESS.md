@@ -47,15 +47,20 @@ The Blind Audition is the demonstration of these at once. The current thesis (pe
 ### Revised plan — layer onto the real blind-audition app
 All work below targets `projects/blind-audition/**`, not the dashboard. Each ships as an atomic commit on `recruiter-v2`.
 
-- [ ] **Provenance passthrough** — the DB already has `source` + `confidence` on every `profile_fact`. Server currently drops them. Wire them through: `server/routes.ts` mapping, `Candidate` type in `client/.../BlindAudition.tsx`, expanded-facts panel renders a compact receipt ("from conversation · March 12, 2026 · high confidence"). Makes every claim inspectable.
-- [ ] **Post-reveal reflection panel** — after all three are revealed, show the fact-count distribution and close with the industry argument: "A resume would have made these three look similar. Dilly didn't. This is what the difference looks like."
-- [ ] **Live ecosystem stat in intro** — `/api/health` already returns `totalFacts`. Surface in intro: "Live from production. N facts across 3 candidates. Updated as they talk to Dilly." Makes the real-data claim tangible.
-- [ ] **Staggered reveal sequence** — "Reveal all at once" currently no-ops. Wire it to reveal cards one at a time with ~1.5–2s between each. Drama matters for the competition demo.
+- [x] **Provenance passthrough** — shipped as `45146f3`. Candidate type now carries a proper `ProfileFact` shape with `source`, `confidence`, `created_at`; `formatProvenance()` turns them into "From conversation with Dilly · March 12, 2026 · medium confidence" receipts under each fact, with a tiny document-icon prefix. Keeps quiet when confidence is high (default case).
+- [x] **Staggered reveal sequence** — shipped as `b4e013f`. "Reveal all at once" was a no-op; now reveals candidates with a 1.4s pause between each. The pause is where the thesis lands.
+- [x] **Post-reveal reflection panel** — shipped as `b4e013f`. Shows fact-count distribution as horizontal bars, a 3-stat row (total facts, depth spread, live profile count), and closes on a black panel: "A resume would have made these three look similar. Dilly didn't."
+- [x] **Live ecosystem stat in intro** — shipped as `0f2d773`. Pulls `totalFacts` from `/api/health` and renders as a pill with a pulsing green dot: "● Live from production · 38 facts across 3 profiles". Hidden gracefully if the DB is unreachable.
 
-### Deferred / nice-to-have
-- Saved-interests panel — `/api/blind-audition/interests?recruiter_email=...` already exists server-side; build the client surface for returning recruiters.
-- Mobile polish pass on the full flow.
-- Exportable outcome card (PNG).
+All three commits pushed to `origin/recruiter-v2` at `0f2d773`. Perplexity Labs should auto-pick up the next preview build.
+
+### Deferred / nice-to-have (next batch candidates)
+- **Saved-interests panel** — `/api/blind-audition/interests?recruiter_email=...` already exists server-side; build the client surface so returning recruiters see their candidate history.
+- **Mobile polish pass** on the full flow — verify ≤390px, fix any overflow/stacking in the role-select grid and the ReflectionPanel bars.
+- **Exportable outcome card (PNG)** — "Share this reveal" button that captures the ReflectionPanel + top 3 ranks as an image a recruiter can drop in Slack/email. Viral loop.
+- **Candidate depth comparison view** — a sticky "comparison tray" recruiters can drag candidates into for side-by-side reading.
+- **Real-time profile growth ticker** — tiny subscriber to candidate profile updates so "38 facts" becomes "39 facts" live during the demo.
+- **Lockout UX when DILLY_INTERNAL_KEY is missing** — right now the server quietly skips the notification when the key is absent; surface this on the interest-success screen so the recruiter knows whether the candidate will actually hear from them.
 
 ### 2026-04-23 — Session start
 - Audited full recruiter surface (6,550 lines across 9 files) in `dashboard/src/app/recruiter/`.
