@@ -147,6 +147,30 @@ function categoryLabel(cat: string): string {
   return map[cat] || cat;
 }
 
+// Relative time for the most recent fact timestamp in a candidate's profile.
+// Shown under the depth bar as "last grew 3d ago" — turns the live-from-prod
+// claim from a static stat into a visible freshness signal. Returns null for
+// candidates with no facts or no usable created_at values (seed fallback).
+function lastGrewRelative(facts: ProfileFact[]): string | null {
+  let maxMs = 0;
+  for (const f of facts) {
+    if (!f.created_at) continue;
+    const ms = Date.parse(f.created_at);
+    if (!isNaN(ms) && ms > maxMs) maxMs = ms;
+  }
+  if (maxMs === 0) return null;
+  const diffMs = Date.now() - maxMs;
+  const diffMin = Math.floor(diffMs / 60_000);
+  const diffHr = Math.floor(diffMs / 3_600_000);
+  const diffDay = Math.floor(diffMs / 86_400_000);
+  if (diffMin < 1) return "last grew just now";
+  if (diffMin < 60) return `last grew ${diffMin}m ago`;
+  if (diffHr < 24) return `last grew ${diffHr}h ago`;
+  if (diffDay < 7) return `last grew ${diffDay}d ago`;
+  const d = new Date(maxMs);
+  return `last grew ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
+
 // Turn the raw DB provenance fields on a fact into a human-readable receipt line.
 // Returns null when there is nothing useful to say — keeps the UI quiet for legacy
 // facts and for seed data that predates provenance tracking.
@@ -880,7 +904,7 @@ function BlindCard({
         </div>
 
         {/* Profile depth bar */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <div className="flex gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => {
               const threshold = Math.min(Math.ceil((candidate.factCount / 20) * 5), 5);
@@ -895,6 +919,19 @@ function BlindCard({
             })}
           </div>
           <span className="text-xs text-zinc-500">{candidate.depthNote}</span>
+          {(() => {
+            const rel = lastGrewRelative(candidate.allFacts);
+            if (!rel) return null;
+            return (
+              <span
+                className="text-xs text-zinc-400 flex items-center gap-1"
+                data-testid={`last-grew-${candidate.id}`}
+              >
+                <span className="text-zinc-300">·</span>
+                <span>{rel}</span>
+              </span>
+            );
+          })()}
         </div>
 
         {/* Dilly narrative */}
