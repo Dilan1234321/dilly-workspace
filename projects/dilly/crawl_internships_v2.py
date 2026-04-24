@@ -2664,6 +2664,23 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.4)
 
+    # ── TalentLyft (Eastern Europe / Balkans ATS) ───────────────────────
+    try:
+        from dilly_core.job_source_talentlyft import TALENTLYFT_COMPANIES, fetch_talentlyft_jobs
+        print(f"\n[TalentLyft] Crawling {len(TALENTLYFT_COMPANIES)} companies...")
+        for slug, (name, industry) in TALENTLYFT_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_talentlyft_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "talentlyft", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[talentlyft] load failed: {e}")
+
     # ── Zoho Recruit (India / SE Asia / MENA tech companies) ────────────
     try:
         from dilly_core.job_source_zoho import ZOHO_COMPANIES, fetch_zoho_jobs

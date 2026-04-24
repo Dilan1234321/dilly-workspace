@@ -307,6 +307,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
 
+    # TalentLyft (Eastern Europe / Balkans ATS)
+    try:
+        from dilly_core.job_source_talentlyft import fetch_all_talentlyft
+        tlyft = fetch_all_talentlyft() or []
+        inserted = sum(1 for item in tlyft if _upsert_listing(cur, item))
+        stats["sources"]["talentlyft"] = {"fetched": len(tlyft), "inserted": inserted}
+        stats["total_fetched"] += len(tlyft)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"talentlyft: {type(e).__name__}: {str(e)[:200]}")
+
     # Zoho Recruit (India/SE Asia/MENA tech companies, global SMBs)
     try:
         from dilly_core.job_source_zoho import fetch_all_zoho
