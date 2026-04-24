@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -522,9 +522,27 @@ function RoleSelectScreen({
   const [customJD, setCustomJD] = useState("");
   const [showCustom, setShowCustom] = useState(false);
 
+  // When a recruiter pastes a custom JD, pull a meaningful short title out of
+  // the first line (or first sentence) so saved-interests history shows
+  // "Senior Product Designer — FinTech" instead of a useless "Custom Role".
+  // Trims to ~60 chars to fit the list layout and stops at the first sentence
+  // boundary so multi-paragraph pastes don't produce a wall-of-text label.
+  const deriveCustomLabel = (jd: string): string => {
+    const firstLine = jd.split(/\r?\n/).map((s) => s.trim()).find((s) => s.length > 0) || "";
+    const firstSentence = firstLine.split(/(?<=[.!?])\s+/)[0] || firstLine;
+    const trimmed = firstSentence.trim().replace(/\s+/g, " ");
+    if (!trimmed) return "Custom role";
+    if (trimmed.length <= 60) return trimmed;
+    return trimmed.slice(0, 57).replace(/\s+\S*$/, "") + "…";
+  };
+
   const handleContinue = () => {
     if (showCustom && customJD.trim()) {
-      onSelectRole({ id: "custom", label: "Custom Role", description: customJD.trim() });
+      onSelectRole({
+        id: "custom",
+        label: deriveCustomLabel(customJD),
+        description: customJD.trim(),
+      });
     } else if (selectedId) {
       const role = roles.find((r) => r.id === selectedId);
       if (role) onSelectRole(role);
@@ -637,6 +655,7 @@ function InterestModal({
 }) {
   const [unlockResult, setUnlockResult] = useState<UnlockResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const queryClient = useQueryClient();
 
   const interestMutation = useMutation({
     mutationFn: () =>
@@ -651,6 +670,15 @@ function InterestModal({
       }).then((r) => r.json()),
     onSuccess: (data) => {
       setUnlockResult(data);
+      // Invalidate the saved-interests cache so the "Dilly remembers" block
+      // on role-select reflects the just-unlocked candidate the next time
+      // the recruiter visits that screen (e.g. via "Try a different role").
+      // Only invalidate when we have an email to scope the query by.
+      if (recruiter.email) {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/blind-audition/interests", recruiter.email],
+        });
+      }
     },
   });
 
