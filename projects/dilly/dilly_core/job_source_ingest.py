@@ -65,10 +65,36 @@ def _cohort_requirements_from_cohorts(cohort_ids: List[str]) -> List[Dict[str, A
     thresholds at 60 so the job shows up for anyone in the cohort who isn't
     far below average. The ATS feed layer will refine per-student.
     """
+    # Inline fallback so Railway path issues never silently drop cohort assignments.
+    _RUBRIC_FALLBACK: Dict[str, str] = {
+        "tech_software_engineering": "Software Engineering & CS",
+        "tech_data_science":         "Data Science & Analytics",
+        "tech_cybersecurity":        "Cybersecurity & IT",
+        "business_finance":          "Finance & Accounting",
+        "business_consulting":       "Consulting & Strategy",
+        "business_marketing":        "Marketing & Advertising",
+        "business_accounting":       "Finance & Accounting",
+        "pre_health":                "Healthcare & Clinical",
+        "pre_law":                   "Law & Government",
+        "science_research":          "Life Sciences & Research",
+        "health_nursing_allied":     "Healthcare & Clinical",
+        "social_sciences":           "Social Sciences & Nonprofit",
+        "humanities_communications": "Media & Communications",
+        "arts_design":               "Design & Creative Arts",
+        "quantitative_math_stats":   "Physical Sciences & Math",
+        "sport_management":          "Management & Operations",
+        "education":                 "Education & Human Development",
+        "economics_policy":          "Economics & Public Policy",
+        "biotech_pharma":            "Biotech & Pharmaceutical",
+        "life_sciences":             "Life Sciences & Research",
+        "physical_sciences":         "Physical Sciences & Math",
+        "entrepreneurship":          "Entrepreneurship & Innovation",
+    }
     try:
         from dilly_core.rubric_scorer import RUBRIC_TO_RICH_COHORT
+        RUBRIC_TO_RICH_COHORT = {**_RUBRIC_FALLBACK, **RUBRIC_TO_RICH_COHORT}
     except Exception:
-        RUBRIC_TO_RICH_COHORT = {}
+        RUBRIC_TO_RICH_COHORT = _RUBRIC_FALLBACK
     out: List[Dict[str, Any]] = []
     for cid in cohort_ids or []:
         rich = RUBRIC_TO_RICH_COHORT.get(cid)
