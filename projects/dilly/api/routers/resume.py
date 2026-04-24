@@ -4192,6 +4192,590 @@ def _get_ats_formatting(ats: str) -> str:
             "- The underlying ATS varies. Use Greenhouse rules as safe default.\n"
             "- All roles are remote. Highlight remote-work readiness."
         ),
+        # ── New ATS crawlers (JazzHR, Recruitee, BreezyHR, Pinpoint) ──────────
+        'pinpoint': (
+            "ATS: Pinpoint (pinpointhq.com).\n"
+            + BASELINE + "\n"
+            "- Pinpoint parses Docx well; standard single-column layout safest.\n"
+            "- Section headers: EDUCATION, EXPERIENCE, SKILLS — title case OK.\n"
+            "- UK-based ATS: include UK date format if applying to UK company (DD/MM/YYYY).\n"
+            "- 'About Me' or 'Profile' summary section is common — keep to 2-3 sentences.\n"
+            "- Avoid tables, text boxes, and graphics.\n"
+            "AVOID: US-only date formats for UK roles, excessive abbreviations."
+        ),
+        # ── Niche / less-common ATSs ─────────────────────────────────────────
+        'comeet': (
+            "ATS: Comeet (comeet.co).\n"
+            + BASELINE + "\n"
+            "- Comeet parses standard PDFs and Word docs cleanly.\n"
+            "- Uses structured data fields — ensure company, title, dates are clearly delineated.\n"
+            "- Popular with Israeli-American tech companies. Mirror tech keywords from JD.\n"
+            "- Single-column layout; standard fonts (Arial, Calibri).\n"
+            "AVOID: multi-column layouts, images, creative formatting."
+        ),
+        'fountain': (
+            "ATS: Fountain (getfountain.com).\n"
+            + BASELINE + "\n"
+            "- Fountain is for hourly/frontline workers — mobile-first application flow.\n"
+            "- Keep resume to 1 page maximum. Bullet points are read on small screens.\n"
+            "- Availability, shift preferences, and location are weighted heavily.\n"
+            "- Lead with relevant certifications (food handler, safety, etc.) if applicable.\n"
+            "- Skills section should include physical/operational skills, not just software.\n"
+            "AVOID: overly formal language, lengthy summaries, dense paragraphs."
+        ),
+        'teamtailor': (
+            "ATS: Teamtailor (teamtailor.com).\n"
+            + BASELINE + "\n"
+            "- Teamtailor parses PDFs reliably; standard reverse-chronological format.\n"
+            "- Popular in Scandinavia/Europe — culture fit and personality are valued.\n"
+            "- Brief personal summary (2-3 sentences) encouraged; mirror company culture language.\n"
+            "- Dates: YYYY-MM or Month YYYY format. Ensure each role has clear start/end.\n"
+            "- Skills tags in Teamtailor UI supplement the resume — keep Skills section brief.\n"
+            "AVOID: US-centric formatting for EU roles, salary expectations in resume."
+        ),
+        'paycor': (
+            "ATS: Paycor / Newton ATS (paycor.com).\n"
+            + BASELINE + "\n"
+            "- Paycor/Newton parses standard resume formats. PDF preferred.\n"
+            "- Dates must be explicit: Jan 2024 - Dec 2024 or 01/2024 - 12/2024.\n"
+            "- Education section: include GPA if above 3.0; expected graduation date if student.\n"
+            "- Mid-market company ATS — standard professional formatting expected.\n"
+            "AVOID: creative layouts, ambiguous date ranges."
+        ),
+        'talentreef': (
+            "ATS: TalentReef (talentreef.com) by Mitratech.\n"
+            + BASELINE + "\n"
+            "- TalentReef is common in food service, retail, and hospitality.\n"
+            "- 1 page maximum. List relevant service/retail experience prominently.\n"
+            "- Certifications (ServSafe, alcohol service, etc.) should be near top.\n"
+            "- Availability and shift flexibility are key differentiators — mention in summary.\n"
+            "AVOID: long academic-style bullets, heavy technical jargon."
+        ),
+        'trakstar': (
+            "ATS: Trakstar Hire (trakstarhire.com).\n"
+            + BASELINE + "\n"
+            "- Trakstar parses PDFs and Word docs. Standard formatting required.\n"
+            "- Used by mid-size SMBs; professional yet approachable tone works well.\n"
+            "- Include a 2-3 sentence objective/summary — Trakstar's UI shows it prominently.\n"
+            "- Skills section: list both hard and soft skills relevant to role.\n"
+            "AVOID: infographic resumes, multiple columns."
+        ),
+        'hirevue': (
+            "ATS: HireVue / Modern Hire (hirevue.com).\n"
+            + BASELINE + "\n"
+            "- HireVue is used by large enterprises (Unilever, Goldman Sachs, etc.).\n"
+            "- Resume is parsed then reviewed alongside video interview — keep it clean.\n"
+            "- Use strong, specific bullet points — quantify every achievement.\n"
+            "- Keywords from JD are critical — HireVue uses NLP to score keyword match.\n"
+            "- Education section: degree, institution, graduation year, GPA if 3.0+.\n"
+            "AVOID: vague bullets, passive language, missing quantified impact."
+        ),
+        'applicantpro': (
+            "ATS: ApplicantPro (applicantpro.com).\n"
+            + BASELINE + "\n"
+            "- Common in SMBs, healthcare, and government contracting.\n"
+            "- Standard chronological format; PDF or Word both accepted.\n"
+            "- Certification and license fields are parsed separately — include dates.\n"
+            "- Skills section with specific keywords increases parse score.\n"
+            "AVOID: ambiguous dates, missing job titles."
+        ),
+        'isolved': (
+            "ATS: isolved Hire (isolved.com).\n"
+            + BASELINE + "\n"
+            "- isolved is common in SMBs replacing manual HR processes.\n"
+            "- Standard single-column resume. Clear date ranges for each position.\n"
+            "- Education: degree, major, institution, graduation year required.\n"
+            "- Brief skills list improves keyword matching in isolved's search.\n"
+            "AVOID: complex formatting, missing contact information."
+        ),
+        'avionte': (
+            "ATS: Avionte (avionte.com) — staffing and workforce management.\n"
+            + BASELINE + "\n"
+            "- Avionte is primarily used by staffing agencies.\n"
+            "- Tailor resume to the specific placement — mention availability and flexibility.\n"
+            "- W2 vs 1099 preference can matter — clarify if it's a contract role.\n"
+            "- Technical skills should match the job order requirements exactly.\n"
+            "AVOID: objective statements unrelated to the specific placement."
+        ),
+        'paradox': (
+            "ATS: Paradox / Olivia AI (paradox.ai) — conversational AI recruiter.\n"
+            + BASELINE + "\n"
+            "- Paradox uses AI/chatbot to pre-screen — resume may be parsed via chat.\n"
+            "- Common in retail, food service, healthcare (McDonald's, Delta, etc.).\n"
+            "- Keep resume simple: 1 page, clean formatting, easy-to-parse dates.\n"
+            "- Paradox extracts structured data fields — ensure every section is explicit.\n"
+            "- Availability is a critical field — mention shift flexibility in summary.\n"
+            "AVOID: tables, multi-column layouts, missing contact fields."
+        ),
+        'testgorilla': (
+            "ATS: TestGorilla (testgorilla.com) — skills-based hiring.\n"
+            + BASELINE + "\n"
+            "- TestGorilla emphasizes skills assessments over traditional resume screening.\n"
+            "- Resume is secondary to test scores — still needs to pass initial screen.\n"
+            "- List technical skills explicitly; they will be assessed.\n"
+            "- Include any certifications or credentials that validate your skill claims.\n"
+            "AVOID: inflated skills claims — you will be tested on them."
+        ),
+        'codility': (
+            "ATS: Codility (codility.com) — technical screening platform.\n"
+            + BASELINE + "\n"
+            "- Codility is primarily a coding assessment platform, not a full ATS.\n"
+            "- Resume is reviewed alongside Codility test score — coding ability is primary.\n"
+            "- List programming languages and frameworks explicitly in Skills section.\n"
+            "- Include GitHub profile, notable projects, or open-source contributions.\n"
+            "- Education: CS/STEM degree or equivalent bootcamp/self-taught experience.\n"
+            "AVOID: vague 'familiar with' language — state proficiency levels clearly."
+        ),
+        'hackerrank': (
+            "ATS: HackerRank for Work (hackerrank.com) — technical assessment platform.\n"
+            + BASELINE + "\n"
+            "- HackerRank is a coding assessment platform — resume reviewed with test scores.\n"
+            "- Programming languages and data structures knowledge are primary filters.\n"
+            "- List technologies from the JD explicitly; these map to assessment topics.\n"
+            "- GitHub link, competitive programming stats, and projects all add signal.\n"
+            "AVOID: omitting relevant technical skills or language proficiency levels."
+        ),
+        'toggl_hire': (
+            "ATS: Toggl Hire (togglhire.com) — skills-first screening.\n"
+            + BASELINE + "\n"
+            "- Toggl Hire leads with skills tests before resume review.\n"
+            "- Resume is reviewed after passing initial skill screen — standard format.\n"
+            "- Async video questions may supplement written application.\n"
+            "- Skills section: be specific about tools and proficiency levels.\n"
+            "AVOID: keyword stuffing — you will be tested on what you claim."
+        ),
+        'harver': (
+            "ATS: Harver (harver.com) — predictive hiring platform.\n"
+            + BASELINE + "\n"
+            "- Harver uses assessments (cognitive, personality, situational) alongside resume.\n"
+            "- Common in retail, contact centers, financial services.\n"
+            "- Resume parsing is secondary to assessment scores.\n"
+            "- List relevant customer service or operational experience prominently.\n"
+            "AVOID: resume padding — Harver assessments will identify mismatches."
+        ),
+        'vincere': (
+            "ATS: Vincere (vincere.io) — recruitment agency CRM/ATS.\n"
+            + BASELINE + "\n"
+            "- Vincere is used by staffing and executive search firms.\n"
+            "- Recruiters using Vincere search by keyword — optimize Skills section.\n"
+            "- Include all relevant technologies, tools, and methodologies explicitly.\n"
+            "- Certifications and professional memberships are important to list.\n"
+            "AVOID: vague descriptions of past responsibilities without specifics."
+        ),
+        'recruit_crm': (
+            "ATS: Recruit CRM (recruitcrm.io) — recruitment agency platform.\n"
+            + BASELINE + "\n"
+            "- Recruit CRM is used by boutique recruiting firms and headhunters.\n"
+            "- Recruiter will search by keywords — make Skills section comprehensive.\n"
+            "- Years of experience per technology or domain should be explicit.\n"
+            "- Include industry certifications and professional credentials.\n"
+            "AVOID: missing technical keywords that match your expertise level."
+        ),
+        'hirehive': (
+            "ATS: HireHive (hirehive.com).\n"
+            + BASELINE + "\n"
+            "- HireHive is used by European SMBs and startups.\n"
+            "- Standard chronological format; clean PDF is preferred.\n"
+            "- Cover letter functionality is prominent in HireHive — tailor carefully.\n"
+            "- Skills tags in the platform supplement resume — keep Skills section clean.\n"
+            "AVOID: US-specific formatting conventions for EU roles."
+        ),
+        'tracker_rms': (
+            "ATS: Tracker RMS (tracker-rms.com) — staffing agency ATS.\n"
+            + BASELINE + "\n"
+            "- Tracker RMS is common in UK and North American staffing firms.\n"
+            "- Skills and keyword density matter — include all relevant technologies.\n"
+            "- Availability, notice period, and contract preferences should be clear.\n"
+            "- Include professional references section or note 'References available'.\n"
+            "AVOID: unexplained employment gaps without context."
+        ),
+        'ceipal': (
+            "ATS: CEIPAL (ceipal.com) — AI-powered talent management.\n"
+            + BASELINE + "\n"
+            "- CEIPAL is common in IT staffing firms and government contractors.\n"
+            "- AI parses for keywords — match JD language exactly in your Skills section.\n"
+            "- Work authorization status (H1B, OPT, GC, Citizen) is often a required field.\n"
+            "- Include all relevant certifications: AWS, Azure, GCP, PMP, etc.\n"
+            "AVOID: omitting technical stack details or years of experience per skill."
+        ),
+        'talentsoft': (
+            "ATS: Cegid Talentsoft (talentsoft.com).\n"
+            + BASELINE + "\n"
+            "- Cegid Talentsoft is common in European enterprises (especially France).\n"
+            "- PDF format preferred; standard chronological layout.\n"
+            "- French employers: include nationality, driving license if relevant.\n"
+            "- Language skills should be explicitly listed with proficiency level.\n"
+            "- For non-French companies: standard international format applies.\n"
+            "AVOID: photos or personal info not legally required in target country."
+        ),
+        'prismhr': (
+            "ATS: PrismHR (prismhr.com) — PEO and HR service bureau ATS.\n"
+            + BASELINE + "\n"
+            "- PrismHR is used by PEO (Professional Employer Organization) firms.\n"
+            "- Standard chronological resume; clean formatting for ATS parsing.\n"
+            "- Include specific job titles and tenure clearly — PEO tracks these.\n"
+            "- Benefits eligibility language can be relevant to SMB roles.\n"
+            "AVOID: inconsistent date formatting across positions."
+        ),
+        'skeeled': (
+            "ATS: Skeeled (skeeled.com) — video and AI-assisted screening.\n"
+            + BASELINE + "\n"
+            "- Skeeled combines resume screening with video interview prompts.\n"
+            "- Used by European companies (Luxembourg-based platform).\n"
+            "- Resume is reviewed alongside video responses — keep resume professional.\n"
+            "- Standard chronological format; multi-language resumes for multilingual roles.\n"
+            "AVOID: informal language or inconsistent formatting."
+        ),
+        'workbright': (
+            "ATS: WorkBright (workbright.com) — onboarding-focused platform.\n"
+            + BASELINE + "\n"
+            "- WorkBright is primarily an onboarding tool; resume matters pre-offer.\n"
+            "- Common in seasonal and high-volume hiring (camps, resorts, nonprofits).\n"
+            "- Standard 1-page resume; experience and availability are key.\n"
+            "- Certifications (CPR, First Aid, background check consent) are often required.\n"
+            "AVOID: overcomplicating the resume — hiring decisions are fast."
+        ),
+        'springrecruit': (
+            "ATS: SpringRecruit (springrecruit.com) — startup-focused free ATS.\n"
+            + BASELINE + "\n"
+            "- SpringRecruit is used by small startups and bootstrapped companies.\n"
+            "- Resume is likely reviewed directly by founder or hiring manager.\n"
+            "- Keep it concise — 1 page for 0-2 years experience, 2 pages for more.\n"
+            "- Tailor the professional summary directly to the company's mission.\n"
+            "AVOID: boilerplate language — startup hiring is personal and direct."
+        ),
+        'jobylon': (
+            "ATS: Jobylon (jobylon.com) — Scandinavian recruitment platform.\n"
+            + BASELINE + "\n"
+            "- Jobylon is used by Nordic companies (Sweden, Norway, Finland).\n"
+            "- Standard chronological resume; clean, minimalist formatting preferred.\n"
+            "- Language skills are important — list Swedish/Norwegian/Finnish if applicable.\n"
+            "- Culture fit is valued in Nordic hiring — brief personal intro works well.\n"
+            "AVOID: overly formal or hierarchical language; Nordic culture is egalitarian."
+        ),
+        'gohire': (
+            "ATS: GoHire (gohire.io) — SMB recruitment platform.\n"
+            + BASELINE + "\n"
+            "- GoHire is used by small businesses and growing startups.\n"
+            "- Hiring manager likely reviews resume directly — make it easy to scan.\n"
+            "- 1 page recommended; bullet points with clear impact.\n"
+            "- Cover letter is prominent in GoHire flow — tailor it carefully.\n"
+            "AVOID: generic summaries that don't address the specific role."
+        ),
+        'peoplefluent': (
+            "ATS: PeopleFluent (peoplefluent.com) — enterprise talent management.\n"
+            + BASELINE + "\n"
+            "- PeopleFluent is common in large enterprises and healthcare systems.\n"
+            "- Structured resume format; standard section headers parse best.\n"
+            "- Internal mobility is a focus — highlight cross-functional experience.\n"
+            "- Dates: explicit month/year for all positions.\n"
+            "AVOID: missing dates, omitting degree completion status."
+        ),
+        'silkroad': (
+            "ATS: SilkRoad (silkroad.com) — enterprise talent acquisition.\n"
+            + BASELINE + "\n"
+            "- SilkRoad is used by enterprise and government organizations.\n"
+            "- Standard chronological format; Word or PDF both acceptable.\n"
+            "- Compliance-heavy environment — include work authorization if relevant.\n"
+            "- Government/regulated industry context: clearance level can be listed.\n"
+            "AVOID: informal language, unexplained gaps without context."
+        ),
+        'exacthire': (
+            "ATS: ExactHire (exacthire.com) — SMB applicant tracking.\n"
+            + BASELINE + "\n"
+            "- ExactHire is used by US-based SMBs, especially in manufacturing and retail.\n"
+            "- Simple, clean resume format parses best.\n"
+            "- Skills section: list software tools and certifications relevant to role.\n"
+            "- Availability and start date should be noted if relevant.\n"
+            "AVOID: creative formatting, tables, text boxes."
+        ),
+        'jobscore': (
+            "ATS: JobScore (jobscore.com) — tech-focused SMB ATS.\n"
+            + BASELINE + "\n"
+            "- JobScore is used by tech startups and digital companies.\n"
+            "- Resume is likely reviewed quickly by a small team.\n"
+            "- GitHub, portfolio, or personal project links are valued for tech roles.\n"
+            "- Skills section should list specific technologies from the JD.\n"
+            "AVOID: vague technology claims without specific tool names."
+        ),
+        'crelate': (
+            "ATS: Crelate (crelate.com) — staffing and recruiting CRM.\n"
+            + BASELINE + "\n"
+            "- Crelate is used by staffing agencies and executive search firms.\n"
+            "- Recruiters search by keyword — maximize relevant keywords in Skills section.\n"
+            "- Years of experience per skill/technology should be explicit.\n"
+            "- Professional certifications and industry memberships are valued.\n"
+            "AVOID: omitting specific technical skills that match your actual experience."
+        ),
+        'broadbean': (
+            "ATS: Broadbean (broadbean.com) — job distribution and ATS.\n"
+            + BASELINE + "\n"
+            "- Broadbean distributes job ads widely; underlying ATS varies by employer.\n"
+            "- Use Greenhouse rules as a safe default for the resume format.\n"
+            "- Standard reverse-chronological, single-column PDF is most widely parsed.\n"
+            "- Include all relevant keywords from JD since source ATS is uncertain.\n"
+            "AVOID: unusual formatting — the parsing engine is unknown."
+        ),
+        'ismartrecruit': (
+            "ATS: iSmartRecruit (ismartrecruit.com).\n"
+            + BASELINE + "\n"
+            "- iSmartRecruit is used by staffing firms and HR consultancies.\n"
+            "- AI-powered keyword matching — include skills from JD verbatim.\n"
+            "- Indian market focus but serves global clients.\n"
+            "- Work authorization and visa status are often explicit fields.\n"
+            "AVOID: missing technical keywords or vague role descriptions."
+        ),
+        'hirebridge': (
+            "ATS: Hirebridge (hirebridge.com).\n"
+            + BASELINE + "\n"
+            "- Hirebridge is used by government contractors and federal agencies.\n"
+            "- Strict EEO compliance context — do not include photo, age, or personal details.\n"
+            "- List relevant clearances, certifications, and compliance credentials.\n"
+            "- Federal resume style acceptable for government roles (longer, more detailed).\n"
+            "AVOID: information that could introduce bias (photo, marital status, age)."
+        ),
+        'mystaffingpro': (
+            "ATS: myStaffingPro (mystaffingpro.com).\n"
+            + BASELINE + "\n"
+            "- myStaffingPro is used by large employers with high-volume hiring.\n"
+            "- Standard chronological format; application form supplements resume.\n"
+            "- Keywords from JD should appear naturally in bullets.\n"
+            "- Certifications and licenses are important for regulated industries.\n"
+            "AVOID: generic bullets without specifics relevant to the role."
+        ),
+        'firefish': (
+            "ATS: Firefish Software (firefishsoftware.com) — UK recruitment CRM.\n"
+            + BASELINE + "\n"
+            "- Firefish is used by UK staffing agencies and executive search firms.\n"
+            "- UK resume format: 2 pages max, no photo, concise professional summary.\n"
+            "- Keyword-heavy search by recruiters — optimize Skills section.\n"
+            "- Notice period should be explicitly stated.\n"
+            "AVOID: US-style objective statements; UK recruiters expect a professional profile."
+        ),
+        'logicmelon': (
+            "ATS: LogicMelon (logicmelon.com) — job board aggregator/ATS.\n"
+            + BASELINE + "\n"
+            "- LogicMelon aggregates to many job boards; underlying ATS varies.\n"
+            "- Use Greenhouse rules as safe default.\n"
+            "- Standard single-column PDF is most compatible across aggregated ATSs.\n"
+            "AVOID: unusual formatting — parsing target is unknown."
+        ),
+        'tempworks': (
+            "ATS: TempWorks (tempworks.com) — staffing industry ERP/ATS.\n"
+            + BASELINE + "\n"
+            "- TempWorks is used by staffing agencies for temp and contract roles.\n"
+            "- Availability, shift preferences, and pay rate expectations are key.\n"
+            "- Skills list should be comprehensive — staffing coordinators search by skill.\n"
+            "- Certifications (OSHA, forklift, CPR) important for light industrial roles.\n"
+            "AVOID: overly formal resume for blue-collar placements."
+        ),
+        'top_echelon': (
+            "ATS: Top Echelon (topechelon.com) — recruiting network and ATS.\n"
+            + BASELINE + "\n"
+            "- Top Echelon is a split-fee recruiting network; resume shared across firms.\n"
+            "- Keyword optimization critical — many recruiters search the network.\n"
+            "- All technologies, tools, and domain expertise should be in Skills section.\n"
+            "- Years of experience per skill should be explicit.\n"
+            "AVOID: vague skill descriptions without depth indicators."
+        ),
+        'saba': (
+            "ATS: Saba / Halogen TalentSpace (saba.com).\n"
+            + BASELINE + "\n"
+            "- Saba is common in large enterprises and government (healthcare, finance).\n"
+            "- Learning and development are integrated — highlight training, certifications.\n"
+            "- Standard chronological resume; Word or PDF acceptable.\n"
+            "- Internal mobility context: highlight leadership and cross-functional impact.\n"
+            "AVOID: missing professional development or certification details."
+        ),
+        'smashfly': (
+            "ATS: SmashFly / Symphony Talent (smashfly.com).\n"
+            + BASELINE + "\n"
+            "- SmashFly is a recruitment marketing CRM, often upstream of another ATS.\n"
+            "- Downstream ATS rules will apply at application — keep resume format clean.\n"
+            "- Used by large enterprise to manage candidate pipelines across ATSs.\n"
+            "- Use Greenhouse rules as safe default for the resume.\n"
+            "AVOID: unusual formatting that won't parse when forwarded to final ATS."
+        ),
+        'sensehq': (
+            "ATS: SenseHQ (sensehq.com) — AI recruiter for staffing.\n"
+            + BASELINE + "\n"
+            "- Sense is an AI communication tool used by staffing agencies.\n"
+            "- Underlying ATS varies — use Greenhouse rules as safe default.\n"
+            "- Respond quickly to Sense AI messages; candidate experience is tracked.\n"
+            "AVOID: unusual resume formatting — downstream ATS is unknown."
+        ),
+        'hireez': (
+            "ATS: HireEZ / Hiretual (hireez.com) — AI sourcing platform.\n"
+            + BASELINE + "\n"
+            "- HireEZ is a sourcing tool that finds candidates on LinkedIn and GitHub.\n"
+            "- Resume isn't directly submitted here — HireEZ sources you, then contacts you.\n"
+            "- Ensure LinkedIn profile is complete and matches resume.\n"
+            "- GitHub contributions and public projects are indexed by HireEZ.\n"
+            "AVOID: profile/resume mismatches — HireEZ cross-references public data."
+        ),
+        'entelo': (
+            "ATS: Entelo (entelo.com) — predictive talent sourcing.\n"
+            + BASELINE + "\n"
+            "- Entelo sources candidates from public profiles and data signals.\n"
+            "- Resume quality matters when they reach out — have a clean standard resume ready.\n"
+            "- LinkedIn, GitHub, and portfolio are what Entelo actually indexes.\n"
+            "AVOID: mismatch between resume and online presence."
+        ),
+        'fetcher': (
+            "ATS: Fetcher AI (fetcher.ai) — AI recruiting automation.\n"
+            + BASELINE + "\n"
+            "- Fetcher is an outbound recruiting tool; they source you, not you them.\n"
+            "- Resume for follow-up applications should match your LinkedIn profile.\n"
+            "- Technical skills and quantified accomplishments are surfaced by AI.\n"
+            "AVOID: online presence that contradicts what's on your resume."
+        ),
+        'pymetrics': (
+            "ATS: Pymetrics / Harver (pymetrics.com).\n"
+            + BASELINE + "\n"
+            "- Pymetrics uses neuroscience-based games to assess cognitive and emotional traits.\n"
+            "- Resume is secondary to game scores and trait profiles.\n"
+            "- Standard clean resume is fine — it won't heavily influence outcome.\n"
+            "- Used by Goldman Sachs, Unilever, LinkedIn — large enterprise context.\n"
+            "AVOID: gaming the neuroscience assessments — results are trait-based."
+        ),
+        'willo': (
+            "ATS: Willo Video (willo.video) — async video interview platform.\n"
+            + BASELINE + "\n"
+            "- Willo is an async video interview tool; resume submitted alongside video.\n"
+            "- Resume is a supporting document — video presentation matters more.\n"
+            "- Standard clean format; hiring manager will watch video first.\n"
+            "- Keep resume to 1 page if 0-3 years experience.\n"
+            "AVOID: inconsistency between resume claims and video content."
+        ),
+        'hireflix': (
+            "ATS: Hireflix (hireflix.com) — async video interview tool.\n"
+            + BASELINE + "\n"
+            "- Hireflix conducts one-way video interviews; resume is submitted alongside.\n"
+            "- Video and resume are reviewed together — align them carefully.\n"
+            "- Standard single-column chronological resume.\n"
+            "- Soft skills emphasized in video — let resume show technical depth.\n"
+            "AVOID: inconsistencies between resume and video interview answers."
+        ),
+        'vidcruiter': (
+            "ATS: VidCruiter (vidcruiter.com) — structured video interview platform.\n"
+            + BASELINE + "\n"
+            "- VidCruiter conducts structured live and async video interviews.\n"
+            "- Resume is reviewed before the video stage — standard ATS-friendly format.\n"
+            "- Prepare structured STAR-method answers as resume bullets reinforce those.\n"
+            "AVOID: unquantified bullets — they won't prepare you for structured interview."
+        ),
+        'myinterview': (
+            "ATS: myInterview (myinterview.com) — video interview platform.\n"
+            + BASELINE + "\n"
+            "- myInterview conducts async video pre-screens; resume submitted alongside.\n"
+            "- Both documents are evaluated — standard professional resume expected.\n"
+            "- Used widely in UK, Australia, and US SMBs.\n"
+            "AVOID: major inconsistencies between resume content and video responses."
+        ),
+        'xor_ai': (
+            "ATS: XOR AI (xor.ai) — AI recruiting chatbot.\n"
+            + BASELINE + "\n"
+            "- XOR automates pre-screening via chatbot/text/WhatsApp.\n"
+            "- Resume submitted in conjunction with chatbot screening.\n"
+            "- Keep resume clean for ATS parsing; chatbot fills in structured data.\n"
+            "- Common in healthcare, manufacturing, retail (high-volume hiring).\n"
+            "AVOID: complex resume formatting — focus on chatbot responses for screening."
+        ),
+        'testgorilla': (
+            "ATS: TestGorilla (testgorilla.com) — skills-based assessment hiring.\n"
+            + BASELINE + "\n"
+            "- Resume is reviewed alongside skills test scores.\n"
+            "- List skills explicitly — they will be assessed via TestGorilla tests.\n"
+            "- Coding, cognitive, and personality tests supplement the resume.\n"
+            "AVOID: listing skills you cannot demonstrate in a timed assessment."
+        ),
+        'vervoe': (
+            "ATS: Vervoe (vervoe.com) — AI skills assessment platform.\n"
+            + BASELINE + "\n"
+            "- Vervoe replaces early resume screening with skills simulations.\n"
+            "- Resume matters less than assessment performance for initial screening.\n"
+            "- Prepare for realistic work simulations based on role requirements.\n"
+            "- Standard clean resume is fine as supporting documentation.\n"
+            "AVOID: inflating skills — Vervoe will test them via simulations."
+        ),
+        'devskiller': (
+            "ATS: DevSkiller (devskiller.com) — tech skills testing platform.\n"
+            + BASELINE + "\n"
+            "- DevSkiller assesses coding via real-world tasks (RealLifeTesting).\n"
+            "- Resume is reviewed alongside coding challenge scores.\n"
+            "- List programming languages with specific version/framework experience.\n"
+            "- Open-source contributions and GitHub profile strengthen your application.\n"
+            "AVOID: claiming languages at proficiency levels that don't match test results."
+        ),
+        'zappyhire': (
+            "ATS: Zappyhire (zappyhire.com) — AI-powered ATS.\n"
+            + BASELINE + "\n"
+            "- Zappyhire is popular in India and emerging markets.\n"
+            "- AI resume screening with keyword matching.\n"
+            "- Include all relevant technical skills from JD verbatim.\n"
+            "- Education and certifications are weighted heavily.\n"
+            "AVOID: vague role descriptions without specifics."
+        ),
+        'talentrecruit': (
+            "ATS: TalentRecruit (talentrecruit.co.in) — Indian HR tech platform.\n"
+            + BASELINE + "\n"
+            "- TalentRecruit is common in Indian enterprises and IT companies.\n"
+            "- AI-powered screening with keyword matching.\n"
+            "- Include all technical skills, certifications, and years of experience.\n"
+            "- Work authorization (for India: PAN card, Aadhaar mention) sometimes required.\n"
+            "AVOID: omitting specific technical stack details."
+        ),
+        'x0pa': (
+            "ATS: X0PA AI (x0pa.ai) — predictive hiring platform.\n"
+            + BASELINE + "\n"
+            "- X0PA uses AI to predict role fitness — resume and online data combined.\n"
+            "- LinkedIn and other professional profiles are indexed alongside resume.\n"
+            "- Skills, certifications, and measurable achievements are key inputs.\n"
+            "AVOID: online profile mismatches — X0PA cross-references public data."
+        ),
+        'skillate': (
+            "ATS: Skillate (skillate.com) — AI hiring automation.\n"
+            + BASELINE + "\n"
+            "- Skillate uses AI resume ranking and job description matching.\n"
+            "- Keyword matching is critical — mirror JD language in resume.\n"
+            "- Structured data parsing: ensure dates, titles, company names are clear.\n"
+            "AVOID: unusual formatting that confuses AI parser."
+        ),
+        'sniper_ai': (
+            "ATS: SniperAI (sniperai.com) — AI resume matching engine.\n"
+            + BASELINE + "\n"
+            "- SniperAI uses machine learning to match resumes to job descriptions.\n"
+            "- High keyword match score is critical — include all relevant JD terms.\n"
+            "- Standard clean format ensures accurate AI parsing.\n"
+            "AVOID: creative formatting that reduces parsing accuracy."
+        ),
+        'amazinghiring': (
+            "ATS: AmazingHiring (amazinghiring.com) — tech talent sourcing.\n"
+            + BASELINE + "\n"
+            "- AmazingHiring sources tech talent from GitHub, Stack Overflow, LinkedIn.\n"
+            "- Public code contributions are as important as your resume.\n"
+            "- Ensure GitHub profile is active and includes relevant open-source work.\n"
+            "- Stack Overflow participation is indexed and signals expertise.\n"
+            "AVOID: inactive or sparse online developer profiles."
+        ),
+        'qureos': (
+            "ATS: Qureos (qureos.com) — MENA region hiring platform.\n"
+            + BASELINE + "\n"
+            "- Qureos is used in UAE, Saudi Arabia, and broader MENA region.\n"
+            "- AI-powered skills matching with regional job market focus.\n"
+            "- For MENA roles: mention language skills (Arabic, English, French).\n"
+            "- Work authorization for UAE/KSA (residence visa status) is often required.\n"
+            "AVOID: omitting language skills or regional work authorization details."
+        ),
+        'springrecruit': (
+            "ATS: SpringRecruit (springrecruit.com) — startup-focused free ATS.\n"
+            + BASELINE + "\n"
+            "- SpringRecruit is used by small startups and bootstrapped companies.\n"
+            "- Resume is likely reviewed directly by the founder or a small hiring team.\n"
+            "- Concise and direct — 1 page for early-career, 2 pages for experienced.\n"
+            "- Tailor professional summary to company mission specifically.\n"
+            "AVOID: boilerplate language that doesn't reflect genuine interest."
+        ),
     }
     # Default to Greenhouse rules — safe because ~60%+ of Dilly's jobs are
     # on Greenhouse-parsed systems (Greenhouse + Jobvite + ClearCompany use Sovren).
