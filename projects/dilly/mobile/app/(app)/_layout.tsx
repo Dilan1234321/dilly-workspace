@@ -362,6 +362,10 @@ function AppLayoutInner() {
       {/* Skills is registered above as a top-level tab. Kept the
           comment here as a breadcrumb for readers who grep. */}
       <Tabs.Screen
+        name="my-dilly-category"
+        options={{ href: null, animation: 'slide_from_right' }}
+      />
+      <Tabs.Screen
         name="raise-brief"
         options={{ href: null, animation: 'fade' }}
       />

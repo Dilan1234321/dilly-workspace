@@ -1773,28 +1773,48 @@ function SeekerProfileScreen() {
             </View>
 
             {/* Expanded category details */}
-            {expandedCat && data?.grouped?.[expandedCat] && (
-              <View style={[d.expandedFacts, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                {data.grouped[expandedCat].slice(0, 8).map((fact, i) => (
-                  <FactRow
-                    key={fact.id || i}
-                    fact={fact}
-                    color={STRENGTH_CATEGORIES[expandedCat]?.color || theme.surface.t3}
-                    onPress={(anchor) => setPopup({ visible: true, anchor, fact })}
-                  />
-                ))}
-                {/* Add new fact — manual add so free users
-                    without a resume can still populate this. */}
-                <AnimatedPressable
-                  style={[d.factRow, { borderTopWidth: 1, borderTopColor: theme.surface.border, paddingTop: 10 }]}
-                  onPress={() => openAddFactModal(expandedCat, STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat)}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="add-circle" size={16} color={theme.accent} />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>Add to {STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat}</Text>
-                </AnimatedPressable>
-              </View>
-            )}
+            {expandedCat && data?.grouped?.[expandedCat] && (() => {
+              const allFacts = [...data.grouped[expandedCat]].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              );
+              const preview = allFacts.slice(0, 5);
+              const hasMore = allFacts.length > 5;
+              const catLabel = STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat;
+              const catColor = STRENGTH_CATEGORIES[expandedCat]?.color || theme.surface.t3;
+              return (
+                <View style={[d.expandedFacts, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                  {preview.map((fact, i) => (
+                    <FactRow
+                      key={fact.id || i}
+                      fact={fact}
+                      color={catColor}
+                      onPress={(anchor) => setPopup({ visible: true, anchor, fact })}
+                    />
+                  ))}
+                  {hasMore && (
+                    <AnimatedPressable
+                      style={[d.factRow, { borderTopWidth: 1, borderTopColor: theme.surface.border, paddingTop: 10 }]}
+                      onPress={() => router.push({ pathname: '/my-dilly-category', params: { category: expandedCat, label: catLabel, color: catColor } })}
+                      scaleDown={0.97}
+                    >
+                      <Ionicons name="list" size={16} color={theme.accent} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>
+                        See all {allFacts.length} in {catLabel}
+                      </Text>
+                    </AnimatedPressable>
+                  )}
+                  {/* Add new fact */}
+                  <AnimatedPressable
+                    style={[d.factRow, { borderTopWidth: 1, borderTopColor: theme.surface.border, paddingTop: 10 }]}
+                    onPress={() => openAddFactModal(expandedCat, catLabel)}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="add-circle" size={16} color={theme.accent} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>Add to {catLabel}</Text>
+                  </AnimatedPressable>
+                </View>
+              );
+            })()}
           </FadeInView>
 
         {/* ── Recent Wins ───────────────────────────────────────

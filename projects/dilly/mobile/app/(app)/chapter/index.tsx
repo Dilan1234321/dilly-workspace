@@ -900,7 +900,7 @@ export default function ChapterSessionScreen() {
         {/* Question screen: inline chat. Renders all messages. Input
             bar is separate below so it stays above the keyboard. */}
         {isQuestion && (
-          <View style={{ gap: 10, marginTop: 8 }}>
+          <View style={{ gap: 10, marginTop: 8, alignSelf: 'stretch' }}>
             {chatMessages.map(m => (
               <View
                 key={m.id}

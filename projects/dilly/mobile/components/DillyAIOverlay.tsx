@@ -78,7 +78,7 @@ const MessageAnimIn = ({ children }: { children: React.ReactNode; index?: number
     ]).start();
   }, []);
   return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+    <Animated.View style={{ opacity, transform: [{ translateY }], alignSelf: 'stretch' }}>
       {children}
     </Animated.View>
   );
