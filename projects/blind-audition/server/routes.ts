@@ -443,6 +443,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         intro_message: intro,
       });
 
+      // Tell the client whether the notification was actually attempted. The
+      // notifyDillyOfInterest() helper silently no-ops when DILLY_INTERNAL_KEY
+      // is missing — without surfacing that, the recruiter gets a success
+      // screen even when the candidate will never hear from Dilly.
+      const notificationAttempted = Boolean(DILLY_INTERNAL_KEY);
+
       res.json({
         ok: true,
         candidate: {
@@ -452,6 +458,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           track: profile.track,
         },
         intro_message: intro,
+        notification: {
+          attempted: notificationAttempted,
+          channel: notificationAttempted ? "dilly_api" : null,
+        },
       });
     } catch (e: any) {
       console.error("interest error:", e);

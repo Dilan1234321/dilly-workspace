@@ -80,6 +80,13 @@ type SavedInterest = {
 type UnlockResult = {
   candidate: { name: string; email: string; major: string; track: string };
   intro_message: string;
+  // Whether the server actually attempted to notify the candidate through the
+  // Dilly ecosystem. `attempted: false` means DILLY_INTERNAL_KEY is not set on
+  // the server and the recruiter needs to send the intro themselves.
+  notification?: {
+    attempted: boolean;
+    channel: "dilly_api" | null;
+  };
 };
 
 type Stage = "intro" | "recruiter-setup" | "role-select" | "ranking" | "reveal";
@@ -738,6 +745,57 @@ function InterestModal({
                 </pre>
               </div>
             </div>
+
+            {/* Notification status — whether Dilly is actually going to tell
+                the candidate. Silent success here would erode trust fast. */}
+            {unlockResult.notification?.attempted === true && (
+              <div
+                className="mb-4 flex items-start gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl"
+                data-testid="notification-status-sent"
+              >
+                <svg
+                  className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  aria-hidden
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  <span className="font-semibold">Candidate being notified.</span>{" "}
+                  Dilly is sending an email and push to let them know{" "}
+                  {recruiter.name} at {recruiter.company} reached out.
+                </p>
+              </div>
+            )}
+            {unlockResult.notification?.attempted === false && (
+              <div
+                className="mb-4 flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl"
+                data-testid="notification-status-manual"
+              >
+                <svg
+                  className="w-3.5 h-3.5 text-amber-700 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  <span className="font-semibold">Auto-notify not configured on this deployment.</span>{" "}
+                  Copy the intro above and send it to the candidate directly —
+                  Dilly is not going to reach out for you this time.
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
