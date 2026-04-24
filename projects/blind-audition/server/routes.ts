@@ -216,6 +216,30 @@ function buildPayload(profile: any, roleText: string): any {
   // Build Dilly narrative — live from DB if available, otherwise synthesize
   const dillyNarrative = profile.narrative || synthesizeNarrative(profile);
 
+  // Conversation quotes — verbatim (or near-verbatim) things the candidate
+  // told Dilly AI, pulled from conversation-sourced facts. Shown to recruiters
+  // as the candidate's own voice. Prefer personality/motivation/life_context/goal
+  // categories which tend to be the most revealing about character.
+  const conversationSources = new Set(["conversation", "chat_voice", "chat_text", "voice", "chat"]);
+  const quotePriority = ["personality", "motivation", "life_context", "goal", "challenge", "achievement", "strength", "soft_skill"];
+  const firstName = (profile.revealName || "").split(" ")[0];
+  const fullName = profile.revealName || "";
+  function redactPII(text: string): string {
+    let out = text;
+    if (fullName) out = out.replace(new RegExp(`\\b${fullName}\\b`, "gi"), "this candidate");
+    if (firstName && firstName.length > 2) out = out.replace(new RegExp(`\\bMy name is ${firstName}\\b`, "gi"), "this candidate");
+    return out;
+  }
+  const conversationQuotes = profile.facts
+    .filter((f: any) => f.source && conversationSources.has(String(f.source).toLowerCase()) && f.value && f.value.length > 15)
+    .sort((a: any, b: any) => {
+      const ai = quotePriority.indexOf(a.category);
+      const bi = quotePriority.indexOf(b.category);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    })
+    .slice(0, 3)
+    .map((f: any) => ({ value: redactPII(f.value), category: f.category, label: f.label }));
+
   return {
     id: profile.email.split("@")[0].replace(/\./g, "-"),
     email: profile.email,
@@ -233,6 +257,7 @@ function buildPayload(profile: any, roleText: string): any {
     skills,
     allFacts: profile.facts.map((f: any) => ({ ...f, categoryLabel: categoryLabel(f.category) })),
     topMatches: topMatchesForRole(profile, roleText, 3),
+    conversationQuotes,
     liveFromDB: true,
   };
 }

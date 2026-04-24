@@ -53,6 +53,7 @@ type Candidate = {
   skills: string[];
   allFacts: ProfileFact[];
   topMatches?: TopMatch[];
+  conversationQuotes?: { value: string; category: string; label: string }[];
 };
 
 type RecruiterInfo = {
@@ -179,9 +180,9 @@ function formatProvenance(fact: ProfileFact): string | null {
 
   const sourceMap: Record<string, string> = {
     conversation: "conversation with Dilly",
-    chat_voice: "voice chat with Dilly",
+    chat_voice: "dilly chat with Dilly",
     chat_text: "conversation with Dilly",
-    voice: "voice chat with Dilly",
+    voice: "dilly chat with Dilly",
     chat: "conversation with Dilly",
     resume: "resume upload",
     onboarding: "onboarding answers",
@@ -1000,6 +1001,30 @@ function BlindCard({
 
         {/* Dilly narrative */}
         <p className="text-sm text-zinc-700 leading-relaxed">{candidate.dillyNarrative}</p>
+
+        {/* Direct quotes — verbatim things the candidate told Dilly AI.
+            Conversation-sourced facts surfaced as the candidate's own voice,
+            so recruiters hear how they actually talk, not a polished summary. */}
+        {candidate.conversationQuotes && candidate.conversationQuotes.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+              What they told Dilly
+            </p>
+            {candidate.conversationQuotes.slice(0, 2).map((q, i) => (
+              <blockquote
+                key={i}
+                className="pl-3 border-l-2 border-[#294199]/30"
+              >
+                <p className="text-xs text-zinc-600 italic leading-relaxed">
+                  &ldquo;{q.value}&rdquo;
+                </p>
+                <p className="text-[10px] text-zinc-400 mt-0.5 not-italic">
+                  {categoryLabel(q.category)}
+                </p>
+              </blockquote>
+            ))}
+          </div>
+        )}
 
         {/* Role-specific top matches — why Dilly ranked this candidate here */}
         {candidate.topMatches && candidate.topMatches.length > 0 && (
