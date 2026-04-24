@@ -54,6 +54,15 @@ All work below targets `projects/blind-audition/**`, not the dashboard. Each shi
 
 All three commits pushed to `origin/recruiter-v2` at `0f2d773`. Perplexity Labs should auto-pick up the next preview build.
 
+### 2026-04-23/24 — Batch 2 (after Dilan returned, said "keep going")
+All targeted at `projects/blind-audition/`. Pushed to `origin/recruiter-v2`.
+
+- [x] **Per-role top matches on each card** — `423c1a9`. Extracted `scoreFactForRole()` so per-fact scoring is shared between `scoreCandidate` and the new `topMatchesForRole`. Every card now renders a "Why Dilly ranked them here, for this role" block with green-checked bullets. Turns a ranking from "trust Dilly" into a visible evidence map.
+- [x] **Saved-interests block on role-select** — `2748614`. Returning recruiters now see the candidates they previously flagged via the existing `/api/blind-audition/interests` endpoint. Renders only when the recruiter provided an email (it's optional in setup).
+- [x] **Notification status / lockout UX** — `fc41079`. Server now returns `notification: { attempted, channel }` on the interest response. Modal renders one of two status rows: emerald "Candidate being notified" or amber "Auto-notify not configured — copy the intro and send directly." Kills the silent-failure mode when `DILLY_INTERNAL_KEY` is missing on the deployed env.
+- [x] **Mobile polish on the ranking card + ReflectionPanel** — `f4bc014`. Card header gets `min-w-0`/`truncate`/`whitespace-nowrap` so long names don't push the fit pill off screen. ReflectionPanel name column drops from `w-28` to `w-24` on mobile, count column hides the "facts" suffix at small widths.
+- [x] **"Try a different role" after reveal** — `c07b7b9`. Button at the bottom of the revealed view steps the stage machine back to role-select with recruiter info preserved. Same candidates re-scored against the new JD. The single move that viscerally proves the profile-first thesis — same person, different role, different ranking.
+
 ### Deferred / nice-to-have (next batch candidates)
 - **Saved-interests panel** — `/api/blind-audition/interests?recruiter_email=...` already exists server-side; build the client surface so returning recruiters see their candidate history.
 - **Mobile polish pass** on the full flow — verify ≤390px, fix any overflow/stacking in the role-select grid and the ReflectionPanel bars.
