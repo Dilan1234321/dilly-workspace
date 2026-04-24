@@ -3,11 +3,12 @@ import {
   View, Text, Image, Modal, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Animated, Easing, Dimensions, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, API_BASE } from '../lib/tokens';
-import { mediumHaptic } from '../lib/haptics';
+import { lightHaptic, mediumHaptic } from '../lib/haptics';
 import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
 import { computeMirrorState } from '../lib/arena/mirror-state';
@@ -316,6 +317,17 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
     })();
     return () => { cancelled = true; };
   }, [visible]);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const copyMessage = useCallback((id: number, text: string) => {
+    lightHaptic();
+    Clipboard.setStringAsync(text).catch(() => {});
+    setCopiedId(id);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 1500);
+  }, []);
+
   const [showHistory, setShowHistory] = useState(false);
   const [historyMounted, setHistoryMounted] = useState(false);
   const historySlide = useRef(new Animated.Value(0)).current; // 0 = offscreen right, 1 = visible
@@ -814,6 +826,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current = [];
       if (streamRef.current) { clearInterval(streamRef.current); streamRef.current = null; }
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       glowLoopRef.current?.stop();
     };
   }, []);
@@ -1022,29 +1035,53 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
 
             {messages.map((msg) => {
               const Wrapper = MessageAnimIn || View;
+              const isCopied = copiedId === msg.id;
               return (
               <Wrapper key={msg.id} index={msg.id}>
                 {msg.role === 'user' ? (
                   <View style={[s.msgRow, { justifyContent: 'flex-end' }]}>
-                    <View style={[s.userBubble, { backgroundColor: theme.accentSoft }]}>
-                      <Text style={[s.msgText, { color: theme.surface.t1 }]}>{msg.content}</Text>
-                    </View>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onLongPress={() => copyMessage(msg.id, msg.content)}
+                      delayLongPress={400}
+                    >
+                      <View style={[s.userBubble, { backgroundColor: theme.accentSoft }]}>
+                        <Text style={[s.msgText, { color: theme.surface.t1 }]}>{msg.content}</Text>
+                      </View>
+                    </TouchableOpacity>
+                    {isCopied && (
+                      <View style={[s.copyBadge, { backgroundColor: theme.surface.s2 }]}>
+                        <Ionicons name="checkmark" size={11} color={theme.accent} />
+                      </View>
+                    )}
                   </View>
                 ) : (
                   <View style={s.assistantBlock}>
                     <View style={s.msgRow}>
                       <View style={[s.assistantDot, { backgroundColor: theme.accent }]} />
-                      <View style={[s.assistantBubble, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                        <RichText text={msg.content} baseStyle={[s.msgText, { color: theme.surface.t1 }]} />
-                        {/* Any YouTube URL in the AI response becomes
-                            a tappable "Watch in Dilly Skills" card that
-                            routes to /skills/video/<id>. Dilly AI never
-                            sends the user out to YouTube — the whole
-                            learning experience stays in the app. */}
-                        {extractAllYouTubeIds(msg.content).map(videoId => (
-                          <SkillsVideoCard key={videoId} videoId={videoId} />
-                        ))}
-                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onLongPress={() => copyMessage(msg.id, msg.content)}
+                        delayLongPress={400}
+                        style={{ flex: 1, maxWidth: '85%' }}
+                      >
+                        <View style={[s.assistantBubble, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                          <RichText text={msg.content} baseStyle={[s.msgText, { color: theme.surface.t1 }]} />
+                          {/* Any YouTube URL in the AI response becomes
+                              a tappable "Watch in Dilly Skills" card that
+                              routes to /skills/video/<id>. Dilly AI never
+                              sends the user out to YouTube — the whole
+                              learning experience stays in the app. */}
+                          {extractAllYouTubeIds(msg.content).map(videoId => (
+                            <SkillsVideoCard key={videoId} videoId={videoId} />
+                          ))}
+                        </View>
+                      </TouchableOpacity>
+                      {isCopied && (
+                        <View style={[s.copyBadge, { backgroundColor: theme.surface.s2, alignSelf: 'flex-end', marginBottom: 6 }]}>
+                          <Ionicons name="checkmark" size={11} color={theme.accent} />
+                        </View>
+                      )}
                     </View>
                     {msg.visual && (
                       <View style={s.visualWrap}>
@@ -1365,6 +1402,7 @@ const s = StyleSheet.create({
   assistantBubble: { backgroundColor: colors.s1, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 10, paddingHorizontal: 14, maxWidth: '80%', flexShrink: 1, borderWidth: 1, borderColor: colors.b1 },
   msgText: { color: colors.t1, fontSize: 15, lineHeight: 22 },
   assistantDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD, marginBottom: 8, flexShrink: 0 },
+  copyBadge: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 4, marginBottom: 4 },
   typingBubble: { backgroundColor: colors.s1, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 16, height: 42, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.b1 },
   typingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD },
   inputBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.b1 },

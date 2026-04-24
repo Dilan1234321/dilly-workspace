@@ -46,7 +46,8 @@ export type AccentId =
 
 export type SurfaceId =
   | 'cloud' | 'cream' | 'slate' | 'midnight'
-  | 'sky' | 'blush' | 'mint' | 'lavender' | 'butter';
+  | 'sky' | 'blush' | 'mint' | 'lavender' | 'butter'
+  | 'darkblue' | 'oled' | 'carbon' | 'cocoa';
 export type ShapeId = 'sharp' | 'standard' | 'rounded' | 'pill';
 export type TypeId = 'dilly' | 'modern' | 'editorial' | 'playful';
 export type DensityId = 'comfortable' | 'compact';
@@ -62,6 +63,9 @@ export interface ThemeConfig {
   /** When true, surface resolves to 'midnight' whenever the system
       is in dark mode. When false, the user's explicit surface wins. */
   autoDark: boolean;
+  /** Which dark surface to use when autoDark kicks in. Defaults to
+      'midnight'. Only dark-family surfaces are valid here. */
+  preferredDark?: SurfaceId;
 }
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -171,6 +175,32 @@ export const SURFACE_PRESETS: Record<SurfaceId, SurfacePreset> = {
     bg: '#FFF9E6', s1: '#FDF1CC', s2: '#FBE8AE', s3: '#F6D97E',
     t1: '#3B2A05', t2: 'rgba(59,42,5,0.60)', t3: 'rgba(59,42,5,0.35)',
     border: 'rgba(59,42,5,0.12)',
+  },
+  // ── Extra dark surfaces ───────────────────────────────────────────
+  // Only selectable in Customize Dilly. Each is a complete token set.
+  darkblue: {
+    id: 'darkblue', label: 'Dark Blue', dark: true,
+    bg: '#071329', s1: '#0D1F3C', s2: '#132850', s3: '#1C3566',
+    t1: '#E8F0FF', t2: 'rgba(232,240,255,0.62)', t3: 'rgba(232,240,255,0.38)',
+    border: 'rgba(232,240,255,0.09)',
+  },
+  oled: {
+    id: 'oled', label: 'OLED Black', dark: true,
+    bg: '#000000', s1: '#0C0C0C', s2: '#141414', s3: '#1E1E1E',
+    t1: '#FFFFFF', t2: 'rgba(255,255,255,0.65)', t3: 'rgba(255,255,255,0.40)',
+    border: 'rgba(255,255,255,0.09)',
+  },
+  carbon: {
+    id: 'carbon', label: 'Carbon', dark: true,
+    bg: '#111318', s1: '#1A1D24', s2: '#22262F', s3: '#2C3039',
+    t1: '#E6EDF3', t2: 'rgba(230,237,243,0.62)', t3: 'rgba(230,237,243,0.38)',
+    border: 'rgba(230,237,243,0.09)',
+  },
+  cocoa: {
+    id: 'cocoa', label: 'Cocoa', dark: true,
+    bg: '#130F0C', s1: '#1E1814', s2: '#28201B', s3: '#332822',
+    t1: '#F5EFE8', t2: 'rgba(245,239,232,0.62)', t3: 'rgba(245,239,232,0.38)',
+    border: 'rgba(245,239,232,0.09)',
   },
 };
 
@@ -306,11 +336,41 @@ function darken(hex: string, amount: number = 0.15): string {
   return `#${[r, g, b].map(n => n.toString(16).padStart(2, '0')).join('')}`;
 }
 
+/** Relative luminance of a hex color (WCAG formula). Returns 0–1. */
+function relativeLuminance(hex: string): number {
+  const m = /^#?([a-f\d]{6})$/i.exec(hex);
+  if (!m) return 0.5;
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const r = toLinear(parseInt(m[1].slice(0, 2), 16));
+  const g = toLinear(parseInt(m[1].slice(2, 4), 16));
+  const b = toLinear(parseInt(m[1].slice(4, 6), 16));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 export function resolveTheme(config: ThemeConfig, systemIsDark: boolean): ResolvedTheme {
   const shouldForceDark = config.autoDark && systemIsDark;
-  const surfaceId: SurfaceId = shouldForceDark ? 'midnight' : config.surface;
+  let surfaceId: SurfaceId;
+  if (shouldForceDark) {
+    // Use the user's preferred dark surface, defaulting to midnight.
+    const preferred = config.preferredDark ?? 'midnight';
+    surfaceId = SURFACE_PRESETS[preferred]?.dark ? preferred : 'midnight';
+  } else {
+    surfaceId = config.surface;
+  }
   const surface = SURFACE_PRESETS[surfaceId];
-  const accent = accentFor(config.accent);
+
+  // Resolve the accent. When the surface is dark and the chosen accent
+  // is very dark (luminance < 0.05 — covers graphite, navy, and any
+  // near-black the user might have picked), flip it to white so it
+  // remains visible. We do this in the resolution layer only — the
+  // stored config is never mutated, so it auto-reverts on light mode.
+  const rawAccent = accentFor(config.accent);
+  const accent = (surface.dark && relativeLuminance(rawAccent) < 0.05)
+    ? '#FFFFFF'
+    : rawAccent;
 
   // Flip the global `colors` Proxy to dark when the resolved surface
   // is dark. Every file that reads `colors.t1` / `colors.bg` will now
@@ -378,6 +438,11 @@ async function _hydrate() {
   try {
     const { dilly } = await import('../lib/dilly');
     const profile: any = await dilly.get('/profile');
+    // Cache slim profile signals for client-side splash greeting rotation.
+    try {
+      const { cacheProfileSlim } = await import('../lib/profileCache');
+      cacheProfileSlim(profile).catch(() => {});
+    } catch {}
     const serverTheme = profile?.theme;
     if (serverTheme && typeof serverTheme === 'object') {
       const merged = { ...DEFAULT_CONFIG, ..._config, ...serverTheme };

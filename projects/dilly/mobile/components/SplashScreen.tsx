@@ -15,6 +15,7 @@ import { colors, API_BASE } from '../lib/tokens';
 import { useResolvedTheme } from '../hooks/useTheme';
 import { getToken } from '../lib/auth';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
+import { pickSplashGreeting } from '../lib/splashVariants';
 
 const { height: H } = Dimensions.get('window');
 const GOLD  = '#2B3A8E';
@@ -146,33 +147,55 @@ export default function SplashScreen({ onDismiss }: Props) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const token = await getToken();
-        const res = await fetch(`${API_BASE}/profile/splash-state`, {
-          headers: { Authorization: `Bearer ${token ?? ''}` },
-        });
-        if (!res.ok) throw new Error('failed');
-        const data: SplashState = await res.json();
-        if (!cancelled) { setSplashData(data); setFetchDone(true); }
-      } catch {
-        if (!cancelled) {
-          setSplashData({
-            state: 'fallback',
-            eyebrow: 'WELCOME BACK',
-            eyebrow_color: 'gold',
-            eyebrow_pulse: false,
-            headline: 'Your career center is ready.',
-            headline_gold: 'career center is ready.',
-            sub: 'Pick up where you left off.',
-            cta_primary: 'Talk to Dilly →',
-            cta_route: '/(app)',
-            cta_context: '',
-            glow_color: 'gold',
-            voice_prompt: null,
+      // 1. Try a local greeting variant immediately — no network, no skeleton.
+      //    This runs in parallel with the backend fetch so there's no added delay.
+      const [localGreeting, backendResult] = await Promise.allSettled([
+        pickSplashGreeting(),
+        (async () => {
+          const token = await getToken();
+          const res = await fetch(`${API_BASE}/profile/splash-state`, {
+            headers: { Authorization: `Bearer ${token ?? ''}` },
           });
-          setFetchDone(true);
-        }
-      }
+          if (!res.ok) throw new Error('failed');
+          return (await res.json()) as SplashState;
+        })(),
+      ]);
+
+      if (cancelled) return;
+
+      const greeting = localGreeting.status === 'fulfilled' ? localGreeting.value : null;
+      const backend  = backendResult.status  === 'fulfilled' ? backendResult.value  : null;
+
+      // Prefer backend CTA/route/voice_prompt but override headline/sub/eyebrow
+      // with the locally-rotated variant so users see something fresh each open.
+      const base: SplashState = backend ?? {
+        state: 'fallback',
+        eyebrow: 'WELCOME BACK',
+        eyebrow_color: 'gold',
+        eyebrow_pulse: false,
+        headline: 'Your career center is ready.',
+        headline_gold: 'career center is ready.',
+        sub: 'Pick up where you left off.',
+        cta_primary: 'Talk to Dilly →',
+        cta_route: '/(app)',
+        cta_context: '',
+        glow_color: 'gold',
+        voice_prompt: null,
+      };
+
+      setSplashData(greeting
+        ? {
+            ...base,
+            eyebrow: greeting.eyebrow,
+            eyebrow_color: greeting.eyebrow_color,
+            eyebrow_pulse: false,
+            headline: greeting.headline,
+            headline_gold: greeting.headline_gold,
+            sub: greeting.sub,
+          }
+        : base
+      );
+      setFetchDone(true);
     })();
     return () => { cancelled = true; };
   }, []);

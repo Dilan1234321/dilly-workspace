@@ -342,42 +342,55 @@ function AccentPanel({ pending, patch, theme }: AxisProps) {
 function SurfacePanel({ pending, patch, theme }: AxisProps) {
   // Appearance mode — Auto / Light / Dark.
   // Auto   = autoDark=true + whatever light surface the user picked
-  // Light  = autoDark=false + user's light surface (never midnight)
-  // Dark   = autoDark=false + surface='midnight' (overrides light pick)
+  // Light  = autoDark=false + user's light surface (never a dark surface)
+  // Dark   = autoDark=false + a dark surface
+  const darkSurfaces = Object.values(SURFACE_PRESETS).filter(sp => sp.dark);
+  const lightSurfaces = Object.values(SURFACE_PRESETS).filter(sp => !sp.dark);
+  const currentIsDark = SURFACE_PRESETS[pending.surface]?.dark ?? false;
+
   const mode: 'auto' | 'light' | 'dark' =
     pending.autoDark ? 'auto'
-    : pending.surface === 'midnight' ? 'dark'
+    : currentIsDark ? 'dark'
     : 'light';
+
+  // Which dark surface is active. In 'dark' mode it's pending.surface;
+  // in 'auto' mode it's preferredDark (or midnight if unset).
+  const activeDarkId: SurfaceId =
+    mode === 'dark' ? pending.surface
+    : (pending.preferredDark ?? 'midnight');
 
   function setMode(m: 'auto' | 'light' | 'dark') {
     if (m === 'auto') {
-      // Going to auto: keep the user's chosen light surface if they
-      // had one. If they're currently on midnight, fall back to cloud.
       patch({
         autoDark: true,
-        surface: pending.surface === 'midnight' ? 'cloud' : pending.surface,
+        surface: currentIsDark ? 'cloud' : pending.surface,
       });
     } else if (m === 'light') {
       patch({
         autoDark: false,
-        surface: pending.surface === 'midnight' ? 'cloud' : pending.surface,
+        surface: currentIsDark ? 'cloud' : pending.surface,
       });
     } else {
-      patch({ autoDark: false, surface: 'midnight' });
+      // Switch to dark: pick the user's preferred dark surface or midnight
+      patch({ autoDark: false, surface: pending.preferredDark ?? 'midnight' });
     }
   }
 
-  // Swatches shown depend on mode. Dark mode only has one surface
-  // (Midnight) so we collapse to that. Light/Auto show all the
-  // light-family surfaces (Cloud, Cream, Slate + 5 pastels).
-  const lightSurfaces = Object.values(SURFACE_PRESETS).filter(sp => !sp.dark);
+  function pickDarkSurface(id: SurfaceId) {
+    if (mode === 'dark') {
+      patch({ surface: id, preferredDark: id });
+    } else {
+      // In auto mode, set preferredDark so it applies when system goes dark
+      patch({ preferredDark: id });
+    }
+  }
+
   const showLightGrid = mode !== 'dark';
+  const showDarkGrid  = mode === 'dark' || mode === 'auto';
 
   return (
     <View style={{ gap: 12, paddingHorizontal: 14 }}>
-      {/* Three-way toggle — Auto / Light / Dark. Pill buttons with
-          the active one tinted accent. Always rendered so the user
-          sees the other options even if they haven't flipped them. */}
+      {/* Three-way toggle */}
       <View style={s.segRow}>
         {(['auto', 'light', 'dark'] as const).map(m => {
           const active = mode === m;
@@ -401,15 +414,13 @@ function SurfacePanel({ pending, patch, theme }: AxisProps) {
       </View>
       <Text style={s.segHint}>
         {mode === 'auto'
-          ? 'Follows your phone. Dark when your phone is dark, light when light.'
+          ? 'Follows your phone. Pick which dark theme below.'
           : mode === 'light'
-            ? 'Always light. Pick a light surface below.'
-            : 'Always dark. Midnight surface active.'}
+            ? 'Always light. Pick a surface below.'
+            : 'Always dark. Pick a dark theme below.'}
       </Text>
 
-      {/* Light-surface grid. Horizontal scroll so all 8 light
-          surfaces (Cloud, Cream, Slate + 5 pastels) are reachable
-          without wrapping into many rows. */}
+      {/* Light surface grid */}
       {showLightGrid && (
         <View>
           <ScrollView
@@ -441,14 +452,39 @@ function SurfacePanel({ pending, patch, theme }: AxisProps) {
         </View>
       )}
 
-      {/* Dark mode explanation when Dark is picked. No grid — there's
-          only one dark surface for v1 (Midnight). */}
-      {mode === 'dark' && (
-        <View style={[s.surfaceCard, { backgroundColor: '#0B0F1E', minWidth: '100%' }]}>
-          <View style={[s.surfaceChip, { backgroundColor: '#1D2340' }]} />
-          <View style={[s.surfaceChip, { backgroundColor: '#151A2E', width: '70%' }]} />
-          <Text style={[s.surfaceLabel, { color: '#E8EAF4' }]}>Midnight</Text>
-          <Text style={[s.surfaceSubLabel, { color: 'rgba(232,234,244,0.6)' }]}>DARK</Text>
+      {/* Dark surface grid — shown in both Dark and Auto modes */}
+      {showDarkGrid && (
+        <View>
+          {mode === 'auto' && (
+            <Text style={[s.segHint, { marginBottom: 6 }]}>When dark, use:</Text>
+          )}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+          >
+            {darkSurfaces.map(sp => {
+              const selected = activeDarkId === sp.id;
+              return (
+                <AnimatedPressable
+                  key={sp.id}
+                  style={[
+                    s.surfaceCard,
+                    { backgroundColor: sp.bg, borderColor: selected ? '#FFFFFF' : 'rgba(255,255,255,0.15)', minWidth: 92 },
+                    selected && { borderWidth: 2 },
+                  ]}
+                  onPress={() => pickDarkSurface(sp.id as SurfaceId)}
+                  scaleDown={0.96}
+                >
+                  <View style={[s.surfaceChip, { backgroundColor: sp.s2 }]} />
+                  <View style={[s.surfaceChip, { backgroundColor: sp.s1, width: '70%' }]} />
+                  <Text style={[s.surfaceLabel, { color: sp.t1 }]}>{sp.label}</Text>
+                  <Text style={[s.surfaceSubLabel, { color: sp.t2 }]}>DARK</Text>
+                </AnimatedPressable>
+              );
+            })}
+          </ScrollView>
+          <Text style={s.scrollHint}>Swipe for more →</Text>
         </View>
       )}
     </View>
