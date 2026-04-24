@@ -95,8 +95,12 @@ app.use((req, res, next) => {
   httpServer.listen(
     {
       port,
-      host: "0.0.0.0",
-      reusePort: true,
+      host: process.env.HOST || "0.0.0.0",
+      // SO_REUSEPORT is Linux-only. Enabling it on macOS or Windows throws
+      // ENOTSUP when the server tries to bind. Only enable in production
+      // Linux environments where multi-process port sharing is the whole
+      // point.
+      ...(process.platform === "linux" ? { reusePort: true } : {}),
     },
     () => {
       log(`serving on port ${port}`);
