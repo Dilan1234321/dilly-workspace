@@ -11,6 +11,19 @@ type RolePreset = {
   description: string;
 };
 
+// Every profile fact carries its own receipt: where it came from (source) and how
+// confident Dilly is in it. This provenance is what makes the profile inspectable
+// in a way a resume never is — every claim has a timestamp and a trail.
+type ProfileFact = {
+  category: string;
+  label: string;
+  value: string;
+  source?: string | null;
+  confidence?: string | null;
+  created_at?: string | null;
+  categoryLabel?: string;
+};
+
 type Candidate = {
   id: string;
   email: string;
@@ -26,7 +39,7 @@ type Candidate = {
   achievements: { label: string; value: string }[];
   projects: { label: string; value: string }[];
   skills: string[];
-  allFacts: { category: string; label: string; value: string }[];
+  allFacts: ProfileFact[];
 };
 
 type RecruiterInfo = {
@@ -96,6 +109,58 @@ function categoryLabel(cat: string): string {
     hobby: "Hobby",
   };
   return map[cat] || cat;
+}
+
+// Turn the raw DB provenance fields on a fact into a human-readable receipt line.
+// Returns null when there is nothing useful to say — keeps the UI quiet for legacy
+// facts and for seed data that predates provenance tracking.
+function formatProvenance(fact: ProfileFact): string | null {
+  const parts: string[] = [];
+
+  const sourceMap: Record<string, string> = {
+    conversation: "conversation with Dilly",
+    chat_voice: "voice chat with Dilly",
+    chat_text: "conversation with Dilly",
+    voice: "voice chat with Dilly",
+    chat: "conversation with Dilly",
+    resume: "resume upload",
+    onboarding: "onboarding answers",
+    manual: "manually added",
+    manual_edit: "manually added",
+  };
+
+  if (fact.source) {
+    const key = String(fact.source).toLowerCase();
+    parts.push("From " + (sourceMap[key] || key.replace(/_/g, " ")));
+  } else {
+    parts.push("From Dilly");
+  }
+
+  if (fact.created_at) {
+    const d = new Date(fact.created_at);
+    if (!isNaN(d.getTime())) {
+      parts.push(
+        d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+      );
+    }
+  }
+
+  // Confidence: only surface when it's worth flagging (anything other than "high"
+  // for string values, or below 0.8 for numeric values). High confidence is the
+  // default assumption — rendering it on every row is noise.
+  const c: unknown = fact.confidence;
+  if (typeof c === "string") {
+    const lower = c.toLowerCase();
+    if (lower && lower !== "high") parts.push(`${lower} confidence`);
+  } else if (typeof c === "number" && c < 0.8) {
+    parts.push(c >= 0.5 ? "medium confidence" : "low confidence");
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 // ─── Dilly Logo ───────────────────────────────────────────────────────────────
@@ -623,18 +688,41 @@ function BlindCard({
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
                   What Dilly learned from conversations
                 </p>
-                <div className="space-y-2">
-                  {candidate.allFacts.slice(0, 8).map((fact, i) => (
-                    <div key={i} className="flex gap-2.5">
-                      <span className="text-xs font-medium text-zinc-400 pt-0.5 flex-shrink-0 w-20">
-                        {categoryLabel(fact.category)}
-                      </span>
-                      <p className="text-xs text-zinc-700 leading-relaxed">
-                        <span className="font-medium text-zinc-800">{fact.label}:</span>{" "}
-                        {fact.value}
-                      </p>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  {candidate.allFacts.slice(0, 8).map((fact, i) => {
+                    const receipt = formatProvenance(fact);
+                    return (
+                      <div key={i} className="flex gap-2.5">
+                        <span className="text-xs font-medium text-zinc-400 pt-0.5 flex-shrink-0 w-20">
+                          {categoryLabel(fact.category)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-zinc-700 leading-relaxed">
+                            <span className="font-medium text-zinc-800">{fact.label}:</span>{" "}
+                            {fact.value}
+                          </p>
+                          {receipt && (
+                            <p className="mt-1 text-[10px] text-zinc-400 leading-snug flex items-center gap-1">
+                              <svg
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                aria-hidden
+                                className="flex-shrink-0"
+                              >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                              <span>{receipt}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                   {candidate.factCount === 0 && (
                     <p className="text-xs text-zinc-400 italic">
                       No conversations with Dilly yet.
