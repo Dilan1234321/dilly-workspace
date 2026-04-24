@@ -326,8 +326,37 @@ def _run_recompute_matches() -> None:
         traceback.print_exc()
 
 
+def _run_startup_migrations() -> None:
+    """Run idempotent ALTER TABLE migrations on every startup.
+
+    All statements use IF NOT EXISTS / COALESCE so they are safe to run
+    repeatedly. This ensures a fresh Railway deploy never crashes because a
+    migration endpoint wasn't manually triggered after the deploy.
+    """
+    try:
+        from projects.dilly.api.database import get_db
+        _MIGRATIONS = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type TEXT DEFAULT 'student'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_domain TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_verified_at TIMESTAMPTZ",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_logo_url TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_jobs_count INTEGER",
+        ]
+        with get_db() as conn:
+            cur = conn.cursor()
+            for stmt in _MIGRATIONS:
+                cur.execute(stmt)
+        print("[STARTUP] DB migrations applied.", flush=True)
+    except Exception:
+        import traceback
+        print("[STARTUP] WARNING: startup migrations failed — see traceback", flush=True)
+        traceback.print_exc()
+
+
 @app.on_event("startup")
 def _on_startup() -> None:
+    _run_startup_migrations()
     _reports_cleanup()
     recruiter_key_set = bool(config.recruiter_api_key.strip())
     print(f"[API] .env loaded from: {_ENV_PATH}", flush=True)
