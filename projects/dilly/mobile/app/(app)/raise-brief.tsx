@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * Raise Brief. pre-rendered page a holder reads 10 minutes before
  * walking into a comp conversation. Zero-LLM: everything comes from
@@ -132,7 +133,7 @@ export default function RaiseBriefScreen() {
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* Header bar */}
       <View style={[s.headerBar, { borderBottomColor: theme.surface.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={s.headerBtn}>
+        <Pressable onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={12} style={s.headerBtn}>
           <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
         </Pressable>
         <Text style={[s.headerTitle, { color: theme.surface.t2 }]}>RAISE BRIEF</Text>

@@ -28,9 +28,11 @@
  * state flip; RN handles the relayout naturally.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Image,
   Linking,
   Modal,
@@ -93,6 +95,14 @@ interface Profile {
   job_locations?: string[];
   cohorts?: string[];
   interests?: string[];
+  // user_type drives the default job-type filter. Students should see
+  // internships by default (that's what they're looking for); everyone
+  // else sees 'all'. This is the fix for "every job says I'm not a
+  // good fit" — we were showing full-time roles to students who had
+  // told Dilly they want internships.
+  user_type?: string;
+  graduation_year?: number | string;
+  career_stage?: string;
 }
 
 interface FitNarrative {
@@ -113,6 +123,26 @@ interface SkillVid {
 }
 
 // -- Helpers ------------------------------------------------------------------
+
+/** Title-case a cohort name for display. Inputs can be slug-style
+ *  ("data-science-analytics"), already-cased labels ("Data Science &
+ *  Analytics"), or fully lowercase ("data science & analytics"). We
+ *  normalize: dashes become spaces, short connector words (of, and,
+ *  &) stay lowercase unless they're the first word, everything else
+ *  gets Title Case. Acronyms (CS, ML, PM) are preserved when they
+ *  appear in the original. */
+const _COHORT_SMALL_WORDS = new Set(['of', 'and', 'or', '&', 'the', 'a', 'an', 'for', 'to', 'in', 'on']);
+const _COHORT_ACRONYMS = new Set(['cs', 'ml', 'ai', 'pm', 'ux', 'ui', 'qa', 'it', 'hr', 'vp']);
+function titleCaseCohort(raw: string): string {
+  if (!raw) return raw;
+  const parts = raw.replace(/[-_]+/g, ' ').split(/\s+/).filter(Boolean);
+  return parts.map((w, i) => {
+    const lower = w.toLowerCase();
+    if (_COHORT_ACRONYMS.has(lower)) return lower.toUpperCase();
+    if (i > 0 && _COHORT_SMALL_WORDS.has(lower)) return lower;
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }).join(' ');
+}
 
 function daysAgo(dateStr?: string): string {
   if (!dateStr) return '';
@@ -177,10 +207,18 @@ function buildFitStory(job: Listing, profile: Profile | null): string {
     const n = Number(fresh.replace('d ago', ''));
     if (!Number.isNaN(n) && n <= 7) parts.push('posted this week');
   }
-  const userCohorts = new Set((profile?.cohorts || []).map(c => c.toLowerCase()));
-  const jobCohorts = (job.cohort_requirements || []).map(c => c.cohort?.toLowerCase()).filter(Boolean);
-  const overlap = jobCohorts.filter(c => userCohorts.has(c));
-  if (overlap.length > 0) parts.push(`matches your ${overlap[0]} track`);
+  // Comparison is case-insensitive but we preserve the original casing
+  // of the user's cohort for display, so the fit story reads
+  // "matches your Data Science & Analytics track" instead of the
+  // lowercased slug.
+  const userCohortsOriginal = (profile?.cohorts || []).filter(Boolean) as string[];
+  const userCohortsLower = new Set(userCohortsOriginal.map(c => c.toLowerCase()));
+  const jobCohortsLower = (job.cohort_requirements || []).map(c => (c.cohort || '').toLowerCase()).filter(Boolean);
+  const overlap = jobCohortsLower.filter(c => userCohortsLower.has(c));
+  if (overlap.length > 0) {
+    const original = userCohortsOriginal.find(c => c.toLowerCase() === overlap[0]) || overlap[0];
+    parts.push(`matches your ${titleCaseCohort(original)} track`);
+  }
   if (parts.length === 0) return '';
   const first = parts[0][0].toUpperCase() + parts[0].slice(1);
   return [first, ...parts.slice(1)].join(', ') + '.';
@@ -335,9 +373,38 @@ export default function JobsScreen() {
   //   typeFilter: 'all' | 'internship' | 'entry_level' | 'full_time' | 'part_time'
   //   remoteFilter: 'any' | 'remote' | 'in_person'
   const [cityFilter, setCityFilter] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  // Start with null so we know whether the user has explicitly picked
+  // a type yet. Once profile loads we pick a sensible default — students
+  // get 'internship', everyone else gets 'all'. A user who actively
+  // taps a chip wins over the auto-default.
+  const [typeFilter, setTypeFilter] = useState<TypeFilter | null>(null);
+  const [typeFilterTouched, setTypeFilterTouched] = useState(false);
   const [remoteFilter, setRemoteFilter] = useState<RemoteFilter>('any');
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [cityMounted, setCityMounted] = useState(false);
+  const cityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (showCityPicker) {
+      setCityMounted(true);
+      cityAnim.setValue(0);
+      Animated.timing(cityAnim, {
+        toValue: 1, duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showCityPicker, cityAnim]);
+
+  const closeCityPickerAnimated = useCallback(() => {
+    Animated.timing(cityAnim, {
+      toValue: 0, duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) { setShowCityPicker(false); setCityMounted(false); }
+    });
+  }, [cityAnim]);
 
   // Per-job expand state. Exactly one expanded at a time keeps the
   // feed scannable; tapping a second job collapses the first.
@@ -439,26 +506,66 @@ export default function JobsScreen() {
     return out.sort((a, b) => b.n - a.n);
   }, [jobs, profile?.job_locations]);
 
+  // Effective type filter: if the user has tapped a chip, honor it.
+  // Otherwise, default based on user_type:
+  //   - student → 'internship' (they told us they want internships)
+  //   - everyone else → 'all'
+  // This fixes the "every job says not a good fit" demo blocker —
+  // the feed was showing full-time roles to students, and the fit
+  // narrative correctly flagged them as stretches/not-a-fit.
+  const effectiveTypeFilter: TypeFilter = useMemo(() => {
+    if (typeFilter) return typeFilter
+    const ut = (profile?.user_type || '').toLowerCase()
+    if (ut === 'student') return 'internship'
+    return 'all'
+  }, [typeFilter, profile?.user_type])
+
+  // Helpers for stricter filter matching. The feed sometimes carries
+  // a null job_type or an imprecise work_mode string, which let jobs
+  // slip past the chip filters. Now we fall back to title/description
+  // heuristics so a posting called "Summer 2026 Software Engineering
+  // Intern" matches the Internship chip even if its job_type column
+  // was never populated.
+  const jobMatchesType = useCallback((j: Listing, type: TypeFilter): boolean => {
+    if (type === 'all') return true;
+    const t = (j.job_type || '').toLowerCase();
+    if (t === type) return true;
+    const title = (j.title || '').toLowerCase();
+    const desc = ((j.description || j.description_preview || '') + '').toLowerCase().slice(0, 500);
+    const intern = /\b(intern|internship|co-?op)\b/.test(title) || /\b(intern|internship|co-?op)\b/.test(desc);
+    const entry = /\b(new\s*grad|entry\s*level|junior|associate|graduate\s+engineer)\b/.test(title);
+    const senior = /\b(senior|staff|principal|lead|head\s+of|director)\b/.test(title);
+    if (type === 'internship') return intern;
+    if (type === 'entry_level') return entry || (!intern && !senior);
+    if (type === 'full_time') return !intern;
+    if (type === 'part_time') return /\bpart\s*time\b/.test(title + ' ' + desc);
+    return false;
+  }, []);
+
+  const jobMatchesRemote = useCallback((j: Listing, r: RemoteFilter): boolean => {
+    if (r === 'any') return true;
+    const mode = (j.work_mode || '').toLowerCase();
+    // Strict remote: the listing explicitly says remote OR the boolean
+    // flag is true. Hybrid does NOT count as remote — users who want
+    // remote want remote, not hybrid.
+    const isRemote = !!j.remote || /\bremote\b/.test(mode);
+    const isHybrid = /\bhybrid\b/.test(mode);
+    if (r === 'remote') return isRemote && !isHybrid;
+    // In-person: anything that is neither remote nor hybrid.
+    return !isRemote && !isHybrid;
+  }, []);
+
   // City + type + remote filter. Applied client-side to the full
   // feed. Per-chip counts shown so users know what will happen
   // before they tap.
   const filteredJobs = useMemo(() => {
     return jobs.filter(j => {
       if (cityFilter && (j.location_city || '').toLowerCase() !== cityFilter) return false;
-      if (typeFilter !== 'all') {
-        const t = (j.job_type || '').toLowerCase();
-        if (t !== typeFilter) return false;
-      }
-      if (remoteFilter === 'remote') {
-        const remote = !!j.remote || (j.work_mode || '').toLowerCase().includes('remote');
-        if (!remote) return false;
-      } else if (remoteFilter === 'in_person') {
-        const remote = !!j.remote || (j.work_mode || '').toLowerCase().includes('remote');
-        if (remote) return false;
-      }
+      if (!jobMatchesType(j, effectiveTypeFilter)) return false;
+      if (!jobMatchesRemote(j, remoteFilter)) return false;
       return true;
     });
-  }, [jobs, cityFilter, typeFilter, remoteFilter]);
+  }, [jobs, cityFilter, effectiveTypeFilter, remoteFilter, jobMatchesType, jobMatchesRemote]);
 
   // Skill-gap -> video map, keyed by job id. Computed once per data
   // change. The heavy lifting is O(jobs * cohortKeywords) which is
@@ -494,11 +601,17 @@ export default function JobsScreen() {
     return { strong, stretch, known, hero: strong[0] || filteredJobs[0] || null };
   }, [filteredJobs]);
 
+  // Count a filter as "active" only when the user has explicitly
+  // narrowed from the default. The student-internship default is not
+  // counted — it's the baseline, not a filter the user applied.
   const activeFilterCount =
-    (cityFilter ? 1 : 0) + (typeFilter !== 'all' ? 1 : 0) + (remoteFilter !== 'any' ? 1 : 0);
+    (cityFilter ? 1 : 0) +
+    (typeFilterTouched && effectiveTypeFilter !== 'all' ? 1 : 0) +
+    (remoteFilter !== 'any' ? 1 : 0);
   const resetFilters = useCallback(() => {
     setCityFilter(null);
     setTypeFilter('all');
+    setTypeFilterTouched(true);
     setRemoteFilter('any');
   }, []);
 
@@ -723,12 +836,12 @@ export default function JobsScreen() {
         {/* Type chips — each type is its own button so the user can
             one-tap the one they want. "All" clears the type filter. */}
         {(['all', 'internship', 'entry_level', 'full_time', 'part_time'] as TypeFilter[]).map(t => {
-          const active = typeFilter === t;
+          const active = effectiveTypeFilter === t;
           return (
             <TouchableOpacity
               key={t}
               activeOpacity={0.85}
-              onPress={() => setTypeFilter(t)}
+              onPress={() => { setTypeFilter(t); setTypeFilterTouched(true); }}
               style={[
                 styles.filterChip,
                 active
@@ -782,19 +895,45 @@ export default function JobsScreen() {
           city present in the current feed with a match count per
           row, plus an "All cities" reset row at the top. */}
       <Modal
-        visible={showCityPicker}
+        visible={cityMounted}
         transparent
-        animationType="slide"
-        onRequestClose={() => setShowCityPicker(false)}
+        animationType="none"
+        onRequestClose={closeCityPickerAnimated}
+        statusBarTranslucent
       >
-        <View style={styles.cityBackdrop}>
-          <View style={[styles.citySheet, { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 14 }]}>
+        {/* Animated dark backdrop */}
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, {
+            backgroundColor: '#000',
+            opacity: cityAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.4] }),
+          }]}
+        />
+        {/* Full-screen tap-to-dismiss area, positioned under the sheet */}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={closeCityPickerAnimated}
+          style={styles.cityBackdrop}
+        >
+          {/* Animated slide-up sheet */}
+          <Animated.View
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={(e) => Math.abs(e.nativeEvent.pageY) > 10}
+            onResponderRelease={(e) => {
+              if ((e.nativeEvent as any).pageY > 200) closeCityPickerAnimated();
+            }}
+            style={[
+              styles.citySheet,
+              { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 14 },
+              { transform: [{ translateY: cityAnim.interpolate({ inputRange: [0, 1], outputRange: [320, 0] }) }] },
+            ]}
+          >
             <View style={styles.citySheetHandle} />
             <Text style={[styles.citySheetTitle, { color: theme.surface.t1 }]}>Filter by city</Text>
 
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => { setCityFilter(null); setShowCityPicker(false); }}
+              onPress={() => { setCityFilter(null); closeCityPickerAnimated(); }}
               style={[
                 styles.cityRow,
                 !cityFilter ? { backgroundColor: theme.accentSoft } : null,
@@ -813,7 +952,7 @@ export default function JobsScreen() {
                     activeOpacity={0.85}
                     onPress={() => {
                       setCityFilter(opt.key);
-                      setShowCityPicker(false);
+                      closeCityPickerAnimated();
                     }}
                     style={[
                       styles.cityRow,
@@ -831,8 +970,8 @@ export default function JobsScreen() {
                 </Text>
               ) : null}
             </ScrollView>
-          </View>
-        </View>
+          </Animated.View>
+        </TouchableOpacity>
       </Modal>
 
       {noticedLine ? (
@@ -856,7 +995,7 @@ export default function JobsScreen() {
       ) : null}
 
       {strong.length > 1 ? (
-        <BandSection label="STRONG MATCHES" subtitle="Your profile lines up well. Apply with confidence."
+        <BandSection label="WORTH APPLYING" subtitle="Your profile lines up well here. Apply with confidence."
           jobs={strong.slice(1)} opacity={1}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
@@ -864,7 +1003,7 @@ export default function JobsScreen() {
       ) : null}
 
       {stretch.length > 0 ? (
-        <BandSection label="STRETCH ROLES" subtitle="Good fit if you frame it right. Dilly can help."
+        <BandSection label="WORTH A SHOT" subtitle="Partial fit. Frame it right and you're in the conversation."
           jobs={stretch} opacity={0.88}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
@@ -872,7 +1011,7 @@ export default function JobsScreen() {
       ) : null}
 
       {known.length > 0 ? (
-        <BandSection label="WORTH KNOWING" subtitle="Not a direct match, but worth tracking."
+        <BandSection label="ON THE RADAR" subtitle="Not an obvious fit today, but worth tracking."
           jobs={known.slice(0, 12)} opacity={0.72}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
@@ -1248,10 +1387,13 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 11, fontWeight: '800' },
 
-  // City picker bottom sheet.
+  // City picker bottom sheet. Fully transparent backdrop — the sheet
+  // should feel like it emerged from the content, not like the screen
+  // went dark. Dismiss on tap-away still works (the backdrop is a
+  // TouchableOpacity that fills the space around the sheet).
   cityBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   citySheet: {

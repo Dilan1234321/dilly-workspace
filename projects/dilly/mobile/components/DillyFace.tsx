@@ -358,6 +358,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
               s={s * 1.8}
               color={accessoryColor || faceInk}
               scribbleAnim={scribbleAnim}
+              isDark={!!theme.surface?.dark}
             />
           </Svg>
         </View>
@@ -474,11 +475,14 @@ interface AccessoryProps {
   color: string
   /** If non-null, drives a scribble stroke-dash animation (pencil only). */
   scribbleAnim: Animated.Value | null
+  /** True on dark surfaces (Midnight theme). Pencil tip + scribble
+   *  flip from black → white so the pencil reads on dark mode. */
+  isDark?: boolean
 }
 
-function Accessory({ kind, cx, cy, s, color, scribbleAnim }: AccessoryProps) {
+function Accessory({ kind, cx, cy, s, color, scribbleAnim, isDark }: AccessoryProps) {
   switch (kind) {
-    case 'pencil':     return <PencilAccessory cx={cx} cy={cy} s={s} color={color} scribbleAnim={scribbleAnim} />
+    case 'pencil':     return <PencilAccessory cx={cx} cy={cy} s={s} color={color} scribbleAnim={scribbleAnim} isDark={isDark} />
     case 'magnifier':  return <MagnifierAccessory cx={cx} cy={cy} s={s} color={color} />
     case 'paintbrush': return <PaintbrushAccessory cx={cx} cy={cy} s={s} color={color} />
     default:           return null
@@ -495,11 +499,13 @@ function Accessory({ kind, cx, cy, s, color, scribbleAnim }: AccessoryProps) {
  *    - Scribble line: black
  *  Previously the pencil pulled from `color` (accent) which made it
  *  disappear on pale themes and didn't read as a pencil. */
-function PencilAccessory({ cx, cy, s, scribbleAnim }: Omit<AccessoryProps, 'kind' | 'color'> & { color?: string }) {
-  const PENCIL_BODY = '#FFD83D'   // yellow no.2 body
-  const PENCIL_ERASER = '#FF7AA2' // classic pink eraser top
-  const PENCIL_TIP = '#111111'    // black graphite
-  const SCRIBBLE = '#111111'      // black scribble line
+function PencilAccessory({ cx, cy, s, scribbleAnim, isDark }: Omit<AccessoryProps, 'kind' | 'color'> & { color?: string }) {
+  const PENCIL_BODY = '#FFD83D'                         // yellow no.2 body (both modes)
+  const PENCIL_ERASER = '#FF7AA2'                       // classic pink eraser top (both modes)
+  // Tip + scribble ink flips on dark surfaces so the pencil stays
+  // readable on Midnight. Graphite on light, chalk-white on dark.
+  const PENCIL_TIP = isDark ? '#F2F3F5' : '#111111'
+  const SCRIBBLE = isDark ? '#F2F3F5' : '#111111'
 
   // Tip at bottom-right, body angled up-right.
   const tipX = cx + 14 * s

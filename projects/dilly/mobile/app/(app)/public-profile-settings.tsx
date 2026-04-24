@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * Public Profile settings — dedicated management screen.
  *
@@ -215,7 +216,7 @@ export default function PublicProfileSettingsScreen() {
     >
       {/* Header — back arrow, eyebrow + title, slug line. */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 10 }}>
@@ -377,7 +378,7 @@ function RowToggle({ label, hint, value, onToggle, theme }: {
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: theme.surface.s2, true: theme.accent }}
+        trackColor={{ false: theme.surface.t3 + '55', true: theme.accent }}
       />
     </View>
   );

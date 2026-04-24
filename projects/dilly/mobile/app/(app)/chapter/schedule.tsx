@@ -1,3 +1,4 @@
+import { safeBack } from '../../../lib/navigation';
 /**
  * Chapter schedule — pick which day and hour your weekly Chapter lands.
  *
@@ -73,11 +74,10 @@ export default function ChapterScheduleScreen() {
         body: JSON.stringify({ day_of_week: day, hour }),
       });
       if (res.ok) {
-        // Reschedule local notifications now that the cadence changed.
-        // Fire-and-forget; a notification error should never block the
-        // user from going back.
         scheduleChapterNotifications({ day_of_week: day, hour, next_override_at: null }).catch(() => {});
-        router.back();
+        // Always land on the prep screen after scheduling so the user
+        // immediately sees their countdown and can write notes.
+        router.replace('/(app)/chapter/prep' as any);
       } else {
         Alert.alert('Not now', 'Could not save your schedule right now.');
       }
@@ -95,7 +95,7 @@ export default function ChapterScheduleScreen() {
     <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
       {/* Top bar */}
       <View style={[s.topBar, { borderBottomColor: theme.surface.border }]}>
-        <AnimatedPressable onPress={() => router.back()} hitSlop={12} scaleDown={0.9}>
+        <AnimatedPressable onPress={() => safeBack('/(app)')} hitSlop={12} scaleDown={0.9}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t1} />
         </AnimatedPressable>
         <Text style={[s.title, { color: theme.surface.t1 }]}>Your Chapter time</Text>

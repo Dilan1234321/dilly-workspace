@@ -286,7 +286,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
   // \u2500\u2500 Render \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false} statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" transparent={false} statusBarTranslucent onRequestClose={onClose}>
       <View style={[es.root, { backgroundColor: theme.surface.bg }]}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
@@ -410,7 +410,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
               <Switch
                 value={leaderboardOptIn}
                 onValueChange={setLeaderboardOptIn}
-                trackColor={{ false: theme.surface.border, true: theme.accentSoft }}
+                trackColor={{ false: theme.surface.t3 + '55', true: theme.accentSoft }}
                 thumbColor={leaderboardOptIn ? theme.accent : theme.surface.t3}
               />
             </View>

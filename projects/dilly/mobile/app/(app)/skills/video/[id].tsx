@@ -1,3 +1,4 @@
+import { safeBack } from '../../../../lib/navigation';
 /**
  * Skills video detail — in-app playback (build 363).
  *
@@ -177,7 +178,7 @@ export default function VideoScreen() {
     return (
       <View style={[styles.center, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
         <Text style={[styles.errTitle, { color: theme.surface.t1 }]}>Video not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 14 }}>
+        <TouchableOpacity onPress={() => safeBack('/(app)/skills')} style={{ marginTop: 14 }}>
           <Text style={{ color: theme.accent, fontWeight: '800' }}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -195,7 +196,7 @@ export default function VideoScreen() {
       contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 60 }}
     >
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity onPress={() => safeBack('/(app)/skills')} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
         </TouchableOpacity>
         <TouchableOpacity onPress={toggleSave} hitSlop={12}>
@@ -225,7 +226,7 @@ export default function VideoScreen() {
               </Text>
               <TouchableOpacity
                 activeOpacity={0.88}
-                onPress={() => router.back()}
+                onPress={() => safeBack('/(app)/skills')}
                 style={[styles.errOverlayBtn, { backgroundColor: theme.accent }]}
               >
                 <Text style={styles.errOverlayBtnText}>Back to the library</Text>

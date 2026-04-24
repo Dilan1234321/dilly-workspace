@@ -15,6 +15,26 @@ import {
   PENDING_UPLOAD_KEY,
 } from '@dilly/api';
 
+/** Read the current signed-in user's email, if any. Used by useTheme
+ *  to tag theme-cache entries with the account that owns them so we
+ *  can restore a returning user's theme immediately on sign-in. */
+export async function getCurrentUserEmail(): Promise<string | null> {
+  try {
+    const secure = await SecureStore.getItemAsync(USER_KEY).catch(() => null);
+    const raw = secure || await AsyncStorage.getItem(USER_KEY).catch(() => null);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      const email = typeof parsed === 'string' ? parsed : parsed?.email;
+      return (email || '').toLowerCase() || null;
+    } catch {
+      return (raw || '').toLowerCase() || null;
+    }
+  } catch {
+    return null;
+  }
+}
+
 // Write to both SecureStore (production) and AsyncStorage (dev fallback)
 export async function setToken(token: string): Promise<void> {
   await Promise.all([

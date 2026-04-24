@@ -139,6 +139,64 @@ async def save_generated_resume(request: Request, body: SaveResumeRequest):
         conn.close()
 
 
+class UpdateResumeRequest(BaseModel):
+    """PATCH body for inline resume edits from the mobile preview.
+
+    Only `sections` is typically sent — the user is tweaking bullet
+    text, a company name, or a role title in the preview and we
+    upsert the whole sections JSON. job_title / company / cohort are
+    optional for the rare case where those get edited too."""
+    sections: Optional[list[dict]] = None
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    job_description: Optional[str] = None
+
+
+@router.patch("/generated-resumes/{resume_id}")
+async def update_generated_resume(request: Request, resume_id: str, body: UpdateResumeRequest):
+    """Update an existing generated resume row. Ownership is enforced
+    by the student_id filter in the WHERE clause — callers can only
+    touch their own rows. Fields not in the body are left alone."""
+    user = deps.require_auth(request)
+    email = user.get("email", "")
+    student_id = _get_student_id(email)
+    if not student_id:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    updates: list[str] = []
+    params: list = []
+    if body.sections is not None:
+        updates.append("sections = %s")
+        params.append(json.dumps(body.sections))
+    if body.job_title is not None:
+        updates.append("job_title = %s")
+        params.append(body.job_title)
+    if body.company is not None:
+        updates.append("company = %s")
+        params.append(body.company)
+    if body.job_description is not None:
+        updates.append("job_description = %s")
+        params.append(body.job_description)
+
+    if not updates:
+        return {"ok": True, "changed": False}
+
+    sql = f"UPDATE generated_resumes SET {', '.join(updates)} WHERE id = %s AND student_id = %s"
+    params.extend([resume_id, student_id])
+
+    conn = _get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            changed = cur.rowcount
+        conn.commit()
+        if changed == 0:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        return {"ok": True, "changed": True}
+    finally:
+        conn.close()
+
+
 @router.get("/generated-resumes")
 async def list_generated_resumes(request: Request):
     user = deps.require_auth(request)
@@ -150,22 +208,30 @@ async def list_generated_resumes(request: Request):
     conn = _get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # De-dup by (job_title, company): each time a user
+            # regenerates a resume for the same role, a new row gets
+            # written. Surfacing every regeneration makes My Resumes
+            # look like "5 copies of the same resume". Keep only the
+            # newest per job/company pair. DISTINCT ON + matching
+            # ORDER BY gives us that in a single query.
             cur.execute(
-                """SELECT id, job_title, company, cohort, created_at
+                """SELECT DISTINCT ON (lower(job_title), lower(company))
+                          id, job_title, company, cohort, created_at
                    FROM generated_resumes
                    WHERE student_id = %s
-                   ORDER BY created_at DESC
-                   LIMIT 50""",
+                   ORDER BY lower(job_title), lower(company), created_at DESC""",
                 (student_id,)
             )
             rows = cur.fetchall()
+            # Re-sort by recency across the de-duped set.
+            rows.sort(key=lambda r: r["created_at"], reverse=True)
             return {"resumes": [{
                 "id": str(r["id"]),
                 "job_title": r["job_title"],
                 "company": r["company"],
                 "cohort": r["cohort"],
                 "created_at": r["created_at"].isoformat(),
-            } for r in rows]}
+            } for r in rows[:50]]}
     finally:
         conn.close()
 
@@ -300,8 +366,14 @@ async def download_generated_resume(
     base = f"{safe_name}_{safe_company}_Resume"
 
     if fmt == "pdf":
-        from projects.dilly.api.ats_resume_builder import build_ats_pdf
-        pdf_bytes = build_ats_pdf(sections, ats)
+        try:
+            from projects.dilly.api.ats_resume_builder import build_ats_pdf
+            pdf_bytes = build_ats_pdf(sections, ats)
+        except Exception as _e:
+            import sys as _sys, traceback as _tb
+            _sys.stderr.write(f"[pdf_build_error] resume_id={resume_id} ats={ats} sections_len={len(sections) if isinstance(sections, list) else 'N/A'} error={type(_e).__name__}: {_e}\n")
+            _tb.print_exc(file=_sys.stderr)
+            raise HTTPException(status_code=500, detail=f"PDF build failed: {type(_e).__name__}: {str(_e)[:200]}")
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -310,8 +382,14 @@ async def download_generated_resume(
             },
         )
     else:
-        from projects.dilly.api.ats_resume_docx import build_ats_docx
-        docx_bytes = build_ats_docx(sections, ats)
+        try:
+            from projects.dilly.api.ats_resume_docx import build_ats_docx
+            docx_bytes = build_ats_docx(sections, ats)
+        except Exception as _e:
+            import sys as _sys, traceback as _tb
+            _sys.stderr.write(f"[docx_build_error] resume_id={resume_id} ats={ats} sections_len={len(sections) if isinstance(sections, list) else 'N/A'} error={type(_e).__name__}: {_e}\n")
+            _tb.print_exc(file=_sys.stderr)
+            raise HTTPException(status_code=500, detail=f"DOCX build failed: {type(_e).__name__}: {str(_e)[:200]}")
         return Response(
             content=docx_bytes,
             media_type=(

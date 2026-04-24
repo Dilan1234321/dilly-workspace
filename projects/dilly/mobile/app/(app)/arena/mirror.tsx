@@ -1,7 +1,15 @@
 /**
- * Honest Mirror — student tile. Reads the rubric the student will
- * actually be graded against (from the cohort playbook) and tallies
- * which items the student's profile has and hasn't substantiated.
+ * Honest Mirror — student tile. Reads the rubric hiring managers in
+ * the user's field actually use, and shows which items the user's
+ * profile already substantiates (green) vs which still need evidence
+ * (empty). Tap a missing row to open Dilly asking about that one
+ * specific item; tap a green row to see which fact Dilly read as
+ * evidence.
+ *
+ * Rewrite focus (build 367): every confusing phrase replaced with
+ * plain English, evidence is cited per row instead of a generic "your
+ * profile has something", rows are tappable so gap-closing is one tap
+ * instead of a separate CTA.
  */
 
 import { useEffect, useState, useMemo } from 'react'
@@ -11,13 +19,7 @@ import { dilly } from '../../../lib/dilly'
 import { useResolvedTheme } from '../../../hooks/useTheme'
 import ArenaPage from '../../../components/arena/ArenaPage'
 import { openDillyOverlay } from '../../../hooks/useDillyOverlay'
-import { resolvePlaybook, type CohortPlaybook } from '../../../lib/arena/cohort-playbook'
-
-interface RubricItem {
-  text: string
-  have: boolean
-  why: string
-}
+import { computeMirrorState, type MirrorState } from '../../../lib/arena/mirror-state'
 
 export default function HonestMirror() {
   const theme = useResolvedTheme()
@@ -35,46 +37,49 @@ export default function HonestMirror() {
     })()
   }, [])
 
-  const playbook = useMemo<CohortPlaybook>(
-    () => resolvePlaybook(profile?.cohorts || []),
-    [profile],
+  const state: MirrorState = useMemo(
+    () => computeMirrorState(profile, facts),
+    [profile, facts],
   )
-
-  const items: RubricItem[] = useMemo(() => {
-    const lowered = facts
-      .map(f => (f.label || f.value || '').toLowerCase())
-      .join(' | ')
-    return playbook.rubric.map(r => {
-      const firstWord = r.toLowerCase().split(/\s+/)[0]
-      const have = lowered.includes(firstWord) || lowered.includes(r.toLowerCase().split(/\s+/)[1] || firstWord)
-      return {
-        text: r,
-        have,
-        why: have
-          ? 'Your profile has something Dilly reads as evidence.'
-          : 'No direct evidence yet. Talk to Dilly about this.',
-      }
-    })
-  }, [facts, playbook])
-
-  const score = items.filter(i => i.have).length
 
   return (
     <ArenaPage
-      eyebrow="HONEST · MIRROR"
-      title={`The ${playbook.shortName} rubric, scored.`}
-      subtitle="Five things hiring managers actually grade against. This is what your surface reads as today."
+      eyebrow="HONEST MIRROR"
+      title={`${state.total} things ${state.shortName} recruiters want to see.`}
+      subtitle={`Green means your profile already shows it. Empty means Dilly hasn't seen proof yet — tap any empty row to tell her about it.`}
     >
-      <View style={[s.scoreCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-        <Text style={[s.scoreLabel, { color: theme.accent }]}>YOU ARE PROVING</Text>
-        <Text style={[s.scoreBig, { color: theme.surface.t1 }]}>
-          {score} <Text style={{ fontSize: 20, color: theme.surface.t3 }}>of {items.length}</Text>
+      {/* Status card — one sentence, plain English. Drops the
+          big-number read ("YOUR PROFILE COVERS 3 of 5") because
+          testers said it read like a grade. */}
+      <View style={[s.statusCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+        <Text style={[s.statusLine, { color: theme.surface.t1 }]}>
+          {state.missing === 0
+            ? `You're showing proof on all ${state.total}.`
+            : state.have === 0
+              ? `Dilly doesn't see proof on any of these yet. Let's fix that.`
+              : `You're showing proof on ${state.have} of ${state.total}. ${state.missing} to go.`}
         </Text>
       </View>
 
-      {items.map((r, i) => (
-        <View
+      {/* Rows. Tapping a GREEN row shows Dilly the evidence + asks
+          her to help sharpen that story. Tapping an EMPTY row opens
+          Dilly focused on that one item so the user can fill the gap
+          in under a minute. Single-purpose taps, no separate CTA. */}
+      {state.rows.map((r, i) => (
+        <TouchableOpacity
           key={i}
+          activeOpacity={0.85}
+          onPress={() => {
+            if (r.have) {
+              openDillyOverlay({
+                initialMessage: `For my Honest Mirror rubric "${r.text}", Dilly read "${r.evidence || ''}" as evidence. Help me sharpen how I tell that story.`,
+              })
+            } else {
+              openDillyOverlay({
+                initialMessage: `My Honest Mirror says I don't yet show proof for "${r.text}" in ${state.shortName}. Walk me through it — one concrete example I could add to my profile.`,
+              })
+            }
+          }}
           style={[
             s.row,
             {
@@ -90,30 +95,50 @@ export default function HonestMirror() {
           />
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={[s.rText, { color: theme.surface.t1 }]}>{r.text}</Text>
-            <Text style={[s.rWhy, { color: theme.surface.t3 }]}>{r.why}</Text>
+            {r.have && r.evidence ? (
+              <Text style={[s.rWhy, { color: theme.surface.t3 }]} numberOfLines={2}>
+                Proof: {r.evidence}
+              </Text>
+            ) : (
+              <Text style={[s.rWhy, { color: theme.accent }]}>
+                Tap to tell Dilly about this
+              </Text>
+            )}
           </View>
-        </View>
+          <Ionicons
+            name="chevron-forward"
+            size={14}
+            color={theme.surface.t3}
+            style={{ marginLeft: 4, alignSelf: 'center' }}
+          />
+        </TouchableOpacity>
       ))}
-
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => openDillyOverlay({ initialMessage: `Honest Mirror says I'm proving ${score} of ${items.length} rubric items for ${playbook.shortName}. Help me close the gap on the missing ones, one at a time.` })}
-        style={[s.cta, { backgroundColor: theme.accent }]}
-      >
-        <Ionicons name="chatbubbles" size={14} color="#FFF" />
-        <Text style={s.ctaText}>Close a gap with Dilly</Text>
-      </TouchableOpacity>
     </ArenaPage>
   )
 }
 
 const s = StyleSheet.create({
-  scoreCard: { marginHorizontal: 16, padding: 18, borderRadius: 16, borderWidth: 1, alignItems: 'center' },
-  scoreLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
-  scoreBig: { fontSize: 44, fontWeight: '800', letterSpacing: -1.2, marginTop: 4 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginHorizontal: 16, padding: 14, borderRadius: 12, borderWidth: 1, marginTop: 12 },
+  statusCard: {
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  statusLine: {
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginHorizontal: 16,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
+  },
   rText: { fontSize: 14, fontWeight: '800', lineHeight: 19 },
   rWhy: { fontSize: 12, lineHeight: 17, marginTop: 4 },
-  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginHorizontal: 16, marginTop: 20, paddingVertical: 13, borderRadius: 13 },
-  ctaText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
 })

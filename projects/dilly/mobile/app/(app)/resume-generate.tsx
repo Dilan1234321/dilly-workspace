@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * Generate Resume — "The Forge"
  *
@@ -25,12 +26,13 @@
  *     and same deep-link viewId flow. Pure UI rewrite.
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TextInput,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -228,6 +230,49 @@ export default function ResumeGenerateScreen() {
   const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const keywordTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Inline edit: debounce-save the current sections to the backend so
+  // the user's tweaks persist + the next PDF export reflects them.
+  // 800ms keeps the PATCH traffic sane while still feeling live.
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleSectionsSave = useCallback((nextSections: GeneratedSection[]) => {
+    if (!variantId) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await dilly.fetch(`/generated-resumes/${variantId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ sections: nextSections }),
+        });
+      } catch {}
+    }, 800);
+  }, [variantId]);
+
+  /** Apply an inline edit. `path` is a dotted accessor into the
+   *  section — e.g. `education.major`, `experiences.0.role`,
+   *  `experiences.0.bullets.2.text`. Safe against typos — an invalid
+   *  path no-ops. */
+  const handleFieldEdit = useCallback((sectionIdx: number, path: string, newValue: string) => {
+    setSections(prev => {
+      const next: GeneratedSection[] = JSON.parse(JSON.stringify(prev));
+      const sec: any = next[sectionIdx];
+      if (!sec) return prev;
+      const parts = path.split('.');
+      let node: any = sec;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const key = parts[i];
+        const idx = Number(key);
+        node = Number.isInteger(idx) ? node[idx] : node[key];
+        if (node == null) return prev;
+      }
+      const last = parts[parts.length - 1];
+      const li = Number(last);
+      if (Number.isInteger(li)) node[li] = newValue;
+      else node[last] = newValue;
+      scheduleSectionsSave(next);
+      return next;
+    });
+  }, [scheduleSectionsSave]);
+
   // Rotate the stage narration every 3s while generating.
   useEffect(() => {
     if (stage !== 'generating') { setStageIdx(0); return; }
@@ -256,26 +301,82 @@ export default function ResumeGenerateScreen() {
         Alert.alert('Saving resume…', 'Give it a second and tap Download again.');
         return;
       }
-      const fileSystemMod: any = require('expo-file-system');
-      const FileSystem = fileSystemMod?.default ?? fileSystemMod;
+      // expo-file-system v19 deprecated the top-level `downloadAsync` —
+      // the legacy entry point still exports the same function, so we
+      // import from there. We also try the new `File` API via the
+      // modern import if legacy isn't available; either produces a
+      // local URI we can hand to Sharing.
+      //
+      // Fallback if both fail: fetch the response, base64-encode
+      // manually, and use writeAsStringAsync(..., Base64). That covers
+      // any future SDK that drops legacy entirely.
+      let FileSystem: any = null;
+      try {
+        FileSystem = require('expo-file-system/legacy');
+      } catch {
+        try {
+          const mod: any = require('expo-file-system');
+          FileSystem = mod?.default ?? mod;
+        } catch {}
+      }
       const token = await dilly.tokenProvider.getToken();
       const name = (profile.name || 'Resume').replace(/[^a-zA-Z0-9 ]/g, '').trim();
       const safeCompany = company.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Company';
       const filename = `${name}_${safeCompany}_Resume.${format}`;
-      const destPath = (FileSystem?.cacheDirectory || FileSystem?.documentDirectory || '') + filename;
+      const cacheDir = FileSystem?.cacheDirectory || FileSystem?.documentDirectory || '';
+      const destPath = cacheDir + filename;
       const url = `${(require('../../lib/tokens') as any).API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
-      const res = await FileSystem.downloadAsync(url, destPath, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res?.uri) throw new Error('Download failed');
+
+      let localUri: string | null = null;
+      if (FileSystem && typeof FileSystem.downloadAsync === 'function') {
+        const res = await FileSystem.downloadAsync(url, destPath, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res?.status && res.status >= 300) {
+          throw new Error(`Server returned ${res.status} — try again.`);
+        }
+        localUri = res?.uri || null;
+      } else if (FileSystem && typeof FileSystem.writeAsStringAsync === 'function') {
+        // Manual fallback: fetch, base64-encode, write.
+        const resp = await fetch(url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!resp.ok) throw new Error(`Download failed (${resp.status})`);
+        const arrayBuffer = await resp.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        // Inline base64 encoder — React Native doesn't ship btoa on
+        // every SDK, and we don't want to pull in a dependency for a
+        // fallback path. This is the standard base64 table + encode.
+        const b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let base64 = '';
+        for (let i = 0; i < binary.length; i += 3) {
+          const c1 = binary.charCodeAt(i);
+          const c2 = i + 1 < binary.length ? binary.charCodeAt(i + 1) : Number.NaN;
+          const c3 = i + 2 < binary.length ? binary.charCodeAt(i + 2) : Number.NaN;
+          base64 += b64chars[c1 >> 2];
+          base64 += b64chars[((c1 & 0x03) << 4) | (isNaN(c2) ? 0 : (c2 >> 4))];
+          base64 += isNaN(c2) ? '=' : b64chars[((c2 & 0x0f) << 2) | (isNaN(c3) ? 0 : (c3 >> 6))];
+          base64 += isNaN(c3) ? '=' : b64chars[c3 & 0x3f];
+        }
+        await FileSystem.writeAsStringAsync(destPath, base64, { encoding: 'base64' });
+        localUri = destPath;
+      } else {
+        throw new Error('File system not available on this device.');
+      }
+
+      if (!localUri) throw new Error('Download failed');
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(res.uri, {
+        await Sharing.shareAsync(localUri, {
           mimeType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           UTI: format === 'pdf' ? 'com.adobe.pdf' : 'org.openxmlformats.wordprocessingml.document',
           dialogTitle: filename,
         });
       } else {
-        Alert.alert('Saved', `Saved to ${res.uri}`);
+        Alert.alert('Saved', `Saved to ${localUri}`);
       }
     } catch (e: any) {
       Alert.alert('Download failed', e?.message || 'Could not download resume.');
@@ -311,11 +412,28 @@ export default function ResumeGenerateScreen() {
   const progressAnim = useSharedValue(0);
   const progressStyle = useAnimatedStyle(() => ({ width: `${progressAnim.value * 100}%` }));
 
+  // Refetch whenever viewId changes. resume-generate is registered as
+  // a hidden tab route which means it does NOT unmount between
+  // navigations. Before this fix the useEffect had [] deps so the
+  // first viewId the user ever opened stayed cached forever — every
+  // subsequent tap on a different resume in My Dilly rendered the
+  // same content. Tying the effect to viewId (plus a small in-flight
+  // guard to avoid double-fetches during the initial mount race)
+  // makes each tap actually load the requested resume.
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         if (viewId) {
+          // Reset visible state before the fetch so the user doesn't
+          // briefly see the prior resume's content while the new one
+          // is in flight.
+          setSections([]);
+          setVariantId(null);
+          setSaved(false);
+          setStage('generating');
           const resume = await dilly.get(`/generated-resumes/${viewId}`);
+          if (cancelled) return;
           if (resume) {
             setJobTitle(resume.job_title || '');
             setCompany(resume.company || '');
@@ -324,8 +442,19 @@ export default function ResumeGenerateScreen() {
             setSaved(true);
             setVariantId(viewId);
             setStage('done');
+          } else {
+            setStage('idle');
           }
         }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [viewId]);
+
+  // One-shot profile + timer cleanup on mount (independent of viewId).
+  useEffect(() => {
+    (async () => {
+      try {
         const profileRes = await dilly.get('/profile');
         setProfile(profileRes || {});
       } catch {}
@@ -335,7 +464,6 @@ export default function ResumeGenerateScreen() {
       if (stageTimer.current) clearInterval(stageTimer.current);
       if (keywordTimer.current) clearInterval(keywordTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleGenerate() {
@@ -485,7 +613,16 @@ export default function ResumeGenerateScreen() {
       <Header
         insetsTop={insets.top}
         usage={resumeUsage}
-        onBack={() => router.back()}
+        onBack={() => {
+          // Hidden-tab routes (resume-generate is Tabs.Screen with
+          // href:null) can drop stack history, so safeBack('/(app)/my-dilly-profile') sometimes
+          // lands users on the Home tab instead of the screen they came
+          // from. The almost-always-correct parent for resume-generate is
+          // My Dilly (that's where the viewId flow originates). Fall back
+          // to that when canGoBack() is false.
+          if (router.canGoBack()) safeBack('/(app)/my-dilly-profile');
+          else router.replace('/(app)/my-dilly-profile' as any);
+        }}
       />
 
       <ScrollView
@@ -528,6 +665,7 @@ export default function ResumeGenerateScreen() {
             saved={saved}
             onDownload={handleDownload}
             onReset={handleReset}
+            onEdit={handleFieldEdit}
           />
         )}
 
@@ -838,7 +976,7 @@ function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, p
 function DonePhase({
   sections, atsInfo, jobTitle, company, jd,
   matchedKeywords, totalKeywords, weakestBullet,
-  saved, onDownload, onReset,
+  saved, onDownload, onReset, onEdit,
 }: any) {
   const theme = useResolvedTheme();
   // Derived scorecard values. Prefer server-provided signals when
@@ -972,7 +1110,9 @@ function DonePhase({
           <SectionView
             key={sec.key ?? si}
             section={sec}
+            sectionIdx={si}
             matchedKeywords={matchedKeywords}
+            onEdit={onEdit}
           />
         ))}
       </View>
@@ -1004,70 +1144,225 @@ function ScoreRow({ label, value }: { label: string; value: number }) {
   );
 }
 
+/** Tap-to-edit text. Renders a Text by default; on tap, swaps to a
+ *  TextInput with autoFocus. Blur saves via onSave(newValue). Multi-
+ *  line fields (bullets, description) pass multiline=true. */
+function EditableText({
+  value, onSave, style, multiline, placeholder,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+  style: any;
+  multiline?: boolean;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+
+  if (editing) {
+    return (
+      <TextInput
+        autoFocus
+        value={draft}
+        onChangeText={setDraft}
+        multiline={!!multiline}
+        blurOnSubmit={!multiline}
+        returnKeyType={multiline ? 'default' : 'done'}
+        onBlur={() => {
+          setEditing(false);
+          if (draft !== value) onSave(draft);
+        }}
+        onSubmitEditing={() => {
+          if (!multiline) {
+            setEditing(false);
+            if (draft !== value) onSave(draft);
+          }
+        }}
+        style={[style, { backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 6, paddingHorizontal: 4 }]}
+      />
+    );
+  }
+  return (
+    <TouchableOpacity activeOpacity={0.7} onPress={() => setEditing(true)}>
+      <Text style={style}>
+        {value || <Text style={{ color: '#9CA3AF', fontStyle: 'italic' }}>{placeholder || 'Tap to edit'}</Text>}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+
 /** Renders a single resume section. Bullet/body text gets keyword
- *  tokens highlighted in indigo so the user sees the JD match. */
-function SectionView({ section, matchedKeywords }: { section: GeneratedSection; matchedKeywords: string[] }) {
+ *  tokens highlighted in indigo so the user sees the JD match.
+ *  When `onEdit` is provided, every field becomes tap-to-edit. */
+function SectionView({
+  section, sectionIdx, matchedKeywords, onEdit,
+}: {
+  section: GeneratedSection;
+  sectionIdx: number;
+  matchedKeywords: string[];
+  onEdit?: (sectionIdx: number, path: string, value: string) => void;
+}) {
   const keywordSet = useMemo(() => new Set(matchedKeywords), [matchedKeywords]);
+  const edit = (path: string) => (v: string) => onEdit && onEdit(sectionIdx, path, v);
+  const editable = !!onEdit;
+
   return (
     <View style={styles.previewSection}>
       <Text style={styles.previewSectionLabel}>{section.label ?? section.key}</Text>
 
       {section.contact && (
         <View style={styles.previewEntry}>
-          {!!section.contact.name && <Text style={styles.previewName}>{section.contact.name}</Text>}
-          <Text style={styles.previewEntryDates}>
-            {[section.contact.email, section.contact.phone, section.contact.location, section.contact.linkedin].filter(Boolean).join(' · ')}
-          </Text>
+          {editable ? (
+            <>
+              <EditableText style={styles.previewName} value={section.contact.name || ''} onSave={edit('contact.name')} placeholder="Your name" />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryDates} value={section.contact.email || ''} onSave={edit('contact.email')} placeholder="email" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.contact.phone || ''} onSave={edit('contact.phone')} placeholder="phone" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.contact.location || ''} onSave={edit('contact.location')} placeholder="city" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.contact.linkedin || ''} onSave={edit('contact.linkedin')} placeholder="linkedin" />
+              </View>
+            </>
+          ) : (
+            <>
+              {!!section.contact.name && <Text style={styles.previewName}>{section.contact.name}</Text>}
+              <Text style={styles.previewEntryDates}>
+                {[section.contact.email, section.contact.phone, section.contact.location, section.contact.linkedin].filter(Boolean).join(' · ')}
+              </Text>
+            </>
+          )}
         </View>
       )}
 
       {section.education && (
         <View style={styles.previewEntry}>
-          <Text style={styles.previewEntryTitle}>{section.education.university}</Text>
-          <Text style={styles.previewEntryDates}>
-            {[section.education.major, section.education.minor ? `Minor: ${section.education.minor}` : '', section.education.graduation].filter(Boolean).join(' · ')}
-          </Text>
-          {!!section.education.gpa && <Highlighted style={styles.previewBullet} text={`GPA: ${section.education.gpa}`} keywords={keywordSet} />}
-          {!!section.education.honors && <Highlighted style={styles.previewBullet} text={section.education.honors} keywords={keywordSet} />}
+          {editable ? (
+            <>
+              <EditableText style={styles.previewEntryTitle} value={section.education.university || ''} onSave={edit('education.university')} placeholder="University" />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryDates} value={section.education.major || ''} onSave={edit('education.major')} placeholder="major" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.education.graduation || ''} onSave={edit('education.graduation')} placeholder="graduation" />
+              </View>
+              <EditableText style={styles.previewBullet} value={section.education.gpa ? `GPA: ${section.education.gpa}` : ''} onSave={(v) => edit('education.gpa')(v.replace(/^GPA:\s*/i, ''))} placeholder="GPA (optional)" />
+            </>
+          ) : (
+            <>
+              <Text style={styles.previewEntryTitle}>{section.education.university}</Text>
+              <Text style={styles.previewEntryDates}>
+                {[section.education.major, section.education.minor ? `Minor: ${section.education.minor}` : '', section.education.graduation].filter(Boolean).join(' · ')}
+              </Text>
+              {!!section.education.gpa && <Highlighted style={styles.previewBullet} text={`GPA: ${section.education.gpa}`} keywords={keywordSet} />}
+              {!!section.education.honors && <Highlighted style={styles.previewBullet} text={section.education.honors} keywords={keywordSet} />}
+            </>
+          )}
         </View>
       )}
 
       {Array.isArray(section.experiences) && section.experiences.map((exp: any, ei: number) => (
         <View key={ei} style={styles.previewEntry}>
-          <Text style={styles.previewEntryTitle}>
-            {exp.role}{exp.company ? `, ${exp.company}` : ''}
-          </Text>
-          <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' · ')}</Text>
-          {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
-            <Highlighted
-              key={bi}
-              style={styles.previewBullet}
-              text={`• ${typeof b === 'string' ? b : b.text}`}
-              keywords={keywordSet}
-            />
-          ))}
+          {editable ? (
+            <>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryTitle} value={exp.role || ''} onSave={edit(`experiences.${ei}.role`)} placeholder="Role" />
+                <Text style={styles.previewEntryTitle}>, </Text>
+                <EditableText style={styles.previewEntryTitle} value={exp.company || ''} onSave={edit(`experiences.${ei}.company`)} placeholder="Company" />
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryDates} value={exp.date || ''} onSave={edit(`experiences.${ei}.date`)} placeholder="dates" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={exp.location || ''} onSave={edit(`experiences.${ei}.location`)} placeholder="location" />
+              </View>
+              {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
+                <View key={bi} style={{ flexDirection: 'row' }}>
+                  <Text style={styles.previewBullet}>• </Text>
+                  <View style={{ flex: 1 }}>
+                    <EditableText
+                      style={styles.previewBullet}
+                      value={typeof b === 'string' ? b : (b.text || '')}
+                      onSave={edit(typeof b === 'string' ? `experiences.${ei}.bullets.${bi}` : `experiences.${ei}.bullets.${bi}.text`)}
+                      multiline
+                      placeholder="Tap to add a bullet"
+                    />
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : (
+            <>
+              <Text style={styles.previewEntryTitle}>
+                {exp.role}{exp.company ? `, ${exp.company}` : ''}
+              </Text>
+              <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' · ')}</Text>
+              {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
+                <Highlighted
+                  key={bi}
+                  style={styles.previewBullet}
+                  text={`• ${typeof b === 'string' ? b : b.text}`}
+                  keywords={keywordSet}
+                />
+              ))}
+            </>
+          )}
         </View>
       ))}
 
       {Array.isArray(section.projects) && section.projects.map((proj: any, pi: number) => (
         <View key={pi} style={styles.previewEntry}>
-          <Text style={styles.previewEntryTitle}>{proj.name}</Text>
-          <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' · ')}</Text>
-          {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
-            <Highlighted
-              key={bi}
-              style={styles.previewBullet}
-              text={`• ${typeof b === 'string' ? b : b.text}`}
-              keywords={keywordSet}
-            />
-          ))}
+          {editable ? (
+            <>
+              <EditableText style={styles.previewEntryTitle} value={proj.name || ''} onSave={edit(`projects.${pi}.name`)} placeholder="Project name" />
+              {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
+                <View key={bi} style={{ flexDirection: 'row' }}>
+                  <Text style={styles.previewBullet}>• </Text>
+                  <View style={{ flex: 1 }}>
+                    <EditableText
+                      style={styles.previewBullet}
+                      value={typeof b === 'string' ? b : (b.text || '')}
+                      onSave={edit(typeof b === 'string' ? `projects.${pi}.bullets.${bi}` : `projects.${pi}.bullets.${bi}.text`)}
+                      multiline
+                      placeholder="Tap to add a bullet"
+                    />
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : (
+            <>
+              <Text style={styles.previewEntryTitle}>{proj.name}</Text>
+              <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' · ')}</Text>
+              {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
+                <Highlighted
+                  key={bi}
+                  style={styles.previewBullet}
+                  text={`• ${typeof b === 'string' ? b : b.text}`}
+                  keywords={keywordSet}
+                />
+              ))}
+            </>
+          )}
         </View>
       ))}
 
       {section.simple?.lines && (
         <View style={styles.previewEntry}>
           {section.simple.lines.map((line: string, li: number) => (
-            <Highlighted key={li} style={styles.previewBullet} text={line} keywords={keywordSet} />
+            editable ? (
+              <EditableText
+                key={li}
+                style={styles.previewBullet}
+                value={line}
+                onSave={edit(`simple.lines.${li}`)}
+                multiline
+                placeholder="Tap to edit"
+              />
+            ) : (
+              <Highlighted key={li} style={styles.previewBullet} text={line} keywords={keywordSet} />
+            )
           ))}
         </View>
       )}

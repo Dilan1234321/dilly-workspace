@@ -207,6 +207,258 @@ GREENHOUSE_COMPANIES = {
     # Logistics / Supply chain
     'convoy':('Convoy','Consumer'),'uber':('Uber','Consumer'),
     'deliveroo':('Deliveroo','Consumer'),'lalamove':('Lalamove','Consumer'),
+
+    # ── Batch added 2026-04-23: 200k-scale seed expansion ──
+    # Target: another ~400 boards across tech, bio, finance, climate, etc.
+    # Slugs that 404 are tolerated — the crawler logs + skips cleanly.
+    # Tech / infra (broad)
+    'palantirtechnologies':('Palantir','Tech'),'servicenow':('ServiceNow','Tech'),
+    'workday':('Workday','Tech'),'workiva':('Workiva','Tech'),
+    'atlassian':('Atlassian','Tech'),'pagerdutyinc':('PagerDuty','Tech'),
+    'sysdig':('Sysdig','Tech'),'aqua-security':('Aqua Security','Tech'),
+    'upcloud':('UpCloud','Tech'),'vultr':('Vultr','Tech'),
+    'digitalocean':('DigitalOcean','Tech'),'linode':('Linode','Tech'),
+    'fastly':('Fastly','Tech'),'fly':('Fly.io','Tech'),
+    'ngrok':('ngrok','Tech'),'tailscale':('Tailscale','Tech'),
+    'boundary':('HashiCorp Boundary','Tech'),'teleport':('Teleport','Tech'),
+    'jumpcloud':('JumpCloud','Tech'),'1password':('1Password','Tech'),
+    'lastpass':('LastPass','Tech'),'dashlane':('Dashlane','Tech'),
+    'bitwarden':('Bitwarden','Tech'),'nordpass':('NordPass','Tech'),
+    # Data / ML / AI-infra
+    'weaviate':('Weaviate','Tech'),'qdrant':('Qdrant','Tech'),
+    'chromadb':('Chroma','Tech'),'pinecone':('Pinecone','Tech'),
+    'milvus':('Milvus','Tech'),'vectara':('Vectara','Tech'),
+    'trychroma':('Chroma','Tech'),
+    'dagster':('Dagster','Tech'),'prefect':('Prefect','Tech'),
+    'orchest':('Orchest','Tech'),'metaflow':('Metaflow','Tech'),
+    'kedro':('Kedro','Tech'),'flyte':('Flyte','Tech'),
+    'great-expectations':('Great Expectations','Tech'),
+    'soda':('Soda','Tech'),'monte-carlo':('Monte Carlo','Tech'),
+    'bigeye':('Bigeye','Tech'),'metaplane':('Metaplane','Tech'),
+    'anomalo':('Anomalo','Tech'),'datafold':('Datafold','Tech'),
+    'acryl-data':('Acryl Data','Tech'),'alation':('Alation','Tech'),
+    'collibra':('Collibra','Tech'),'atlan':('Atlan','Tech'),
+    'select-star':('Select Star','Tech'),
+    # Dev tooling
+    'sourcegraph':('Sourcegraph','Tech'),'deepcode':('DeepCode','Tech'),
+    'tabnine':('Tabnine','Tech'),'codeium':('Codeium','Tech'),
+    'sweep':('Sweep','Tech'),'cody':('Sourcegraph Cody','Tech'),
+    'e2b-dev':('E2B','Tech'),
+    'continue':('Continue','Tech'),'aider':('Aider','Tech'),
+    'devinai':('Devin / Cognition','Tech'),'cognition':('Cognition','Tech'),
+    # Observability / security
+    'sentryio':('Sentry','Tech'),'rollbarhq':('Rollbar','Tech'),
+    'loggly':('Loggly','Tech'),'papertrail':('Papertrail','Tech'),
+    'solarwinds':('SolarWinds','Tech'),'dynatraceinc':('Dynatrace','Tech'),
+    'paloaltonetworks':('Palo Alto Networks','Tech'),
+    'fortinet':('Fortinet','Tech'),'zscaler':('Zscaler','Tech'),
+    'crowdstrikeinc':('CrowdStrike','Tech'),'sentinelone':('SentinelOne','Tech'),
+    # Fintech / banking
+    'creditkarma':('Credit Karma','Finance'),'nerdwallet-inc':('NerdWallet','Finance'),
+    'currentrh':('Current','Finance'),'step-mobile':('Step','Finance'),
+    'varo':('Varo','Finance'),'aspiration':('Aspiration','Finance'),
+    'money-lion':('MoneyLion','Finance'),
+    'acorns':('Acorns','Finance'),'stash':('Stash','Finance'),
+    'plaidinc':('Plaid','Finance'),'finix':('Finix','Finance'),
+    'modern-treasury-inc':('Modern Treasury','Finance'),
+    'stripe-inc':('Stripe','Finance'),
+    'wise':('Wise','Finance'),'remitly':('Remitly','Finance'),
+    'worldremit':('WorldRemit','Finance'),'transferwise':('Wise','Finance'),
+    'adyen':('Adyen','Finance'),'checkout':('Checkout.com','Finance'),
+    'klarna':('Klarna','Finance'),'afterpay':('Afterpay','Finance'),
+    'affirm-holdings':('Affirm','Finance'),
+    # Healthcare / biotech / pharma
+    'devoted-health':('Devoted Health','Healthcare'),
+    'grailinc':('GRAIL','Healthcare'),'tempus-labs':('Tempus','Healthcare'),
+    'guardanthealth':('Guardant Health','Healthcare'),
+    'myriadgenetics':('Myriad Genetics','Healthcare'),
+    'pathai':('PathAI','Healthcare'),'tempusai':('Tempus AI','Healthcare'),
+    'recursion':('Recursion','Healthcare'),
+    'insitro':('Insitro','Healthcare'),'schrödinger':('Schrödinger','Healthcare'),
+    'generate-biomedicines':('Generate Biomedicines','Healthcare'),
+    'absci':('Absci','Healthcare'),'atomwise':('Atomwise','Healthcare'),
+    'benevolentai':('BenevolentAI','Healthcare'),
+    'exscientia':('Exscientia','Healthcare'),
+    'isomorphiclabs':('Isomorphic Labs','Healthcare'),
+    'xaira':('Xaira','Healthcare'),
+    'orchard':('Orchard','Healthcare'),
+    'carbon-health':('Carbon Health','Healthcare'),
+    'forward':('Forward','Healthcare'),
+    'one-medical':('One Medical','Healthcare'),
+    # Climate / energy
+    'climeworks':('Climeworks','Tech'),'carbonengineering':('Carbon Engineering','Tech'),
+    'charm-industrial':('Charm Industrial','Tech'),
+    'noya-labs':('Noya','Tech'),'running-tide':('Running Tide','Tech'),
+    'pachama':('Pachama','Tech'),'sylvera':('Sylvera','Tech'),
+    'patch':('Patch','Tech'),'cloverly':('Cloverly','Tech'),
+    'watershed-tech':('Watershed','Tech'),'persefoni':('Persefoni','Tech'),
+    'normativeio':('Normative','Tech'),'sweep-earth':('Sweep','Tech'),
+    'crusoe':('Crusoe','Tech'),'commonwealth-fusion-systems':('Commonwealth Fusion','Tech'),
+    'tae-technologies':('TAE Technologies','Tech'),
+    'helion-energy':('Helion Energy','Tech'),
+    'formenergy':('Form Energy','Tech'),'ironcladenergy':('Form Energy','Tech'),
+    'octopus-energy':('Octopus Energy','Tech'),
+    'arcadia':('Arcadia','Tech'),'david-energy':('David Energy','Tech'),
+    # Robotics / hardware / aero
+    'skydio':('Skydio','Tech'),'zipline':('Zipline','Tech'),
+    'wingcopter':('Wingcopter','Tech'),'matternet':('Matternet','Tech'),
+    'shield-ai':('Shield AI','Tech'),'saronic':('Saronic','Tech'),
+    'blue-origin':('Blue Origin','Tech'),'spacex':('SpaceX','Tech'),
+    'planet-labs':('Planet Labs','Tech'),'astranis':('Astranis','Tech'),
+    'vast-space':('Vast','Tech'),'varda':('Varda','Tech'),
+    'stokespace':('Stoke Space','Tech'),
+    'impulsespace':('Impulse Space','Tech'),
+    'firefly-aerospace':('Firefly Aerospace','Tech'),
+    # Media / streaming / social
+    'spotify-inc':('Spotify','Media'),
+    'twitch-careers':('Twitch','Media'),
+    'youtubeinc':('YouTube','Media'),
+    'substack-inc':('Substack','Media'),'ghost':('Ghost','Media'),
+    'notable-inc':('Notable','Media'),
+    'patreoninc':('Patreon','Media'),'buy-me-a-coffee':('Buy Me a Coffee','Media'),
+    'discord-careers':('Discord','Media'),
+    # EdTech
+    'outschool':('Outschool','Education'),
+    'aLeaf':('ALeaf','Education'),
+    'labster':('Labster','Education'),'age-of-learning':('Age of Learning','Education'),
+    'prodigy':('Prodigy','Education'),'abcmouse':('ABCmouse','Education'),
+    'varsitytutors':('Varsity Tutors','Education'),
+    'outschool-tutors':('Outschool','Education'),
+    # Consulting / prof services
+    'mbb-deloitte':('Deloitte','Consulting'),
+    'alphasights':('AlphaSights','Consulting'),
+    'guidepoint':('Guidepoint','Consulting'),
+    'third-bridge':('Third Bridge','Consulting'),
+    'gerson-lehrman-group':('GLG','Consulting'),
+    # Legal / govtech / civic
+    'clearcompany':('ClearCompany','Tech'),
+    'relativityhq':('Relativity','Tech'),
+    'clio':('Clio','Tech'),
+    'rocket-lawyer':('Rocket Lawyer','Tech'),
+    'legalzoom':('LegalZoom','Tech'),
+    'everlaw':('Everlaw','Tech'),
+    'hashiocorp':('HashiCorp','Tech'),
+    # Generic "we see them a lot"
+    'klaviyo-inc':('Klaviyo','Tech'),'attentive':('Attentive','Tech'),
+    'mailmodo':('Mailmodo','Tech'),'sendgrid':('Twilio SendGrid','Tech'),
+    'mailchimp':('Mailchimp','Tech'),'activecampaign':('ActiveCampaign','Tech'),
+    'klaviyoltd':('Klaviyo','Tech'),
+    'iterable-inc':('Iterable','Tech'),'braze-inc':('Braze','Tech'),
+    'omnisend':('Omnisend','Tech'),'postmark':('Postmark','Tech'),
+    'postscript':('Postscript','Tech'),
+    # Gaming (additional)
+    'scopely':('Scopely','Media'),'king-digital':('King','Media'),
+    'jagex':('Jagex','Media'),'mojang':('Mojang','Media'),
+    'miniclip':('Miniclip','Media'),
+    'supercell':('Supercell','Media'),'rovio':('Rovio','Media'),
+    # Misc tech unicorns
+    'canva-inc':('Canva','Tech'),'notion-labs':('Notion','Tech'),
+    'miro-inc':('Miro','Tech'),'figma-inc':('Figma','Tech'),
+    'monday-com':('Monday.com','Tech'),'asana-inc':('Asana','Tech'),
+    'trello-atlassian':('Trello','Tech'),
+    'slack-tech':('Slack','Tech'),'discord-inc':('Discord','Tech'),
+    'telegram':('Telegram','Tech'),'signal':('Signal','Tech'),
+    'element':('Element','Tech'),'matrix-org':('Matrix','Tech'),
+    'rocket-chat':('Rocket.Chat','Tech'),'mattermost':('Mattermost','Tech'),
+
+    # ── Batch added 2026-04-23 (round 2): another 150 slugs ──
+    # YC batches + well-known startups. 404 slugs silently skip.
+    'yc-companies':('Y Combinator','Tech'),
+    'discord-app':('Discord','Tech'),'convex-dev':('Convex','Tech'),
+    'temporaltech':('Temporal','Tech'),'convexinc':('Convex','Tech'),
+    'blend':('Blend','Finance'),'blendlabs':('Blend','Finance'),
+    'toastinc':('Toast','Tech'),'lightmatter':('Lightmatter','Tech'),
+    'ayar-labs':('Ayar Labs','Tech'),'psiquantum':('PsiQuantum','Tech'),
+    'quantinuum':('Quantinuum','Tech'),'ionq':('IonQ','Tech'),
+    'rigetti':('Rigetti','Tech'),'atom-computing':('Atom Computing','Tech'),
+    'pasqal':('Pasqal','Tech'),
+    'sambanova':('SambaNova','Tech'),'graphcore':('Graphcore','Tech'),
+    'tenstorrent':('Tenstorrent','Tech'),
+    'ambarella':('Ambarella','Tech'),'mobileye':('Mobileye','Tech'),
+    'cruise-automation':('Cruise','Tech'),
+    'motional':('Motional','Tech'),'aurora':('Aurora','Tech'),
+    'argo-ai':('Argo AI','Tech'),'applied-intuition':('Applied Intuition','Tech'),
+    'oxbotica':('Oxbotica','Tech'),'kodiak-robotics':('Kodiak Robotics','Tech'),
+    'torc-robotics':('Torc Robotics','Tech'),
+    'nuro-inc':('Nuro','Tech'),'gatik':('Gatik','Tech'),
+    'embark-trucks':('Embark','Tech'),'einride':('Einride','Tech'),
+    # Climate/energy
+    'sundae':('Sundae','Tech'),'sundaeprotocol':('Sundae','Tech'),
+    'arrive-ai':('Arrive AI','Tech'),'ambient-ai':('Ambient','Tech'),
+    'cribl':('Cribl','Tech'),'panther-labs':('Panther','Tech'),
+    'nucleus-cyber':('Nucleus','Tech'),'endor-labs':('Endor Labs','Tech'),
+    'chainguard':('Chainguard','Tech'),'snyk-io':('Snyk','Tech'),
+    'huntress':('Huntress','Tech'),'tanium':('Tanium','Tech'),
+    'okyo-pharma':('Okyo Pharma','Healthcare'),
+    'relay-therapeutics':('Relay Therapeutics','Healthcare'),
+    'revolution-medicines':('Revolution Medicines','Healthcare'),
+    'denali-therapeutics':('Denali Therapeutics','Healthcare'),
+    'vertex-pharma':('Vertex Pharmaceuticals','Healthcare'),
+    'biogen':('Biogen','Healthcare'),'regeneron':('Regeneron','Healthcare'),
+    'alnylam':('Alnylam','Healthcare'),'moderna':('Moderna','Healthcare'),
+    'bluebird-bio':('bluebird bio','Healthcare'),
+    'crispr-therapeutics':('CRISPR Therapeutics','Healthcare'),
+    'editas':('Editas Medicine','Healthcare'),
+    'sana-biotech':('Sana Biotechnology','Healthcare'),
+    'beam-therapeutics':('Beam Therapeutics','Healthcare'),
+    'verve-therapeutics':('Verve Therapeutics','Healthcare'),
+    'sutro-biopharma':('Sutro Biopharma','Healthcare'),
+    # Media
+    'vox-media':('Vox Media','Media'),'atlantic-media':('The Atlantic','Media'),
+    'nyt':('New York Times','Media'),'washingtonpost':('Washington Post','Media'),
+    'bloomberg':('Bloomberg','Media'),'reuters':('Reuters','Media'),
+    'associated-press':('Associated Press','Media'),
+    'bustle':('Bustle','Media'),'refinery29':('Refinery29','Media'),
+    # Consumer internet
+    'discord-careers':('Discord','Media'),'redditinc':('Reddit','Media'),
+    'twitterinc':('Twitter','Media'),'xcompany':('X','Media'),
+    'threads':('Threads','Media'),'meta':('Meta','Tech'),
+    # Startups with good internship volume
+    'openstorage':('OpenStorage','Tech'),
+    'coda-io':('Coda','Tech'),'clickupbuild':('ClickUp','Tech'),
+    'trello':('Trello','Tech'),
+    'zoom-video':('Zoom','Tech'),'webex':('Cisco Webex','Tech'),
+    'stickermule':('Sticker Mule','Consumer'),
+    'rareform':('Rareform','Consumer'),
+    'faire-com':('Faire','Consumer'),
+    'thrasio':('Thrasio','Consumer'),
+    # Consulting firms
+    'guidehouse':('Guidehouse','Consulting'),
+    'booz-allen-hamilton':('Booz Allen Hamilton','Consulting'),
+    'oliver-wyman':('Oliver Wyman','Consulting'),
+    'adlittle':('Arthur D. Little','Consulting'),
+    'monitor-deloitte':('Monitor Deloitte','Consulting'),
+    'lek-consulting':('L.E.K. Consulting','Consulting'),
+    'kearney':('Kearney','Consulting'),
+    'roland-berger':('Roland Berger','Consulting'),
+    'parthenon':('Parthenon','Consulting'),
+    'strategyand':('Strategy&','Consulting'),
+    'zs-associates':('ZS Associates','Consulting'),
+    # Banks / PE / VC
+    'goldman-sachs':('Goldman Sachs','Finance'),
+    'morgan-stanley':('Morgan Stanley','Finance'),
+    'jpmc':('JPMorgan','Finance'),
+    'blackrock':('BlackRock','Finance'),
+    'blackstone':('Blackstone','Finance'),
+    'kkr':('KKR','Finance'),
+    'apollo-global':('Apollo Global','Finance'),
+    'carlyle-group':('Carlyle','Finance'),
+    'bridgewater':('Bridgewater','Finance'),
+    'wellington-management':('Wellington','Finance'),
+    't-rowe-price':('T. Rowe Price','Finance'),
+    'vanguard':('Vanguard','Finance'),
+    'fidelity':('Fidelity','Finance'),
+    'state-street':('State Street','Finance'),
+    'bny-mellon':('BNY Mellon','Finance'),
+    # EdTech + kids
+    'kahoot':('Kahoot','Education'),
+    'epic-games-store':('Epic Games','Media'),
+    'outlier-ai':('Outlier AI','Tech'),
+    'turing-com':('Turing','Tech'),'toptalio':('Toptal','Tech'),
+    # More YC / Series A
+    'default-com':('Default','Tech'),'daylight-com':('Daylight','Tech'),
+    'pylon':('Pylon','Tech'),'fillout':('Fillout','Tech'),
+    'ramp-hq':('Ramp','Finance'),
 }
 
 LEVER_COMPANIES = {
@@ -264,6 +516,60 @@ LEVER_COMPANIES = {
     "justin-tv":("Twitch","Media"),"vimeo":("Vimeo","Media"),
     "substack":("Substack","Media"),"medium":("Medium","Media"),
     "quora":("Quora","Media"),"pinterest-eng":("Pinterest","Tech"),
+
+    # ── Batch added 2026-04-23: 200k-scale Lever expansion ──
+    "attentive":("Attentive","Tech"),"klaviyo":("Klaviyo","Tech"),
+    "tecton":("Tecton","Tech"),"bigid":("BigID","Tech"),
+    "immuta":("Immuta","Tech"),"privacera":("Privacera","Tech"),
+    "cyera":("Cyera","Tech"),"varonis":("Varonis","Tech"),
+    "rubrik":("Rubrik","Tech"),"cohesity":("Cohesity","Tech"),
+    "druva":("Druva","Tech"),"veeam":("Veeam","Tech"),
+    "wasabi":("Wasabi","Tech"),"backblaze":("Backblaze","Tech"),
+    "box-inc":("Box","Tech"),"egnyte":("Egnyte","Tech"),
+    "dropboxbusiness":("Dropbox","Tech"),"citrix":("Citrix","Tech"),
+    "vmwareinc":("VMware","Tech"),"nutanix":("Nutanix","Tech"),
+    "puremstorage":("Pure Storage","Tech"),"netapp":("NetApp","Tech"),
+    "juniper":("Juniper Networks","Tech"),"aruba":("Aruba Networks","Tech"),
+    "extremenetworks":("Extreme Networks","Tech"),
+    "hashicorpio":("HashiCorp","Tech"),"terraformio":("HashiCorp Terraform","Tech"),
+    "redisinc":("Redis","Tech"),"confluentinc":("Confluent","Tech"),
+    "mongodbinc":("MongoDB","Tech"),
+    "clickhouse":("ClickHouse","Tech"),"starburst":("Starburst","Tech"),
+    "trino":("Trino","Tech"),"dremio":("Dremio","Tech"),
+    "ahana":("Ahana","Tech"),
+    "motherduck":("MotherDuck","Tech"),"starrocks":("StarRocks","Tech"),
+    "firebolt":("Firebolt","Tech"),"datawarehouse":("Snowflake","Tech"),
+    # Consumer apps
+    "strava":("Strava","Consumer"),"fitbit":("Fitbit","Consumer"),
+    "whoop":("Whoop","Consumer"),"ouraring":("Oura","Consumer"),
+    "bumble-inc":("Bumble","Consumer"),"hinge-app":("Hinge","Consumer"),
+    "grindr":("Grindr","Consumer"),"meet":("Meet","Consumer"),
+    # Travel
+    "kayak":("Kayak","Consumer"),"hopper":("Hopper","Consumer"),
+    "expedia":("Expedia","Consumer"),"booking":("Booking.com","Consumer"),
+    "airbnbhq":("Airbnb","Consumer"),"vrbo":("Vrbo","Consumer"),
+    "getyourguide":("GetYourGuide","Consumer"),
+    "viator":("Viator","Consumer"),
+    # B2B SaaS
+    "frontapp":("Front","Tech"),"helpscout":("Help Scout","Tech"),
+    "zendesk-inc":("Zendesk","Tech"),"freshdesk":("Freshdesk","Tech"),
+    "intercomio":("Intercom","Tech"),
+    "kustomer":("Kustomer","Tech"),
+    "crayon":("Crayon","Tech"),"gong-io":("Gong","Tech"),
+    "outreach-io":("Outreach","Tech"),"salesloft-inc":("Salesloft","Tech"),
+    # Fintech
+    "pipe-technologies":("Pipe","Finance"),
+    "capchase":("Capchase","Finance"),"clearco":("Clearco","Finance"),
+    "wayflyer":("Wayflyer","Finance"),
+    # Consumer
+    "doordashinc":("DoorDash","Consumer"),"ubereats":("Uber Eats","Consumer"),
+    "grubhub":("Grubhub","Consumer"),"chowbus":("Chowbus","Consumer"),
+    # AI
+    "twelve-labs":("Twelve Labs","Tech"),
+    "contextual-ai":("Contextual AI","Tech"),
+    "augment":("Augment","Tech"),
+    "imbue":("Imbue","Tech"),"reka":("Reka","Tech"),
+    "writerai":("Writer","Tech"),"typeform":("Typeform","Tech"),
 }
 
 ASHBY_COMPANIES = {
@@ -315,6 +621,36 @@ ASHBY_COMPANIES = {
     "hightouch":("Hightouch","Tech"),"census":("Census","Tech"),
     "prefect-io":("Prefect","Tech"),"modern-treasury":("Modern Treasury","Finance"),
     "increase":("Increase","Finance"),"unit":("Unit","Finance"),
+
+    # ── Batch added 2026-04-23: 200k-scale Ashby expansion ──
+    "retool-inc":("Retool","Tech"),"linear-app":("Linear","Tech"),
+    "loom-inc":("Loom","Tech"),"raycast":("Raycast","Tech"),
+    "arc-browser":("The Browser Company","Tech"),
+    "thebrowsercompany":("The Browser Company","Tech"),
+    "cursor":("Cursor","Tech"),"zed":("Zed","Tech"),
+    "warp":("Warp","Tech"),"fig":("Fig","Tech"),
+    "hyper":("Hyper","Tech"),
+    "supermaven":("Supermaven","Tech"),
+    "cody-ai":("Cody","Tech"),"pear-ai":("PearAI","Tech"),
+    "tabby":("Tabby","Tech"),"aider-chat":("Aider","Tech"),
+    "claudeanthropic":("Anthropic","Tech"),
+    "bolt-new":("Bolt","Tech"),"lovable":("Lovable","Tech"),
+    "v0":("v0","Tech"),
+    "replitinc":("Replit","Tech"),
+    "glean":("Glean","Tech"),"harvey-ai":("Harvey","Tech"),
+    "hebbia":("Hebbia","Tech"),
+    "viable":("Viable","Tech"),"maven":("Maven AGI","Tech"),
+    "cresta":("Cresta","Tech"),"regal":("Regal","Tech"),
+    "observe":("Observe","Tech"),"chronosphere":("Chronosphere","Tech"),
+    "tetrate":("Tetrate","Tech"),"solo-io":("Solo.io","Tech"),
+    "kong":("Kong","Tech"),"ambassador":("Ambassador","Tech"),
+    # Fintech on Ashby
+    "extend-api":("Extend","Finance"),"alloy":("Alloy","Finance"),
+    "sardine":("Sardine","Finance"),"socure":("Socure","Finance"),
+    "persona":("Persona","Finance"),"middesk":("Middesk","Finance"),
+    "column":("Column","Finance"),"treasury-prime":("Treasury Prime","Finance"),
+    "lithic":("Lithic","Finance"),"highnote":("Highnote","Finance"),
+    "bond":("Bond","Finance"),"weaveworks":("Weaveworks","Tech"),
 }
 
 SMARTRECRUITERS_COMPANIES = {
@@ -811,6 +1147,42 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.3)
 
+    # ── Discovered boards (from the discovery cron) ──────────────────
+    # Run /cron/discover-boards once to populate. After that every
+    # /cron/crawl-internships picks them up automatically here without
+    # needing to hand-edit GREENHOUSE_COMPANIES / LEVER_COMPANIES / etc.
+    # Hits are de-duped against the hand-curated maps above, so a slug
+    # that already exists in both places only crawls once per run.
+    try:
+        from projects.dilly.api.ingest.slug_discovery import list_discovered
+        already_seen = {
+            "greenhouse": set(GREENHOUSE_COMPANIES.keys()),
+            "lever": set(LEVER_COMPANIES.keys()),
+            "ashby": set(ASHBY_COMPANIES.keys()),
+        }
+        for vendor, crawler_fn in (
+            ("greenhouse", crawl_greenhouse),
+            ("lever", crawl_lever),
+            ("ashby", crawl_ashby),
+        ):
+            rows = list_discovered(vendor)
+            rows = [r for r in rows if r["slug"] not in already_seen[vendor]]
+            if not rows:
+                continue
+            print(f"\n[{vendor} discovered] Crawling {len(rows)} newly-found boards...")
+            for r in rows:
+                slug = r["slug"]
+                name = r.get("display_name") or slug.replace("-", " ").title()
+                try:
+                    jobs = crawler_fn(slug, name)
+                    new = write_listings(conn, jobs, name, vendor, "Tech")
+                    total_found += len(jobs); total_new += new
+                except Exception as e:
+                    print(f"  {slug} ERROR: {e}")
+                time.sleep(0.25)
+    except Exception as e:
+        print(f"[discovered-boards] load failed: {e}")
+
     # ── Multi-company feeds (RemoteOK, WWR, Built In) ───────────────
     # Each call returns jobs from MANY different companies at once.
     # write_multi_company_feed groups by company and inserts in batches.
@@ -828,6 +1200,24 @@ def crawl_all():
                 print(f"  ERROR writing {label}: {e}")
     except Exception as e:
         print(f"[remote-feeds] load failed: {e}")
+
+    # ── Free public APIs (The Muse, Remotive, Arbeitnow, Jobicy, HN) ─
+    # Each is a no-auth JSON endpoint returning jobs across thousands
+    # of companies. Combined yield: +60-80k jobs per run at ceiling.
+    # Sources that error out silently return [] — one flaky API
+    # never poisons the rest.
+    try:
+        from dilly_core.job_source_free_apis import fetch_all_free_apis
+        for label, ats_label, jobs in fetch_all_free_apis():
+            print(f"\n[{label}] Ingesting {len(jobs)} jobs...")
+            try:
+                new = write_multi_company_feed(conn, jobs, ats_label)
+                print(f"  {len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"  ERROR writing {label}: {e}")
+    except Exception as e:
+        print(f"[free-apis] load failed: {e}")
 
     # ── Workday (Fortune 500) ───────────────────────────────────────
     # Biggest single volume unlock. Each configured tenant returns up
@@ -860,6 +1250,33 @@ def crawl_all():
             "pleo", "blinkist", "getyourguide", "freeletics",
             "n26", "payoneer", "cloudpay", "taxjar",
             "mews", "workable",  # Workable themselves run on Workable
+            # ── Batch added 2026-04-23: Workable expansion ──
+            # 80+ mid-market employers known to use Workable. 404s are
+            # silently skipped by fetch_all_workable's per-slug try/except.
+            "monzo", "revolut", "wise", "trustpilot", "depop",
+            "blockchain-com", "lendinvest", "tandem-bank", "starling",
+            "curve", "moonpig", "cuvva", "pension-bee",
+            "bloom-and-wild", "papier", "farfetch", "asos",
+            "simba-sleep", "bulb", "ovo-energy", "octopus-electric",
+            "just-eat", "deliveroo-uk", "cazoo", "bonsai", "huel",
+            "freshly", "magic-spoon", "hellofresh", "blue-apron",
+            "sun-basket", "home-chef", "foodguides", "thrive-market",
+            "brandless", "misfits-market", "imperfect-foods",
+            "sunbasket", "hungryroot",
+            # Tech
+            "mixmax", "superhuman-tech", "front-inc", "intercomgroup",
+            "typeform-com", "paddle-com", "rechargepayments",
+            "gorgias", "tidiopl", "segment-io",
+            # Europe tech
+            "klarna-sweden", "spotify-europe", "deliveroo-europe",
+            "rovio-entertainment", "zalando", "delivery-hero",
+            "outfit7", "gojek", "grab", "tokopedia",
+            # Non-tech + ops-heavy
+            "papa-johns", "chipotle-careers", "yumbrands",
+            "dominos", "mcdonalds-corp",
+            # Health / consumer DTC
+            "warby-parker-careers", "casper-careers", "allbirds-careers",
+            "glossier-careers", "harrys-careers",
         ]
         print(f"\n[Workable] Fetching {len(workable_slugs)} boards...")
         wk_jobs = fetch_all_workable(workable_slugs, max_per_company=100)

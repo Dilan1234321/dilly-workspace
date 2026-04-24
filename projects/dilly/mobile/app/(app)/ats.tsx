@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -501,7 +502,7 @@ export default function ATSScreen() {
       {/* Nav */}
       <FadeInView delay={0}>
         <View style={[ss.navBar, { borderBottomColor: theme.surface.border }]}>
-          <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
+          <AnimatedPressable onPress={() => safeBack('/(app)/my-dilly-profile')} scaleDown={0.9} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
           <Text style={[ss.navTitle, { color: theme.surface.t1 }]}>ATS Scanner</Text>

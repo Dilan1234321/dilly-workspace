@@ -68,7 +68,7 @@ export default function CohortPicker({ visible, onClose, activeCohorts, onToggle
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={[s.sheet, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }]}>
           {/* Header */}

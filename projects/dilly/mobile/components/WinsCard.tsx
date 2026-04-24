@@ -242,7 +242,7 @@ export function LogWinSheet({
   }, [title, company, note, type, upcomingDate, saving, onLogged]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={s.modalRoot}

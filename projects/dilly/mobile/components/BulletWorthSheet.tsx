@@ -94,7 +94,7 @@ export default function BulletWorthSheet({
   }, [visible, bullet, cohortId]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={s.sheet}>
           {/* Handle + close */}

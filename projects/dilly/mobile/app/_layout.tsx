@@ -12,7 +12,7 @@ import {
   Cinzel_700Bold,
   Cinzel_900Black,
 } from '@expo-google-fonts/cinzel';
-import { View, StyleSheet, Animated, Easing, Image } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Image, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -272,6 +272,40 @@ export default function RootLayout() {
   );
 }
 
+/** Crossfade overlay that fires when the OS dark/light mode toggles.
+ * Snaps to the new theme's bg at full opacity, then animates out over
+ * ~300ms — masking the instant palette snap with a smooth fade-in.
+ * Uses useNativeDriver so the animation runs on the UI thread. */
+function SystemThemeTransitionOverlay() {
+  const theme = useResolvedTheme();
+  const colorScheme = useColorScheme();
+  const prevScheme = useRef(colorScheme);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const [bgColor, setBgColor] = useState(theme.surface.bg);
+
+  useEffect(() => {
+    if (colorScheme === prevScheme.current) return;
+    prevScheme.current = colorScheme;
+    // Capture the new bg (theme has already resolved to the new scheme),
+    // flash the overlay to full opacity, then fade out.
+    setBgColor(theme.surface.bg);
+    overlayOpacity.setValue(1);
+    Animated.timing(overlayOpacity, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [colorScheme, theme.surface.bg]);
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { backgroundColor: bgColor, opacity: overlayOpacity, zIndex: 99998 }]}
+    />
+  );
+}
+
 /** Inner Stack that reads the resolved theme so the screen chrome
  * (content background between animations, status-bar-safe regions)
  * picks up the user's accent/surface. Kept separate from RootLayout
@@ -294,6 +328,7 @@ function ThemedAppStack({ pathname }: { pathname: string }) {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(app)" />
       </Stack>
+      <SystemThemeTransitionOverlay />
     </>
   );
 }

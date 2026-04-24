@@ -3,13 +3,15 @@ import {
   View, Text, Image, Modal, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Animated, Easing, Dimensions, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, API_BASE } from '../lib/tokens';
-import { mediumHaptic } from '../lib/haptics';
+import { lightHaptic, mediumHaptic } from '../lib/haptics';
 import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
+import { computeMirrorState } from '../lib/arena/mirror-state';
 import RichText, { extractAllYouTubeIds } from './RichText';
 import SkillsVideoCard from './SkillsVideoCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,7 +21,10 @@ import { useSubscription } from '../hooks/useSubscription';
 import { useResolvedTheme } from '../hooks/useTheme';
 import { FirstVisitCoach } from './FirstVisitCoach';
 import {
-  markExtractionPending, resolveExtraction, abortExtraction,
+  markExtractionPending,
+  resolveExtraction,
+  abortExtraction,
+  type ExtractionAddedFact,
 } from '../hooks/useExtractionPending';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -73,7 +78,7 @@ const MessageAnimIn = ({ children }: { children: React.ReactNode; index?: number
     ]).start();
   }, []);
   return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+    <Animated.View style={{ opacity, transform: [{ translateY }], alignSelf: 'stretch' }}>
       {children}
     </Animated.View>
   );
@@ -257,6 +262,72 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   }, [rawOnClose]);
   const [mode,     setMode]     = useState<ChatMode>('coaching');
   const [isTyping, setIsTyping] = useState(false);
+  // Per-mode message stashes — when the user switches from coaching
+  // to practice mid-response, we save coaching's thread (including
+  // any in-flight assistant stream) so they can switch back later
+  // and pick up exactly where they left. Previously, switching wiped
+  // the other thread and the user lost the reply.
+  const stashedMessages = useRef<Record<ChatMode, Message[]>>({ coaching: [], practice: [] });
+  // In-flight request controller. Switching modes aborts the old
+  // mode's stream so the new mode starts a fresh chat with no
+  // stale-response leakage.
+  const activeControllerRef = useRef<AbortController | null>(null);
+  // Arena state we send alongside every chat message so Dilly knows
+  // the user's current rubric coverage without the user having to
+  // recite the page. Populated on overlay open from /profile +
+  // /memory. Null until the fetch returns — the backend treats
+  // null as "no data available" and falls back to generic advice.
+  const [arenaState, setArenaState] = useState<null | {
+    honest_mirror: {
+      cohort: string
+      short_name: string
+      total: number
+      have: number
+      missing: number
+      have_items: string[]
+      missing_items: string[]
+    }
+  }>(null);
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [prof, surface] = await Promise.all([
+          dilly.get('/profile').catch(() => null),
+          dilly.get('/memory').catch(() => null),
+        ]);
+        if (cancelled) return;
+        const items = Array.isArray((surface as any)?.items)
+          ? (surface as any).items
+          : [];
+        const st = computeMirrorState(prof || null, items);
+        setArenaState({
+          honest_mirror: {
+            cohort: st.cohort,
+            short_name: st.shortName,
+            total: st.total,
+            have: st.have,
+            missing: st.missing,
+            have_items: st.rows.filter(r => r.have).map(r => r.text),
+            missing_items: st.rows.filter(r => !r.have).map(r => r.text),
+          },
+        });
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [visible]);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const copyMessage = useCallback((id: number, text: string) => {
+    lightHaptic();
+    Clipboard.setStringAsync(text).catch(() => {});
+    setCopiedId(id);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 1500);
+  }, []);
+
   const [showHistory, setShowHistory] = useState(false);
   const [historyMounted, setHistoryMounted] = useState(false);
   const historySlide = useRef(new Animated.Value(0)).current; // 0 = offscreen right, 1 = visible
@@ -380,6 +451,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       const token = await getToken();
       if (!token) throw new Error('auth');
       const controller = new AbortController();
+      activeControllerRef.current = controller;
       const timeout = setTimeout(() => controller.abort(), 30000);
       const res = await fetch(`${API_BASE}/ai/chat`, {
         method: 'POST',
@@ -391,6 +463,10 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           // Seed a stable conv_id on first send. Sticks for the whole
           // session, gets cleared on overlay close.
           conv_id: (convIdRef.current ||= _newConvId()),
+          // Arena state: the user's current Honest Mirror rubric
+          // coverage. Sent so Dilly can answer "what does my mirror
+          // say" without bluffing. Null until mount-time fetch resolves.
+          arena_state: arenaState,
           student_context: studentContext ? {
             name:              studentContext.name,
             cohort:            studentContext.cohort,
@@ -452,6 +528,29 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         throw new Error(errMsg);
       }
       const data = await res.json();
+
+      // Synchronous memory extraction on the server: new facts are persisted
+      // before this JSON returns. Broadcast so My Dilly + ProfileGrowthToast
+      // update without waiting for overlay close /flush.
+      const memAdded = data?.memory?.added;
+      if (Array.isArray(memAdded) && memAdded.length > 0) {
+        const facts: ExtractionAddedFact[] = memAdded
+          .filter(
+            (row: unknown) =>
+              row &&
+              typeof row === 'object' &&
+              typeof (row as { id?: string }).id === 'string',
+          )
+          .map((row: { id: string; category?: string; label?: string; value?: string }) => ({
+            id: row.id,
+            category: String(row.category ?? ''),
+            label: String(row.label ?? ''),
+            value: String(row.value ?? ''),
+          }));
+        if (facts.length > 0) {
+          resolveExtraction(facts);
+        }
+      }
 
       const visual: VisualPayload | undefined = data.visual || undefined;
       const fullText = data.content as string;
@@ -727,6 +826,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       timeoutsRef.current.forEach(clearTimeout);
       timeoutsRef.current = [];
       if (streamRef.current) { clearInterval(streamRef.current); streamRef.current = null; }
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       glowLoopRef.current?.stop();
     };
   }, []);
@@ -853,11 +953,41 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 ]}
                 onPress={() => {
                   if (mode === m) return;
+                  // Stash the current mode's thread BEFORE we swap in
+                  // the target mode's stash. If Dilly was mid-response,
+                  // we intentionally keep the partial assistant message
+                  // in the stash so switching back shows the full
+                  // (final) reply once it lands. Streaming updates
+                  // flow through a setMessages(prev => ...) closure so
+                  // they keep writing into the SAME array reference
+                  // that the stash now holds — when the user switches
+                  // back, they'll see the completed response.
+                  stashedMessages.current[mode] = messages;
+                  // Abort the in-flight stream so the new-mode chat
+                  // doesn't inherit a half-written reply from the old
+                  // mode. (setIsTyping stays true until the stream
+                  // actually settles on its own — if the user switches
+                  // back before then, they'll see the typing indicator
+                  // resume on the correct thread.)
+                  if (activeControllerRef.current) {
+                    try { activeControllerRef.current.abort(); } catch {}
+                    activeControllerRef.current = null;
+                  }
+                  setIsTyping(false);
+                  const restored = stashedMessages.current[m] || [];
                   setMode(m);
-                  setMessages([]);
+                  setMessages(restored);
                   setRichContext(null);
-                  setSuggestions(getInitialSuggestions(studentContext, m));
-                  suggestionsOpacity.setValue(1);
+                  // Only show starter suggestions when the restored
+                  // thread is empty — otherwise the user is resuming
+                  // a conversation and doesn't need intro chips.
+                  if (restored.length === 0) {
+                    setSuggestions(getInitialSuggestions(studentContext, m));
+                    suggestionsOpacity.setValue(1);
+                  } else {
+                    setSuggestions([]);
+                    suggestionsOpacity.setValue(0);
+                  }
                 }}
               >
                 <Text style={[
@@ -905,29 +1035,53 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
 
             {messages.map((msg) => {
               const Wrapper = MessageAnimIn || View;
+              const isCopied = copiedId === msg.id;
               return (
               <Wrapper key={msg.id} index={msg.id}>
                 {msg.role === 'user' ? (
                   <View style={[s.msgRow, { justifyContent: 'flex-end' }]}>
-                    <View style={[s.userBubble, { backgroundColor: theme.accentSoft }]}>
-                      <Text style={[s.msgText, { color: theme.surface.t1 }]}>{msg.content}</Text>
-                    </View>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onLongPress={() => copyMessage(msg.id, msg.content)}
+                      delayLongPress={400}
+                    >
+                      <View style={[s.userBubble, { backgroundColor: theme.accentSoft }]}>
+                        <Text style={[s.msgText, { color: theme.surface.t1 }]}>{msg.content}</Text>
+                      </View>
+                    </TouchableOpacity>
+                    {isCopied && (
+                      <View style={[s.copyBadge, { backgroundColor: theme.surface.s2 }]}>
+                        <Ionicons name="checkmark" size={11} color={theme.accent} />
+                      </View>
+                    )}
                   </View>
                 ) : (
                   <View style={s.assistantBlock}>
                     <View style={s.msgRow}>
                       <View style={[s.assistantDot, { backgroundColor: theme.accent }]} />
-                      <View style={[s.assistantBubble, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                        <RichText text={msg.content} baseStyle={[s.msgText, { color: theme.surface.t1 }]} />
-                        {/* Any YouTube URL in the AI response becomes
-                            a tappable "Watch in Dilly Skills" card that
-                            routes to /skills/video/<id>. Dilly AI never
-                            sends the user out to YouTube — the whole
-                            learning experience stays in the app. */}
-                        {extractAllYouTubeIds(msg.content).map(videoId => (
-                          <SkillsVideoCard key={videoId} videoId={videoId} />
-                        ))}
-                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onLongPress={() => copyMessage(msg.id, msg.content)}
+                        delayLongPress={400}
+                        style={{ flex: 1, maxWidth: '85%' }}
+                      >
+                        <View style={[s.assistantBubble, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                          <RichText text={msg.content} baseStyle={[s.msgText, { color: theme.surface.t1 }]} />
+                          {/* Any YouTube URL in the AI response becomes
+                              a tappable "Watch in Dilly Skills" card that
+                              routes to /skills/video/<id>. Dilly AI never
+                              sends the user out to YouTube — the whole
+                              learning experience stays in the app. */}
+                          {extractAllYouTubeIds(msg.content).map(videoId => (
+                            <SkillsVideoCard key={videoId} videoId={videoId} />
+                          ))}
+                        </View>
+                      </TouchableOpacity>
+                      {isCopied && (
+                        <View style={[s.copyBadge, { backgroundColor: theme.surface.s2, alignSelf: 'flex-end', marginBottom: 6 }]}>
+                          <Ionicons name="checkmark" size={11} color={theme.accent} />
+                        </View>
+                      )}
                     </View>
                     {msg.visual && (
                       <View style={s.visualWrap}>
@@ -1248,6 +1402,7 @@ const s = StyleSheet.create({
   assistantBubble: { backgroundColor: colors.s1, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 10, paddingHorizontal: 14, maxWidth: '80%', flexShrink: 1, borderWidth: 1, borderColor: colors.b1 },
   msgText: { color: colors.t1, fontSize: 15, lineHeight: 22 },
   assistantDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD, marginBottom: 8, flexShrink: 0 },
+  copyBadge: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 4, marginBottom: 4 },
   typingBubble: { backgroundColor: colors.s1, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 16, height: 42, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.b1 },
   typingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD },
   inputBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.b1 },

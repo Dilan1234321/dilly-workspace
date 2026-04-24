@@ -364,7 +364,7 @@ function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
   return (
     <View style={[d.container, { paddingTop: insetTop }]}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-        <DillyFace size={120} />
+        <DillyFace size={120} mood="writing" accessory="pencil" />
         <Animated.Text
           style={{
             fontSize: 16,
@@ -875,7 +875,7 @@ function SeekerProfileScreen() {
                   // A user can have a photo via any of these — don't
                   // prompt "Add a photo" if ANY is set.
                   const slug = p.profile_slug;
-                  const bust = Math.floor(Date.now() / 60000);
+                  const bust = Math.floor(Date.now() / 86400000);
                   const hasPhoto = !!(slug || p.photo_url || p.profile_photo_url);
                   if (!hasPhoto) {
                     return (
@@ -1362,11 +1362,17 @@ function SeekerProfileScreen() {
           />
         </FadeInView>
 
-        {/* ── 1b. Your Public Profile ──────────────────────────── */}
+        {/* ── 1b. Your Public Profile ──────────────────────────────
+            Tapping this row opens the dedicated
+            /(app)/public-profile-settings page (full surface with
+            tagline, sections, fact visibility, toggles, QR). We used
+            to inline-expand all of that inside My Dilly, which made
+            the profile page feel like a settings screen and pushed
+            the interesting content down the fold. */}
         <FadeInView delay={40}>
           <AnimatedPressable
             style={{ backgroundColor: theme.accentSoft, borderRadius: 14, borderWidth: 1, borderColor: theme.accentBorder, padding: 16, marginBottom: 4 }}
-            onPress={() => setShowWebProfile(!showWebProfile)}
+            onPress={() => router.push('/(app)/public-profile-settings' as any)}
             scaleDown={0.98}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1374,7 +1380,7 @@ function SeekerProfileScreen() {
                 <Ionicons name="globe-outline" size={18} color={theme.accent} />
                 <Text style={{ fontSize: 15, fontWeight: '700', color: theme.surface.t1 }}>Your Public Profile</Text>
               </View>
-              <Ionicons name={showWebProfile ? 'chevron-up' : 'chevron-down'} size={16} color={theme.surface.t3} />
+              <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />
             </View>
             {readableSlug ? (
               <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 4, marginLeft: 28 }}>
@@ -1468,8 +1474,8 @@ function SeekerProfileScreen() {
                         setWebSections(updated);
                         dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ web_profile_settings: { sections: updated, hidden_fact_ids: hiddenFactIds } }) }).catch(() => {});
                       }}
-                      trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
-                      thumbColor={webSections[sec.key] !== false ? theme.accent : '#f4f3f4'}
+                      trackColor={{ false: theme.surface.t3 + '55', true: theme.accent + '40' }}
+                      thumbColor={webSections[sec.key] !== false ? theme.accent : '#9CA3AF'}
                     />
                   </View>
                 ))}
@@ -1528,8 +1534,8 @@ function SeekerProfileScreen() {
                                 toast.show({ message: `Could not update: ${status || ''} ${reason}`.trim() });
                               }
                             }}
-                            trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
-                            thumbColor={isPublic ? theme.accent : '#f4f3f4'}
+                            trackColor={{ false: theme.surface.t3 + '55', true: theme.accent + '40' }}
+                            thumbColor={isPublic ? theme.accent : '#9CA3AF'}
                           />
                         </View>
                       );
@@ -1568,8 +1574,8 @@ function SeekerProfileScreen() {
                       setProfile((prev: any) => ({ ...prev, booking_availability: updated }));
                       dilly.fetch('/booking/availability', { method: 'PATCH', body: JSON.stringify(updated) }).catch(() => {});
                     }}
-                    trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
-                    thumbColor={p.booking_availability?.enabled ? theme.accent : '#f4f3f4'}
+                    trackColor={{ false: theme.surface.t3 + '55', true: theme.accent + '40' }}
+                    thumbColor={p.booking_availability?.enabled ? theme.accent : '#9CA3AF'}
                   />
                 </View>
 
@@ -1585,8 +1591,8 @@ function SeekerProfileScreen() {
                       setProfile((prev: any) => ({ ...prev, show_qr_button: v }));
                       dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ show_qr_button: v }) }).catch(() => {});
                     }}
-                    trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
-                    thumbColor={p.show_qr_button !== false ? theme.accent : '#f4f3f4'}
+                    trackColor={{ false: theme.surface.t3 + '55', true: theme.accent + '40' }}
+                    thumbColor={p.show_qr_button !== false ? theme.accent : '#9CA3AF'}
                   />
                 </View>
 
@@ -1602,8 +1608,8 @@ function SeekerProfileScreen() {
                       setProfile((prev: any) => ({ ...prev, show_refer_button: v }));
                       dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ show_refer_button: v }) }).catch(() => {});
                     }}
-                    trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
-                    thumbColor={p.show_refer_button !== false ? theme.accent : '#f4f3f4'}
+                    trackColor={{ false: theme.surface.t3 + '55', true: theme.accent + '40' }}
+                    thumbColor={p.show_refer_button !== false ? theme.accent : '#9CA3AF'}
                   />
                 </View>
               </View>
@@ -1767,28 +1773,48 @@ function SeekerProfileScreen() {
             </View>
 
             {/* Expanded category details */}
-            {expandedCat && data?.grouped?.[expandedCat] && (
-              <View style={[d.expandedFacts, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                {data.grouped[expandedCat].slice(0, 8).map((fact, i) => (
-                  <FactRow
-                    key={fact.id || i}
-                    fact={fact}
-                    color={STRENGTH_CATEGORIES[expandedCat]?.color || theme.surface.t3}
-                    onPress={(anchor) => setPopup({ visible: true, anchor, fact })}
-                  />
-                ))}
-                {/* Add new fact — manual add so free users
-                    without a resume can still populate this. */}
-                <AnimatedPressable
-                  style={[d.factRow, { borderTopWidth: 1, borderTopColor: theme.surface.border, paddingTop: 10 }]}
-                  onPress={() => openAddFactModal(expandedCat, STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat)}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="add-circle" size={16} color={theme.accent} />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>Add to {STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat}</Text>
-                </AnimatedPressable>
-              </View>
-            )}
+            {expandedCat && data?.grouped?.[expandedCat] && (() => {
+              const allFacts = [...data.grouped[expandedCat]].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              );
+              const preview = allFacts.slice(0, 5);
+              const hasMore = allFacts.length > 5;
+              const catLabel = STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat;
+              const catColor = STRENGTH_CATEGORIES[expandedCat]?.color || theme.surface.t3;
+              return (
+                <View style={[d.expandedFacts, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                  {preview.map((fact, i) => (
+                    <FactRow
+                      key={fact.id || i}
+                      fact={fact}
+                      color={catColor}
+                      onPress={(anchor) => setPopup({ visible: true, anchor, fact })}
+                    />
+                  ))}
+                  {hasMore && (
+                    <AnimatedPressable
+                      style={[d.factRow, { borderTopWidth: 1, borderTopColor: theme.surface.border, paddingTop: 10 }]}
+                      onPress={() => router.push({ pathname: '/my-dilly-category', params: { category: expandedCat, label: catLabel, color: catColor } })}
+                      scaleDown={0.97}
+                    >
+                      <Ionicons name="list" size={16} color={theme.accent} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>
+                        See all {allFacts.length} in {catLabel}
+                      </Text>
+                    </AnimatedPressable>
+                  )}
+                  {/* Add new fact */}
+                  <AnimatedPressable
+                    style={[d.factRow, { borderTopWidth: 1, borderTopColor: theme.surface.border, paddingTop: 10 }]}
+                    onPress={() => openAddFactModal(expandedCat, catLabel)}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="add-circle" size={16} color={theme.accent} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>Add to {catLabel}</Text>
+                  </AnimatedPressable>
+                </View>
+              );
+            })()}
           </FadeInView>
 
         {/* ── Recent Wins ───────────────────────────────────────
@@ -1897,7 +1923,12 @@ function SeekerProfileScreen() {
           <PulseTimelineSection theme={theme} />
         </FadeInView>
 
-        {/* ── 7. My Resumes ──────────────────────────────────── */}
+        {/* ── 7. My Resumes ────────────────────────────────────
+            All styling overridden inline with theme.* values so this
+            section honors Customize Dilly. Previously it pulled from
+            the fixed `d.resumeCard` stylesheet (using static colors.*
+            tokens) and ignored Midnight / Cloud / Cream / Blush /
+            Slate. */}
         {resumes.length > 0 && (
           <FadeInView delay={400}>
             <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>MY RESUMES</Text>
@@ -1907,14 +1938,20 @@ function SeekerProfileScreen() {
               return (
                 <AnimatedPressable
                   key={r.id}
-                  style={d.resumeCard}
+                  style={[
+                    d.resumeCard,
+                    {
+                      backgroundColor: theme.surface.s1,
+                      borderColor: theme.surface.border,
+                    },
+                  ]}
                   onPress={() => router.push({ pathname: '/(app)/resume-generate', params: { viewId: r.id } })}
                   scaleDown={0.98}
                 >
-                  <Ionicons name="document-text-outline" size={18} color={COBALT} />
+                  <Ionicons name="document-text-outline" size={18} color={theme.accent} />
                   <View style={{ flex: 1 }}>
-                    <Text style={d.resumeTitle}>{r.job_title}</Text>
-                    <Text style={d.resumeSub}>{r.company} · {dateStr}</Text>
+                    <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>{r.job_title}</Text>
+                    <Text style={[d.resumeSub, { color: theme.surface.t3 }]}>{r.company} · {dateStr}</Text>
                   </View>
                   <TouchableOpacity
                     hitSlop={10}
@@ -1922,11 +1959,11 @@ function SeekerProfileScreen() {
                       e.stopPropagation?.();
                       handleShareResume(r);
                     }}
-                    style={d.resumeShareBtn}
+                    style={[d.resumeShareBtn, { backgroundColor: theme.accentSoft }]}
                   >
-                    <Ionicons name="share-outline" size={16} color={COBALT} />
+                    <Ionicons name="share-outline" size={16} color={theme.accent} />
                   </TouchableOpacity>
-                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
                 </AnimatedPressable>
               );
             })}
@@ -2194,7 +2231,7 @@ function SeekerProfileScreen() {
 
       {/* QR Code Fullscreen. The QR itself stays dark-on-white for scan
           reliability — theme only chromes the surrounding screen. */}
-      <Modal visible={showQrFullscreen} animationType="slide" presentationStyle="fullScreen" transparent={false}>
+      <Modal visible={showQrFullscreen} animationType="none" presentationStyle="fullScreen" transparent={false}>
         <View style={{ flex: 1, backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center' }}>
           <TouchableOpacity
             style={{ position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: theme.surface.s2, alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
@@ -2372,7 +2409,7 @@ function HolderCareer() {
   //   3. p.photo_url (full profile response)
   // Cache-bust with a minute-resolution timestamp so stale 404s on
   // the CDN clear within ~60s of a new upload.
-  const _bust = Math.floor(Date.now() / 60000);
+  const _bust = Math.floor(Date.now() / 86400000);
   const photoFull =
     p.profile_slug
       ? `${API_BASE}/profile/public/${p.profile_slug}/photo?_t=${_bust}`
@@ -2480,7 +2517,7 @@ function HolderCareer() {
               // Result: card showed the initial instead of the
               // actual photo even though the profile had one.
               photoUri: (() => {
-                const bust = Math.floor(Date.now() / 60000);
+                const bust = Math.floor(Date.now() / 86400000);
                 if (identity.photo_url) {
                   return String(identity.photo_url).startsWith('http')
                     ? `${identity.photo_url}?_t=${bust}`

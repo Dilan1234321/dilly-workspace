@@ -398,7 +398,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
   const cfg = MILESTONE_CONFIGS[milestone];
 
   return (
-    <Modal transparent animationType="fade" visible>
+    <Modal transparent animationType="none" visible>
       <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
 
         {/* ── Confetti layer ─────────────────────────────────────────────── */}

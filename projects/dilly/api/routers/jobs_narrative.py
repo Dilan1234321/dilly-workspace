@@ -393,8 +393,23 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
         'Name the exact skill to learn, project to build, or experience to add."\n'
         "}\n\n"
         "Rules:\n"
-        "- fit_color: green = strong fit (most requirements met), amber = partial fit (some gaps), "
-        "red = significant gaps\n"
+        "- fit_color is CALIBRATED TO THE ROLE LEVEL. Do not hold an intern to "
+        "a senior-engineer bar. Use this rubric:\n"
+        "    * INTERNSHIP postings: green = profile shows 2+ relevant signals "
+        "(coursework, a project, a skill, or an adjacent experience); amber = "
+        "1 weak signal or a reasonable stretch; red ONLY when the profile is "
+        "fundamentally mismatched (e.g. a pure-humanities student applying to "
+        "a quant trading internship with zero math/CS). Students with some "
+        "relevant coursework or a basic project should almost never be red for "
+        "internships.\n"
+        "    * ENTRY-LEVEL / NEW-GRAD: green = most listed requirements met; "
+        "amber = missing one major requirement but has adjacent proof; red = "
+        "missing multiple major requirements with no adjacent proof.\n"
+        "    * MID/SENIOR: green = most requirements met and obvious seniority "
+        "match; amber = seniority gap but skills fit; red = clear level mismatch.\n"
+        "- Bias toward amber when uncertain. Red is reserved for genuine mismatches "
+        "the user would be wasting time applying to. Over-labeling red makes "
+        "the whole feed feel like 'nothing fits me'.\n"
         "- Only cite facts that are actually in the profile. Never invent.\n"
         '- Be specific: "your Python work at [Company]" not "your technical skills"\n'
         "- Be honest: if they're missing something major, say it plainly\n"
@@ -402,10 +417,27 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
         "- Never use em dashes"
     )
 
+    # Cheap role-level inference so the LLM applies the right rubric
+    # without bluffing. Title + description are scanned for obvious
+    # signals; fallback is 'entry_level' which gets the mid-strictness
+    # rule.
+    _title_l = (job_title or "").lower()
+    _desc_l = (job_description or "").lower()[:500]
+    if any(k in _title_l for k in ["intern", "co-op", "coop"]):
+        _role_level = "INTERNSHIP"
+    elif any(k in _title_l for k in ["senior ", "staff ", "principal ", "lead ", " vp ", "director"]):
+        _role_level = "SENIOR"
+    elif any(k in _title_l for k in ["junior ", "associate ", "new grad", "new-grad", "entry "]) or \
+         any(k in _desc_l for k in ["new graduate", "recent graduate", "0-2 years", "0 - 2 years"]):
+        _role_level = "ENTRY_LEVEL"
+    else:
+        _role_level = "ENTRY_LEVEL"
+
     user_message = (
         f"---PROFILE---\n{profile_text}\n---END PROFILE---\n\n"
         f"---JOB---\n"
         f"Title: {job_title}\n"
+        f"Role level: {_role_level}  (apply the {_role_level} rubric for fit_color)\n"
         f"Company: {company}\n"
         f"Location: {location}\n"
         f"Description: {job_description}\n"

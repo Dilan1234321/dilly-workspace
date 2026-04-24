@@ -18,7 +18,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, PanResponder, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResolvedTheme } from '../hooks/useTheme';
@@ -44,8 +44,38 @@ export default function ProfileGrowthToast() {
   const [label, setLabel] = useState('');
   const opacity = useRef(new Animated.Value(0)).current;
   const translate = useRef(new Animated.Value(-12)).current;
+  const panX = useRef(new Animated.Value(0)).current;
   const lastSeq = useRef<number>(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function dismiss() {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    Animated.parallel([
+      Animated.timing(opacity,   { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(translate, { toValue: -16, duration: 200, useNativeDriver: true }),
+    ]).start(({ finished }) => { if (finished) { setVisible(false); panX.setValue(0); } });
+  }
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_e, gs) => Math.abs(gs.dx) > 6 || gs.dy < -6,
+      onPanResponderMove: (_e, gs) => {
+        panX.setValue(gs.dx);
+        if (gs.dy < 0) translate.setValue(gs.dy * 0.5 - 12 + 12); // small upward drag
+      },
+      onPanResponderRelease: (_e, gs) => {
+        const swipedFarEnough = Math.abs(gs.dx) > 80 || gs.dy < -40;
+        const fastEnough = Math.abs(gs.vx) > 0.8 || gs.vy < -0.6;
+        if (swipedFarEnough || fastEnough) {
+          dismiss();
+        } else {
+          Animated.spring(panX, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }).start();
+          Animated.spring(translate, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     // Only react when a new batch arrives (seq advances) AND contains
@@ -65,14 +95,7 @@ export default function ProfileGrowthToast() {
     ]).start();
 
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(opacity,   { toValue: 0, duration: 240, useNativeDriver: true }),
-        Animated.timing(translate, { toValue: -8, duration: 240, useNativeDriver: true }),
-      ]).start(({ finished }) => {
-        if (finished) setVisible(false);
-      });
-    }, SHOW_MS);
+    hideTimer.current = setTimeout(dismiss, SHOW_MS);
 
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -83,13 +106,13 @@ export default function ProfileGrowthToast() {
 
   return (
     <Animated.View
-      pointerEvents="none"
+      {...panResponder.panHandlers}
       style={[
         styles.wrap,
         {
           top: insets.top + 8,
           opacity,
-          transform: [{ translateY: translate }],
+          transform: [{ translateY: translate }, { translateX: panX }],
           backgroundColor: theme.surface.s1,
           borderColor: theme.accentBorder,
         },

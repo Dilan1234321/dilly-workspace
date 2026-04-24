@@ -21,10 +21,6 @@ export default function SkillsLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        // Smooth horizontal slide into sub-surfaces (cohort, video,
-        // ask, library, trending), plus a matching fade so surfaces
-        // with different backgrounds don't flash. 260ms is long
-        // enough to feel considered without dragging.
         animation: 'slide_from_right',
         animationDuration: 260,
       }}

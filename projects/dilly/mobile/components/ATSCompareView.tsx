@@ -105,7 +105,7 @@ export default function ATSCompareView({
   }, [visible]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" onRequestClose={onClose}>
       <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
         {/* Nav */}
         <View style={[s.navBar, { borderBottomColor: theme.surface.border }]}>

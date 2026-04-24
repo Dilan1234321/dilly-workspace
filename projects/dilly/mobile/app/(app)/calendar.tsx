@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -17,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import { useResolvedTheme } from '../../hooks/useTheme';
-import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
+import { openAddToCalendar, openSubscribeToDillyCalendar, isCalendarSubscribed } from '../../lib/calendar';
 import { remindDeadline, remindInterview, remindMeLater } from '../../lib/reminders';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -454,7 +455,7 @@ function PrepDeckModalMobile({ deck, onClose }: { deck: PrepDeck; onClose: () =>
   const probColor: Record<string, string> = { high: CORAL, medium: AMBER, low: GREEN };
 
   return (
-    <Modal visible animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={cs.modalOverlay}>
         <View style={[cs.prepDeckSheet, { paddingBottom: insets.bottom + 20 }]}>
           <View style={cs.modalHeader}>
@@ -664,7 +665,7 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={cs.modalOverlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={cs.modalKav}>
           {/* Cap the card height so it never fills the full screen
@@ -687,6 +688,19 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
                 <Ionicons name="close" size={24} color={colors.t1} />
               </AnimatedPressable>
             </View>
+
+            {/* Scrollable body — the keyboard used to cover the date
+                picker + notes + Add button because the modal card was
+                fixed. Wrapping everything below the header in a
+                ScrollView lets the user scroll past the keyboard to
+                hit "Add Event". keyboardShouldPersistTaps='handled' so
+                date picker chips still register taps while the input
+                has focus. */}
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 10, paddingBottom: 12 }}
+            >
 
             {/* Type selector */}
             <View style={cs.typeRow}>
@@ -783,6 +797,7 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
               <Ionicons name="add-circle" size={16} color="#FFFFFF" />
               <Text style={cs.modalBtnText}>Add Event</Text>
             </AnimatedPressable>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -810,6 +825,14 @@ export default function CalendarScreen() {
   const [prepDeck, setPrepDeck]     = useState<PrepDeck | null>(null);
   const [loadingPrepScheduleId, setLoadingPrepScheduleId] = useState<string | null>(null);
   const [loadingPrepDeckId, setLoadingPrepDeckId] = useState<string | null>(null);
+  // Whether the user has already subscribed to the Dilly Calendar feed
+  // in iOS. When true, we hide the Subscribe button in the top bar to
+  // avoid a redundant CTA — the user can always unsubscribe via
+  // Settings → Calendar → Account, which is where iOS owns the state.
+  const [calSubscribed, setCalSubscribed] = useState(false);
+  useEffect(() => {
+    (async () => setCalSubscribed(await isCalendarSubscribed()))();
+  }, []);
 
   // Current month view
   const now = new Date();
@@ -1084,15 +1107,27 @@ export default function CalendarScreen() {
       {/* Nav bar */}
       <FadeInView delay={0}>
         <View style={cs.navBar}>
-          <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
+          <AnimatedPressable onPress={() => safeBack('/(app)')} scaleDown={0.9} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
           <Text style={[cs.navTitle, { color: theme.surface.t1 }]}>Calendar</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {/* Build-78: sync to native calendar */}
-            <TouchableOpacity onPress={openSubscribeToDillyCalendar} hitSlop={8}>
-              <Ionicons name="cloud-download-outline" size={18} color={GOLD} />
-            </TouchableOpacity>
+            {/* Subscribe to Dilly's feed calendar — hidden once the
+                user has subscribed so we don't show a redundant CTA.
+                Unsubscribe lives in Settings → Dilly Calendar.
+                iOS owns the actual subscription state; this flag is
+                a local UX hint, refreshed on mount. */}
+            {!calSubscribed && (
+              <TouchableOpacity
+                onPress={async () => {
+                  await openSubscribeToDillyCalendar();
+                  setCalSubscribed(true);
+                }}
+                hitSlop={8}
+              >
+                <Ionicons name="cloud-download-outline" size={18} color={GOLD} />
+              </TouchableOpacity>
+            )}
             {/* Top-right plus button removed. Users said it was
                 redundant with the bottom-right FAB and the swipe-
                 on-day "add event" affordance; just one + on this

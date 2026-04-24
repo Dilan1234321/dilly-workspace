@@ -315,23 +315,22 @@ export default function ChapterSessionScreen() {
     };
   }, [chapter?.id]);
 
-  // Chapter load with the new session-aware routing.
+  // Chapter routing state machine.
   //
-  // Rule (per product direction):
-  //   - If a brand-new session is ready (server says generation_eligible,
-  //     OR the latest chapter has not yet been marked "completed" by
-  //     this user locally) → render the typed session flow as before.
-  //   - If the last chapter has already been completed and no new
-  //     session is ready → redirect to /chapter/recap, which shows the
-  //     read-only cards + notes-for-next-chapter pad.
-  //
-  // "Completed" is tracked in AsyncStorage under CHAPTER_COMPLETED_KEY
-  // (a set of chapter ids the user has already walked through). The
-  // write happens in advance()'s end-of-chapter branch below.
+  // Phase A — never scheduled:  schedule === null  → /chapter/schedule
+  // Phase B — session ready:    generation_eligible → generate + play
+  // Phase C — unread session:   latest exists, not in CHAPTER_COMPLETED_KEY → play
+  // Phase D — waiting / done:   everything else → /chapter/prep
   useEffect(() => {
     (async () => {
       try {
         const cur = await dilly.get('/chapters/current');
+
+        // Phase A: no schedule set yet — first-time setup.
+        if (!cur?.schedule) {
+          router.replace('/(app)/chapter/schedule' as any);
+          return;
+        }
 
         if (cur?.generation_eligible) {
           // A new scheduled cycle has opened — generate and play.
@@ -340,9 +339,7 @@ export default function ChapterSessionScreen() {
             const body = await res.json();
             setChapter({ ...body, count: cur?.count || 1 });
             cancelMissReminder().catch(() => {});
-            if (cur?.schedule) {
-              scheduleChapterNotifications({ ...cur.schedule, next_override_at: null }).catch(() => {});
-            }
+            scheduleChapterNotifications({ ...cur.schedule, next_override_at: null }).catch(() => {});
           } else if (cur?.latest) {
             setChapter({ ...cur.latest, count: cur?.count || 1 });
           } else {
@@ -352,24 +349,22 @@ export default function ChapterSessionScreen() {
         }
 
         if (cur?.latest) {
-          // Has the user already finished this chapter once? If so,
-          // route them to the recap + notes surface instead of
-          // re-opening the typed session.
           const completedRaw = await AsyncStorage.getItem(CHAPTER_COMPLETED_KEY).catch(() => null);
           const completed: string[] = (() => {
             try { return completedRaw ? JSON.parse(completedRaw) : []; }
             catch { return []; }
           })();
-          if (cur.latest.id && completed.includes(cur.latest.id)) {
-            router.replace('/chapter/recap');
+          if (cur.latest.id && !completed.includes(cur.latest.id)) {
+            // Unread session — play it.
+            setChapter({ ...cur.latest, count: cur?.count || 1 });
+            cancelMissReminder().catch(() => {});
             return;
           }
-          // Not yet completed — play the session.
-          setChapter({ ...cur.latest, count: cur?.count || 1 });
-          cancelMissReminder().catch(() => {});
-        } else {
-          setError("You don't have a Chapter yet. Come back at your scheduled time.");
         }
+
+        // Phase D: waiting for next session (scheduled but not ready yet,
+        // or all sessions completed) → prep + notes screen.
+        router.replace('/(app)/chapter/prep' as any);
       } catch {
         setError('Could not reach Dilly right now.');
       } finally {
@@ -560,7 +555,7 @@ export default function ChapterSessionScreen() {
       // intermission, but testers reported a "No journey yet" empty
       // state there and recap is the screen the user actually wants.
       markChapterCompleted(chapter?.id).catch(() => {});
-      router.replace('/chapter/recap');
+      router.replace('/(app)/chapter/recap' as any);
     }
   }
 
@@ -573,7 +568,7 @@ export default function ChapterSessionScreen() {
   const endSession = useCallback(() => {
     if (typeRef.current) { typeRef.current(); typeRef.current = null; }
     markChapterCompleted(chapter?.id).catch(() => {});
-    router.replace('/chapter/recap');
+    router.replace('/(app)/chapter/recap' as any);
   }, [chapter?.id]);
 
   function goBack() {
@@ -900,7 +895,7 @@ export default function ChapterSessionScreen() {
         {/* Question screen: inline chat. Renders all messages. Input
             bar is separate below so it stays above the keyboard. */}
         {isQuestion && (
-          <View style={{ gap: 10, marginTop: 8 }}>
+          <View style={{ gap: 10, marginTop: 8, alignSelf: 'stretch' }}>
             {chatMessages.map(m => (
               <View
                 key={m.id}

@@ -12,7 +12,9 @@ from typing import Any
 from dilly_core.llm_client import get_chat_completion
 from projects.dilly.api.audit_history import get_audits
 from projects.dilly.api.memory_surface_store import (
+    _MEMORY_CATEGORIES,
     _SENTINEL,
+    _canonical_memory_category,
     get_memory_surface,
     save_memory_surface,
     should_regenerate_narrative,
@@ -73,12 +75,15 @@ def _messages_worth_extracting(messages: list[dict[str, Any]]) -> bool:
         if not isinstance(text, str):
             continue
         stripped = text.strip()
-        if len(stripped) < 20:
+        # Short replies can still carry one concrete fact ("Interned at
+        # Goldman", "I know Rust"). Previous bar (20 chars + 3 words)
+        # skipped too many real turns → profile stayed empty while chat
+        # context still looked "smart" from raw history.
+        if len(stripped) < 12:
             continue
-        # Any word that isn't trivial or a stop-ish word → worth a call.
         words = re.findall(r"[a-zA-Z']+", stripped.lower())
         non_trivial = [w for w in words if w not in trivial and len(w) > 2]
-        if len(non_trivial) >= 3:
+        if len(non_trivial) >= 2:
             return True
     return False
 
@@ -119,10 +124,13 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     (
         "experience",
         re.compile(
-            r"\b(?:i (?:work|worked|am working|just started|am|used to work) (?:at|for|with)|"
-            r"i'?m (?:at|with|on a team at)|working (?:at|for)) "
+            r"\b(?:i (?:work|worked|am working|just started|am|used to work|interned|did an internship) (?:at|for|with)|"
+            r"i'?m (?:at|with|on a team at|a [a-z ]{3,40}? at)|"
+            r"working (?:at|for)|"
+            r"my (?:internship|job|role|internships|role|work) (?:at|with)|"
+            r"(?:internship|internships) at) "
             r"([A-Za-z][A-Za-z0-9&'.,\- ]{1,50}?)"
-            r"(?=\s*(?:,|;|\.)|\s+(?:as|in|on|doing|where|right now|currently|$))",
+            r"(?=\s*(?:,|;|\.)|\s+(?:as|in|on|doing|where|right now|currently|last|this|$))",
             re.IGNORECASE,
         ),
         "Works at {v}",
@@ -175,6 +183,21 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "Built {v}",
     ),
     (
+        "project",
+        # "(I'm | been) working on a project <building | about | that ...>"
+        # catches casual in-progress project mentions that aren't caught
+        # by the built/shipped verbs above.
+        re.compile(
+            r"\b(?:i'?m|been|i'?ve been|currently)\s+working on (?:a |my |an )?"
+            r"(?:project |side project |app |thing |tool )?"
+            r"(?:building |creating |making |called )?"
+            r"([A-Za-z0-9 '\-]{3,80}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:that|which|with|for|using|in|as|$))",
+            re.IGNORECASE,
+        ),
+        "Working on {v}",
+    ),
+    (
         "skill",
         # Lookahead now accepts "," / ";" with no preceding whitespace so
         # lists like "I know Python, SQL, and React" capture the first item.
@@ -223,7 +246,7 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(
             r"\b(?:my goal|i want|i'?d like|my plan|i'?m trying|i hope|i'?m hoping) "
             r"(?:is to|to) ([A-Za-z0-9 ,&'.\-]{5,80}?)"
-            r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|\.|$))",
+            r"(?=\s*(?:[.,;])|\s+(?:before|by|so|because|and|$))",
             re.IGNORECASE,
         ),
         "Goal: {v}",
@@ -231,12 +254,68 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     (
         "goal",
         re.compile(
-            r"\bi'?m trying to (?:land|get|find|break into|transition to|pivot to) "
+            r"\bi'?m (?:trying to|thinking about|planning to) "
+            r"(?:land|get|find|break into|transition to|pivot to|go into|move into|switch to) "
             r"([A-Za-z0-9 ,&'.\-]{3,70}?)"
             r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|at|right now|currently|\.|$))",
             re.IGNORECASE,
         ),
         "Trying to {v}",
+    ),
+    (
+        "goal",
+        re.compile(
+            r"\bi (?:want to|would like to|hope to|plan to) "
+            r"(?:go into|move into|get into|transition to|pivot to|switch to|work in|break into) "
+            r"([A-Za-z0-9 ,&'.\-]{3,70}?)"
+            r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|at|eventually|one day|$|\.))",
+            re.IGNORECASE,
+        ),
+        "Wants to enter {v}",
+    ),
+    (
+        "rejection",
+        re.compile(
+            r"\b(?:i (?:got|was) (?:rejected|denied|turned down) (?:from|by)|"
+            r"rejected (?:from|by)|didn'?t get (?:the|an) offer from) "
+            r"([A-Z][A-Za-z0-9&'.,\- ]{1,40}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:last|this|yesterday|for|after|$))",
+            re.IGNORECASE,
+        ),
+        "Rejected from {v}",
+    ),
+    (
+        "skill",
+        # Captures "used X", "I used X and Y", "used kafka and scala"
+        # when described inside a project/experience narrative.
+        re.compile(
+            r"\b(?:used|we used|team used|stack was|built with|using|with) "
+            r"([A-Za-z0-9 +#./\-]{2,40}?)"
+            r"(?=\s*(?:,|;)|\s+(?:and|plus|for|to|in|on|\.|$))",
+            re.IGNORECASE,
+        ),
+        "Worked with {v}",
+    ),
+    (
+        "skill",
+        # "my experience with X and Y" / "experience in X"
+        re.compile(
+            r"\bmy experience (?:with|in|using) "
+            r"([A-Za-z0-9 +#./\-]{2,50}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:and|plus|is|has|because|for|$))",
+            re.IGNORECASE,
+        ),
+        "Skill: {v}",
+    ),
+    (
+        "achievement",
+        re.compile(
+            r"\bi (?:shipped|delivered|launched|grew|increased|reduced|cut|raised) "
+            r"([A-Za-z0-9 ,&'.\-%]{3,80}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:in|by|from|to|for|$))",
+            re.IGNORECASE,
+        ),
+        "{v}",
     ),
     (
         "location_pref",
@@ -318,9 +397,15 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
     # the skill verb (know / use / work with / ...). Captures the span
     # from the verb until the first period or end-of-string.
     skill_list_rx = re.compile(
-        r"\bi (?:know|use|work with|am good at|have experience with|"
-        r"am proficient in|taught myself|self.taught in|am learning|picked up) "
-        r"([A-Za-z0-9 +#./\-,]{2,120}?)(?:\.|$)",
+        r"\b(?:i (?:know|use|work with|am good at|have experience with|"
+        r"am proficient in|taught myself|self.taught in|am learning|picked up)|"
+        r"used|we used|team used|built with|my experience (?:with|in|using)) "
+        # Tight terminator list: end on punctuation, or on connector
+        # words that clearly signal the end of the skill list (is, was,
+        # for, because, etc.). Prevents capturing "distributed systems
+        # and pytorch is what I want to highlight" as the whole list.
+        r"([A-Za-z0-9 +#./\-,]{2,120}?)"
+        r"(?:\.|,\s+(?:but|so|which|and then)|\s+(?:is|was|because|for|to help|in order|since|$)|$)",
         re.IGNORECASE,
     )
 
@@ -386,6 +471,96 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
 # to save what she's learning") so users know the bar exists.
 LLM_EXTRACTION_MIN_USER_MSGS = 5
 
+# Map Voice/beyond-resume extractor types → profile_facts categories (whitelist).
+_COACH_TYPE_TO_MEMORY: dict[str, str] = {
+    "skill": "skill_unlisted",
+    "experience": "experience",
+    "project": "project_detail",
+    "person": "person_to_follow_up",
+    "company": "target_company",
+    "event": "interview",
+    "emotion": "concern",
+    "other": "motivation",
+}
+
+
+def _coach_beyond_resume_memory_items(
+    uid: str,
+    conv_id: str,
+    messages: list[dict[str, Any]],
+    existing_items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """When the profile-style memory LLM returns nothing, run the same
+    beyond-resume extractor Voice uses and map chips into profile_facts.
+
+    This closes the gap where chat felt smart (history in-request) but
+    My Dilly stayed empty because the two extractors disagreed or the
+    model emitted categories that failed normalization before we fixed
+    canonicalization."""
+    last_user = ""
+    hist: list[dict[str, str]] = []
+    for m in messages or []:
+        if not isinstance(m, dict):
+            continue
+        role = str(m.get("role") or "").strip().lower()
+        content = str(m.get("content") or "").strip()
+        if not content:
+            continue
+        hist.append({"role": role, "content": content})
+        if role == "user":
+            last_user = content
+    if len(last_user.strip()) < 8:
+        return []
+    already_captured: list[dict[str, str]] = []
+    for i in (existing_items or [])[-40:]:
+        if not isinstance(i, dict):
+            continue
+        v = (str(i.get("value") or "").strip() or str(i.get("label") or "").strip())[:80]
+        if len(v) >= 4:
+            already_captured.append({"text": v})
+    try:
+        from projects.dilly.api.voice_helpers import extract_beyond_resume_with_llm
+
+        extracted = extract_beyond_resume_with_llm(
+            last_user,
+            history=hist[:-1][-8:] if len(hist) > 1 else None,
+            already_captured=already_captured or None,
+        )
+    except Exception:
+        return []
+    if not extracted:
+        return []
+    now = _now_iso()
+    out: list[dict[str, Any]] = []
+    for item in extracted[:12]:
+        if not isinstance(item, dict):
+            continue
+        t = str(item.get("type") or "other").strip().lower()
+        text = str(item.get("text") or "").strip()
+        if not text:
+            continue
+        cat = _COACH_TYPE_TO_MEMORY.get(t, "motivation")
+        short = text if len(text) <= 48 else (text[:45] + "…")
+        label = f"{t}: {short}"[:80]
+        out.append(
+            {
+                "id": str(uuid.uuid4()),
+                "uid": uid,
+                "category": cat,
+                "label": label,
+                "value": text[:500],
+                "source": "voice",
+                "created_at": now,
+                "updated_at": now,
+                "action_type": None,
+                "action_payload": None,
+                "confidence": "medium",
+                "shown_to_user": False,
+                "conv_id": conv_id,
+            }
+        )
+    return out
+
 
 def extract_memory_items(
     uid: str,
@@ -395,6 +570,9 @@ def extract_memory_items(
     use_llm: bool = False,
     skip_gate: bool = False,
 ) -> list[dict[str, Any]]:
+    """skip_gate: when True with use_llm, always attempt the Haiku extract call
+    (still returns [] if the model finds nothing). Used for /ai/chat per turn
+    so short factual replies are not skipped twice."""
     # Regex extraction runs unconditionally — zero LLM cost, no reason
     # to gate it. The word-count gate below applies ONLY to the LLM
     # path where each call costs money.
@@ -411,22 +589,13 @@ def extract_memory_items(
     regex_items = _regex_extract_from_user_turns(messages)
 
     # Two extraction paths:
-    #   use_llm=False (default, called per-turn from /ai/chat) — regex
-    #     only. Zero LLM cost. Catches obvious literal facts ("I work
-    #     at X", "my goal is Y") and nothing else.
-    #   use_llm=True (on chat close via /ai/chat/flush) — LLM
-    #     extraction. One call per qualifying conversation. Catches
-    #     inferential facts regex can't: emotional context, implied
-    #     goals, mentioned-but-not-done, personality tells, rejections,
-    #     soft skills, etc. This is the "she actually remembers me"
-    #     differentiator paid users are buying.
+    #   use_llm=False — regex only (zero LLM cost).
+    #   use_llm=True — regex ∪ LLM. /ai/chat runs this every turn (sync);
+    #     flush runs it on close with a 5-user-message gate on the LLM leg.
+    #     skip_gate=True on /ai/chat forces a Haiku attempt even when the
+    #     last user line is short (still may return []).
     #
-    # The flush endpoint is the only caller that passes use_llm=True,
-    # and it gates that on:
-    #   - >= LLM_EXTRACTION_MIN_USER_MSGS user messages (quality bar)
-    #   - daily cap per user (cost bar)
-    #   - no re-flush within 5 min for the same conv_id (dedup)
-    # so we can't run away with cost even if a user hammers the overlay.
+    # Flush is not the only use_llm=True caller — see routers/ai.py.
     # On the flush path (use_llm=True), ALWAYS run regex as a safety
     # net in addition to the LLM. Previously we ran only one or the
     # other — which meant if Haiku rate-limited, errored, or returned
@@ -444,7 +613,9 @@ def extract_memory_items(
         llm_items: list[dict[str, Any]] = []
         if skip_gate or _messages_worth_extracting(messages):
             try:
-                llm_items = _extract_memory_items_llm(uid, conv_id, messages, existing_items)
+                llm_items = _extract_memory_items_llm(
+                    uid, conv_id, messages, existing_items, skip_trivial_gate=skip_gate
+                )
             except Exception:
                 llm_items = []
         # Union: dedupe by (category, label) so we do not double-count.
@@ -461,6 +632,17 @@ def extract_memory_items(
     else:
         new_items = regex_items
 
+    # Second-chance path: memory-profile LLM + regex both empty, but the user
+    # may still have said something concrete. Reuse Voice's beyond-resume
+    # Haiku (one call) so facts land in My Dilly.
+    if use_llm and not new_items:
+        try:
+            bridged = _coach_beyond_resume_memory_items(uid, conv_id, messages, existing_items)
+            if bridged:
+                new_items = bridged
+        except Exception:
+            pass
+
     # Dedup against existing memory (same category+label).
     existing_keys = {
         (str(i.get("category") or "").lower(), str(i.get("label") or "").strip().lower())
@@ -475,8 +657,15 @@ def extract_memory_items(
 
 # Kept for ad-hoc internal use (e.g. /internal/memory/run-extraction
 # endpoint with an admin token). Not called from chat anymore.
-def _extract_memory_items_llm(uid: str, conv_id: str, messages: list[dict[str, Any]], existing_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if not _messages_worth_extracting(messages):
+def _extract_memory_items_llm(
+    uid: str,
+    conv_id: str,
+    messages: list[dict[str, Any]],
+    existing_items: list[dict[str, Any]],
+    *,
+    skip_trivial_gate: bool = False,
+) -> list[dict[str, Any]]:
+    if not skip_trivial_gate and not _messages_worth_extracting(messages):
         return []
 
     system = """You are building a Dilly Profile by extracting everything you can learn about a student from their conversation with Dilly, their AI career coach.
@@ -574,12 +763,12 @@ Extract new memory items now. Return JSON array only."""
     for row in parsed:
         if not isinstance(row, dict):
             continue
-        category = str(row.get("category") or "").strip()
+        category = _canonical_memory_category(str(row.get("category") or ""))
         label = str(row.get("label") or "").strip()[:50]
         value = str(row.get("value") or "").strip()[:200]
-        if not category or not label or not value:
+        if not category or category not in _MEMORY_CATEGORIES or not label or not value:
             continue
-        key = (category.lower(), label.lower())
+        key = (category, label.lower())
         if key in seen:
             continue
         seen.add(key)
@@ -741,11 +930,19 @@ def run_extraction(
     conv_id: str,
     messages: list[dict[str, Any]],
     use_llm: bool = False,
+    skip_llm_trivial_gate: bool = False,
 ) -> dict[str, Any]:
     profile = get_profile(uid) or {}
     surface = get_memory_surface(uid)
     existing_items = surface.get("items") or []
-    new_items = extract_memory_items(uid, conv_id, messages, existing_items, use_llm=use_llm)
+    new_items = extract_memory_items(
+        uid,
+        conv_id,
+        messages,
+        existing_items,
+        use_llm=use_llm,
+        skip_gate=skip_llm_trivial_gate,
+    )
 
     items_all = list(existing_items)
     item_ids: list[str] = []

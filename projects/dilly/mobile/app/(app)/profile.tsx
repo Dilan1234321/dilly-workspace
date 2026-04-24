@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -315,7 +316,7 @@ export default function ProfileScreen() {
 
       {/* Nav bar */}
       <View style={ps.navBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Ionicons name="chevron-back" size={22} color={colors.t1} />
         </TouchableOpacity>
         <Text style={ps.navTitle}>Profile</Text>
