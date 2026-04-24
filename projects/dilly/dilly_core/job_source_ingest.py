@@ -267,45 +267,16 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"icims: {type(e).__name__}: {str(e)[:200]}")
 
-    # JazzHR (SMBs, staffing, agencies, healthcare SMBs)
+    # Pinpoint HQ (UK fintech + PE-backed companies)
     try:
-        import sys as _sys, os as _os
-        _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", ".."))
-        from projects.dilly.crawl_internships_v2 import (
-            JAZZHR_COMPANIES, crawl_jazzhr,
-            RECRUITEE_COMPANIES, crawl_recruitee,
-            BREEZYHR_COMPANIES, crawl_breezyhr,
-            PINPOINT_COMPANIES, crawl_pinpoint,
-        )
-        for company_dict, crawl_fn, label in [
-            (JAZZHR_COMPANIES, crawl_jazzhr, "jazzhr"),
-            (RECRUITEE_COMPANIES, crawl_recruitee, "recruitee"),
-            (BREEZYHR_COMPANIES, crawl_breezyhr, "breezyhr"),
-            (PINPOINT_COMPANIES, crawl_pinpoint, "pinpoint"),
-        ]:
-            fetched = 0
-            inserted_count = 0
-            for slug, (name, industry) in company_dict.items():
-                try:
-                    jobs = crawl_fn(slug, name)
-                    fetched += len(jobs)
-                    for job in jobs:
-                        item = {
-                            **job,
-                            "external_id": job.get("external_id", f"{label}-{slug}-{job.get('title','')}"),
-                            "source_ats": label,
-                            "cohorts": [],
-                            "industry": industry.lower(),
-                        }
-                        if _upsert_listing(cur, item):
-                            inserted_count += 1
-                except Exception:
-                    pass
-            stats["sources"][label] = {"fetched": fetched, "inserted": inserted_count}
-            stats["total_fetched"] += fetched
-            stats["total_inserted"] += inserted_count
+        from dilly_core.job_source_pinpoint import fetch_all_pinpoint
+        pinpoint = fetch_all_pinpoint() or []
+        inserted = sum(1 for item in pinpoint if _upsert_listing(cur, item))
+        stats["sources"]["pinpoint"] = {"fetched": len(pinpoint), "inserted": inserted}
+        stats["total_fetched"] += len(pinpoint)
+        stats["total_inserted"] += inserted
     except Exception as e:
-        stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
+        stats["errors"].append(f"pinpoint: {type(e).__name__}: {str(e)[:200]}")
 
     # Paylocity + Paycom (US mid-market HCM platforms)
     try:
@@ -324,162 +295,6 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"paylocity_paycom: {type(e).__name__}: {str(e)[:200]}")
 
-    # Darwinbox / Keka / TurboHire / Manatal / Skeeled / Springrecruit / X0PA
-    try:
-        from dilly_core.job_source_darwinbox import (
-            fetch_all_darwinbox, fetch_all_keka, fetch_all_turbohire,
-            fetch_all_manatal, fetch_all_skeeled, fetch_all_springrecruit, fetch_all_x0pa,
-        )
-        for fetch_fn, key in [
-            (fetch_all_darwinbox, "darwinbox"),
-            (fetch_all_keka, "keka"),
-            (fetch_all_turbohire, "turbohire"),
-            (fetch_all_manatal, "manatal"),
-            (fetch_all_skeeled, "skeeled"),
-            (fetch_all_springrecruit, "springrecruit"),
-            (fetch_all_x0pa, "x0pa"),
-        ]:
-            items = fetch_fn() or []
-            ins = sum(1 for item in items if _upsert_listing(cur, item))
-            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
-            stats["total_fetched"] += len(items)
-            stats["total_inserted"] += ins
-    except Exception as e:
-        stats["errors"].append(f"darwinbox_group: {type(e).__name__}: {str(e)[:200]}")
-
-    # ApplicantStack / ApplicantPro / ClearCompany / ExactHire / isolved / TalentReef / WorkBright
-    try:
-        from dilly_core.job_source_applicantstack import (
-            fetch_all_applicantstack, fetch_all_applicantpro, fetch_all_clearcompany,
-            fetch_all_exacthire, fetch_all_isolved, fetch_all_talentreef, fetch_all_workbright,
-        )
-        for fetch_fn, key in [
-            (fetch_all_applicantstack, "applicantstack"),
-            (fetch_all_applicantpro, "applicantpro"),
-            (fetch_all_clearcompany, "clearcompany"),
-            (fetch_all_exacthire, "exacthire"),
-            (fetch_all_isolved, "isolved"),
-            (fetch_all_talentreef, "talentreef"),
-            (fetch_all_workbright, "workbright"),
-        ]:
-            items = fetch_fn() or []
-            ins = sum(1 for item in items if _upsert_listing(cur, item))
-            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
-            stats["total_fetched"] += len(items)
-            stats["total_inserted"] += ins
-    except Exception as e:
-        stats["errors"].append(f"applicantstack_group: {type(e).__name__}: {str(e)[:200]}")
-
-    # Odoo / Paycor / iSmartRecruit / Jobsoid / JobScore / Crelate / Tracker RMS / Qureos
-    try:
-        from dilly_core.job_source_misc_ats import (
-            fetch_all_odoo, fetch_all_paycor, fetch_all_ismartrecruit,
-            fetch_all_jobsoid, fetch_all_jobscore, fetch_all_crelate,
-            fetch_all_tracker_rms, fetch_all_qureos,
-        )
-        for fetch_fn, key in [
-            (fetch_all_odoo, "odoo"),
-            (fetch_all_paycor, "paycor"),
-            (fetch_all_ismartrecruit, "ismartrecruit"),
-            (fetch_all_jobsoid, "jobsoid"),
-            (fetch_all_jobscore, "jobscore"),
-            (fetch_all_crelate, "crelate"),
-            (fetch_all_tracker_rms, "tracker_rms"),
-            (fetch_all_qureos, "qureos"),
-        ]:
-            items = fetch_fn() or []
-            ins = sum(1 for item in items if _upsert_listing(cur, item))
-            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
-            stats["total_fetched"] += len(items)
-            stats["total_inserted"] += ins
-    except Exception as e:
-        stats["errors"].append(f"misc_ats_group: {type(e).__name__}: {str(e)[:200]}")
-
-    # CEIPAL / Avionte / PrismHR / JobAdder / Broadbean / Firefish / Vincere (staffing ATSs)
-    try:
-        from dilly_core.job_source_staffing_ats import (
-            fetch_all_ceipal, fetch_all_avionte, fetch_all_prismhr,
-            fetch_all_jobadder, fetch_all_broadbean, fetch_all_firefish, fetch_all_vincere,
-        )
-        for fetch_fn, key in [
-            (fetch_all_ceipal, "ceipal"),
-            (fetch_all_avionte, "avionte"),
-            (fetch_all_prismhr, "prismhr"),
-            (fetch_all_jobadder, "jobadder"),
-            (fetch_all_broadbean, "broadbean"),
-            (fetch_all_firefish, "firefish"),
-            (fetch_all_vincere, "vincere"),
-        ]:
-            items = fetch_fn() or []
-            ins = sum(1 for item in items if _upsert_listing(cur, item))
-            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
-            stats["total_fetched"] += len(items)
-            stats["total_inserted"] += ins
-    except Exception as e:
-        stats["errors"].append(f"staffing_ats_group: {type(e).__name__}: {str(e)[:200]}")
-
-    # BreezyHR (SMB tech, agencies, field services)
-    try:
-        from dilly_core.job_source_breezyhr import fetch_all_breezyhr
-        breezy = fetch_all_breezyhr() or []
-        inserted = sum(1 for item in breezy if _upsert_listing(cur, item))
-        stats["sources"]["breezyhr"] = {"fetched": len(breezy), "inserted": inserted}
-        stats["total_fetched"] += len(breezy)
-        stats["total_inserted"] += inserted
-    except Exception as e:
-        stats["errors"].append(f"breezyhr: {type(e).__name__}: {str(e)[:200]}")
-
-    # JazzHR (US SMBs, restaurant chains, nonprofits)
-    try:
-        from dilly_core.job_source_jazzhr import fetch_all_jazzhr
-        jazz = fetch_all_jazzhr() or []
-        inserted = sum(1 for item in jazz if _upsert_listing(cur, item))
-        stats["sources"]["jazzhr"] = {"fetched": len(jazz), "inserted": inserted}
-        stats["total_fetched"] += len(jazz)
-        stats["total_inserted"] += inserted
-    except Exception as e:
-        stats["errors"].append(f"jazzhr: {type(e).__name__}: {str(e)[:200]}")
-
-    # Recruitee (European ATS — Poland, Netherlands, Germany)
-    try:
-        from dilly_core.job_source_recruitee import fetch_all_recruitee
-        recruitee = fetch_all_recruitee() or []
-        inserted = sum(1 for item in recruitee if _upsert_listing(cur, item))
-        stats["sources"]["recruitee"] = {"fetched": len(recruitee), "inserted": inserted}
-        stats["total_fetched"] += len(recruitee)
-        stats["total_inserted"] += inserted
-    except Exception as e:
-        stats["errors"].append(f"recruitee: {type(e).__name__}: {str(e)[:200]}")
-
-    # Pinpoint / Trakstar / GoHire / Jobylon (UK + Scandi ATS)
-    try:
-        from dilly_core.job_source_pinpoint import (
-            fetch_all_pinpoint, fetch_all_trakstar, fetch_all_gohire, fetch_all_jobylon
-        )
-        for fetch_fn, key in [
-            (fetch_all_pinpoint, "pinpoint"),
-            (fetch_all_trakstar, "trakstar"),
-            (fetch_all_gohire, "gohire"),
-            (fetch_all_jobylon, "jobylon"),
-        ]:
-            items = fetch_fn() or []
-            ins = sum(1 for item in items if _upsert_listing(cur, item))
-            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
-            stats["total_fetched"] += len(items)
-            stats["total_inserted"] += ins
-    except Exception as e:
-        stats["errors"].append(f"pinpoint_group: {type(e).__name__}: {str(e)[:200]}")
-
-    # Hireology (automotive dealerships, home services franchises)
-    try:
-        from dilly_core.job_source_hireology import fetch_all_hireology
-        hireology = fetch_all_hireology() or []
-        inserted = sum(1 for item in hireology if _upsert_listing(cur, item))
-        stats["sources"]["hireology"] = {"fetched": len(hireology), "inserted": inserted}
-        stats["total_fetched"] += len(hireology)
-        stats["total_inserted"] += inserted
-    except Exception as e:
-        stats["errors"].append(f"hireology: {type(e).__name__}: {str(e)[:200]}")
 
     # TalentLyft (Eastern Europe / Balkans ATS)
     try:
