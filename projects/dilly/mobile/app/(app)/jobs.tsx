@@ -28,9 +28,11 @@
  * state flip; RN handles the relayout naturally.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Image,
   Linking,
   Modal,
@@ -379,6 +381,30 @@ export default function JobsScreen() {
   const [typeFilterTouched, setTypeFilterTouched] = useState(false);
   const [remoteFilter, setRemoteFilter] = useState<RemoteFilter>('any');
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [cityMounted, setCityMounted] = useState(false);
+  const cityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (showCityPicker) {
+      setCityMounted(true);
+      cityAnim.setValue(0);
+      Animated.timing(cityAnim, {
+        toValue: 1, duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showCityPicker, cityAnim]);
+
+  const closeCityPickerAnimated = useCallback(() => {
+    Animated.timing(cityAnim, {
+      toValue: 0, duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) { setShowCityPicker(false); setCityMounted(false); }
+    });
+  }, [cityAnim]);
 
   // Per-job expand state. Exactly one expanded at a time keeps the
   // feed scannable; tapping a second job collapses the first.
@@ -868,38 +894,45 @@ export default function JobsScreen() {
           city present in the current feed with a match count per
           row, plus an "All cities" reset row at the top. */}
       <Modal
-        visible={showCityPicker}
+        visible={cityMounted}
         transparent
         animationType="none"
-        onRequestClose={() => setShowCityPicker(false)}
+        onRequestClose={closeCityPickerAnimated}
+        statusBarTranslucent
       >
-        {/* Tap anywhere on the (now fully transparent) backdrop to
-            dismiss. No black overlay — the sheet just appears over
-            the underlying content. */}
+        {/* Animated dark backdrop */}
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, {
+            backgroundColor: '#000',
+            opacity: cityAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.4] }),
+          }]}
+        />
+        {/* Full-screen tap-to-dismiss area, positioned under the sheet */}
         <TouchableOpacity
           activeOpacity={1}
-          onPress={() => setShowCityPicker(false)}
+          onPress={closeCityPickerAnimated}
           style={styles.cityBackdrop}
         >
-          {/* Swipe-down-to-dismiss on the sheet itself. We use a
-              PanResponder via the onStartShouldSetResponder /
-              onResponderRelease chain so users can flick the sheet
-              down without needing a dedicated close button. */}
-          <View
+          {/* Animated slide-up sheet */}
+          <Animated.View
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={(e) => Math.abs(e.nativeEvent.pageY) > 10}
             onResponderRelease={(e) => {
-              // Any downward release of the handle area closes the sheet.
-              if ((e.nativeEvent as any).pageY > 200) setShowCityPicker(false);
+              if ((e.nativeEvent as any).pageY > 200) closeCityPickerAnimated();
             }}
-            style={[styles.citySheet, { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 14 }]}
+            style={[
+              styles.citySheet,
+              { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 14 },
+              { transform: [{ translateY: cityAnim.interpolate({ inputRange: [0, 1], outputRange: [320, 0] }) }] },
+            ]}
           >
             <View style={styles.citySheetHandle} />
             <Text style={[styles.citySheetTitle, { color: theme.surface.t1 }]}>Filter by city</Text>
 
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => { setCityFilter(null); setShowCityPicker(false); }}
+              onPress={() => { setCityFilter(null); closeCityPickerAnimated(); }}
               style={[
                 styles.cityRow,
                 !cityFilter ? { backgroundColor: theme.accentSoft } : null,
@@ -918,7 +951,7 @@ export default function JobsScreen() {
                     activeOpacity={0.85}
                     onPress={() => {
                       setCityFilter(opt.label.toLowerCase());
-                      setShowCityPicker(false);
+                      closeCityPickerAnimated();
                     }}
                     style={[
                       styles.cityRow,
@@ -936,7 +969,7 @@ export default function JobsScreen() {
                 </Text>
               ) : null}
             </ScrollView>
-          </View>
+          </Animated.View>
         </TouchableOpacity>
       </Modal>
 
