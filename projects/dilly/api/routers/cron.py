@@ -3,7 +3,7 @@ Cron / internal endpoints. Protected by CRON_SECRET.
 """
 import os, sys
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request
 
 router = APIRouter(prefix="/cron", tags=["cron"])
 
@@ -68,6 +68,19 @@ def setup_users_table(token: str = ""):
             "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS ats_system TEXT DEFAULT 'greenhouse'",
             "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS ats_parse_score INTEGER DEFAULT 0",
             "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS keyword_coverage_pct INTEGER DEFAULT 0",
+            # Recruiter accounts (Phase 1 — 2026-04-24)
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type TEXT DEFAULT 'student'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_domain TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_verified_at TIMESTAMPTZ",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_logo_url TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_jobs_count INTEGER",
+            # Backfill: pull mode out of profile_json for existing student sub-modes
+            """UPDATE users SET account_type = COALESCE(
+                CASE WHEN profile_json->>'mode' IN ('seeker','holder')
+                     THEN profile_json->>'mode' ELSE 'student' END,
+                'student'
+            ) WHERE account_type IS NULL OR account_type = 'student'""",
         ]:
             cur.execute(stmt)
         # -- Sessions table (auth_store) --
@@ -238,6 +251,97 @@ def setup_users_table(token: str = ""):
         """)
 
     return {"ok": True, "message": "All tables ready"}
+
+
+# ---------------------------------------------------------------------------
+# Admin: promote a user to recruiter account type
+#
+# Use this for early partners who can't self-serve (personal email, etc.).
+# Gated by DILLY_INTERNAL_KEY (same key as the internal API endpoints).
+# No UI — call via curl or your admin client.
+#
+# curl -X POST \
+#   "https://api.hellodilly.com/cron/admin/promote-to-recruiter" \
+#   -H "X-Internal-Key: $DILLY_INTERNAL_KEY" \
+#   -H "Content-Type: application/json" \
+#   -d '{"email": "recruiter@acme.com", "company_name": "Acme Corp", "company_domain": "acme.com"}'
+# ---------------------------------------------------------------------------
+
+@router.post("/admin/promote-to-recruiter", summary="Admin: promote user to recruiter account type")
+async def admin_promote_to_recruiter(request: Request, body: dict = Body(default={})):
+    """Promote an existing Dilly user to account_type='recruiter'.
+
+    Accepts optional company_name and company_domain overrides.
+    Protected by X-Internal-Key header (DILLY_INTERNAL_KEY env var).
+    """
+    from fastapi import HTTPException as _HTTPException
+    from projects.dilly.api.deps import require_internal_key
+    await require_internal_key(request)
+
+    email = (body.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        raise _HTTPException(status_code=400, detail="'email' is required.")
+
+    from projects.dilly.api.auth_store import (
+        get_user_by_email,
+        set_account_type,
+        update_company_fields,
+    )
+    user = get_user_by_email(email)
+    if not user:
+        raise _HTTPException(status_code=404, detail=f"No user found with email: {email}")
+
+    set_account_type(email, "recruiter")
+
+    # Optionally override company fields
+    company_name = (body.get("company_name") or "").strip() or None
+    company_domain = (body.get("company_domain") or "").strip() or None
+
+    if not company_domain and "@" in email:
+        company_domain = email.split("@", 1)[1].strip()
+
+    # If no name provided, try enrichment
+    if not company_name and company_domain:
+        try:
+            from projects.dilly.api.company_enrichment import enrich_recruiter
+            enrichment = enrich_recruiter(email)
+            company_name = enrichment.get("company_name") or None
+            update_company_fields(
+                email,
+                company_domain=company_domain,
+                company_name=company_name,
+                company_logo_url=enrichment.get("company_logo_url"),
+                company_jobs_count=enrichment.get("company_jobs_count"),
+            )
+        except Exception:
+            update_company_fields(email, company_domain=company_domain, company_name=company_name)
+    else:
+        update_company_fields(email, company_domain=company_domain, company_name=company_name)
+
+    return {
+        "ok": True,
+        "email": email,
+        "account_type": "recruiter",
+        "company_domain": company_domain,
+        "company_name": company_name,
+        "message": f"{email} is now a recruiter account.",
+    }
+
+
+@router.post("/admin/demote-from-recruiter", summary="Admin: revert recruiter to student account type")
+async def admin_demote_from_recruiter(request: Request, body: dict = Body(default={})):
+    """Revert a recruiter account back to student. Protected by X-Internal-Key."""
+    from fastapi import HTTPException as _HTTPException
+    from projects.dilly.api.deps import require_internal_key
+    await require_internal_key(request)
+
+    email = (body.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        raise _HTTPException(status_code=400, detail="'email' is required.")
+
+    from projects.dilly.api.auth_store import set_account_type
+    set_account_type(email, "student")
+    return {"ok": True, "email": email, "account_type": "student"}
 
 
 @router.get("/cleanup-draft-profiles", summary="Cleanup draft profiles")
