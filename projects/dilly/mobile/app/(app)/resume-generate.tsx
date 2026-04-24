@@ -26,12 +26,13 @@ import { safeBack } from '../../lib/navigation';
  *     and same deep-link viewId flow. Pure UI rewrite.
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TextInput,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -228,6 +229,49 @@ export default function ResumeGenerateScreen() {
 
   const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const keywordTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Inline edit: debounce-save the current sections to the backend so
+  // the user's tweaks persist + the next PDF export reflects them.
+  // 800ms keeps the PATCH traffic sane while still feeling live.
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleSectionsSave = useCallback((nextSections: GeneratedSection[]) => {
+    if (!variantId) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await dilly.fetch(`/generated-resumes/${variantId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ sections: nextSections }),
+        });
+      } catch {}
+    }, 800);
+  }, [variantId]);
+
+  /** Apply an inline edit. `path` is a dotted accessor into the
+   *  section — e.g. `education.major`, `experiences.0.role`,
+   *  `experiences.0.bullets.2.text`. Safe against typos — an invalid
+   *  path no-ops. */
+  const handleFieldEdit = useCallback((sectionIdx: number, path: string, newValue: string) => {
+    setSections(prev => {
+      const next: GeneratedSection[] = JSON.parse(JSON.stringify(prev));
+      const sec: any = next[sectionIdx];
+      if (!sec) return prev;
+      const parts = path.split('.');
+      let node: any = sec;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const key = parts[i];
+        const idx = Number(key);
+        node = Number.isInteger(idx) ? node[idx] : node[key];
+        if (node == null) return prev;
+      }
+      const last = parts[parts.length - 1];
+      const li = Number(last);
+      if (Number.isInteger(li)) node[li] = newValue;
+      else node[last] = newValue;
+      scheduleSectionsSave(next);
+      return next;
+    });
+  }, [scheduleSectionsSave]);
 
   // Rotate the stage narration every 3s while generating.
   useEffect(() => {
@@ -618,6 +662,7 @@ export default function ResumeGenerateScreen() {
             saved={saved}
             onDownload={handleDownload}
             onReset={handleReset}
+            onEdit={handleFieldEdit}
           />
         )}
 
@@ -928,7 +973,7 @@ function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, p
 function DonePhase({
   sections, atsInfo, jobTitle, company, jd,
   matchedKeywords, totalKeywords, weakestBullet,
-  saved, onDownload, onReset,
+  saved, onDownload, onReset, onEdit,
 }: any) {
   const theme = useResolvedTheme();
   // Derived scorecard values. Prefer server-provided signals when
@@ -1062,7 +1107,9 @@ function DonePhase({
           <SectionView
             key={sec.key ?? si}
             section={sec}
+            sectionIdx={si}
             matchedKeywords={matchedKeywords}
+            onEdit={onEdit}
           />
         ))}
       </View>
@@ -1094,70 +1141,225 @@ function ScoreRow({ label, value }: { label: string; value: number }) {
   );
 }
 
+/** Tap-to-edit text. Renders a Text by default; on tap, swaps to a
+ *  TextInput with autoFocus. Blur saves via onSave(newValue). Multi-
+ *  line fields (bullets, description) pass multiline=true. */
+function EditableText({
+  value, onSave, style, multiline, placeholder,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+  style: any;
+  multiline?: boolean;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+
+  if (editing) {
+    return (
+      <TextInput
+        autoFocus
+        value={draft}
+        onChangeText={setDraft}
+        multiline={!!multiline}
+        blurOnSubmit={!multiline}
+        returnKeyType={multiline ? 'default' : 'done'}
+        onBlur={() => {
+          setEditing(false);
+          if (draft !== value) onSave(draft);
+        }}
+        onSubmitEditing={() => {
+          if (!multiline) {
+            setEditing(false);
+            if (draft !== value) onSave(draft);
+          }
+        }}
+        style={[style, { backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 6, paddingHorizontal: 4 }]}
+      />
+    );
+  }
+  return (
+    <TouchableOpacity activeOpacity={0.7} onPress={() => setEditing(true)}>
+      <Text style={style}>
+        {value || <Text style={{ color: '#9CA3AF', fontStyle: 'italic' }}>{placeholder || 'Tap to edit'}</Text>}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+
 /** Renders a single resume section. Bullet/body text gets keyword
- *  tokens highlighted in indigo so the user sees the JD match. */
-function SectionView({ section, matchedKeywords }: { section: GeneratedSection; matchedKeywords: string[] }) {
+ *  tokens highlighted in indigo so the user sees the JD match.
+ *  When `onEdit` is provided, every field becomes tap-to-edit. */
+function SectionView({
+  section, sectionIdx, matchedKeywords, onEdit,
+}: {
+  section: GeneratedSection;
+  sectionIdx: number;
+  matchedKeywords: string[];
+  onEdit?: (sectionIdx: number, path: string, value: string) => void;
+}) {
   const keywordSet = useMemo(() => new Set(matchedKeywords), [matchedKeywords]);
+  const edit = (path: string) => (v: string) => onEdit && onEdit(sectionIdx, path, v);
+  const editable = !!onEdit;
+
   return (
     <View style={styles.previewSection}>
       <Text style={styles.previewSectionLabel}>{section.label ?? section.key}</Text>
 
       {section.contact && (
         <View style={styles.previewEntry}>
-          {!!section.contact.name && <Text style={styles.previewName}>{section.contact.name}</Text>}
-          <Text style={styles.previewEntryDates}>
-            {[section.contact.email, section.contact.phone, section.contact.location, section.contact.linkedin].filter(Boolean).join(' · ')}
-          </Text>
+          {editable ? (
+            <>
+              <EditableText style={styles.previewName} value={section.contact.name || ''} onSave={edit('contact.name')} placeholder="Your name" />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryDates} value={section.contact.email || ''} onSave={edit('contact.email')} placeholder="email" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.contact.phone || ''} onSave={edit('contact.phone')} placeholder="phone" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.contact.location || ''} onSave={edit('contact.location')} placeholder="city" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.contact.linkedin || ''} onSave={edit('contact.linkedin')} placeholder="linkedin" />
+              </View>
+            </>
+          ) : (
+            <>
+              {!!section.contact.name && <Text style={styles.previewName}>{section.contact.name}</Text>}
+              <Text style={styles.previewEntryDates}>
+                {[section.contact.email, section.contact.phone, section.contact.location, section.contact.linkedin].filter(Boolean).join(' · ')}
+              </Text>
+            </>
+          )}
         </View>
       )}
 
       {section.education && (
         <View style={styles.previewEntry}>
-          <Text style={styles.previewEntryTitle}>{section.education.university}</Text>
-          <Text style={styles.previewEntryDates}>
-            {[section.education.major, section.education.minor ? `Minor: ${section.education.minor}` : '', section.education.graduation].filter(Boolean).join(' · ')}
-          </Text>
-          {!!section.education.gpa && <Highlighted style={styles.previewBullet} text={`GPA: ${section.education.gpa}`} keywords={keywordSet} />}
-          {!!section.education.honors && <Highlighted style={styles.previewBullet} text={section.education.honors} keywords={keywordSet} />}
+          {editable ? (
+            <>
+              <EditableText style={styles.previewEntryTitle} value={section.education.university || ''} onSave={edit('education.university')} placeholder="University" />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryDates} value={section.education.major || ''} onSave={edit('education.major')} placeholder="major" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={section.education.graduation || ''} onSave={edit('education.graduation')} placeholder="graduation" />
+              </View>
+              <EditableText style={styles.previewBullet} value={section.education.gpa ? `GPA: ${section.education.gpa}` : ''} onSave={(v) => edit('education.gpa')(v.replace(/^GPA:\s*/i, ''))} placeholder="GPA (optional)" />
+            </>
+          ) : (
+            <>
+              <Text style={styles.previewEntryTitle}>{section.education.university}</Text>
+              <Text style={styles.previewEntryDates}>
+                {[section.education.major, section.education.minor ? `Minor: ${section.education.minor}` : '', section.education.graduation].filter(Boolean).join(' · ')}
+              </Text>
+              {!!section.education.gpa && <Highlighted style={styles.previewBullet} text={`GPA: ${section.education.gpa}`} keywords={keywordSet} />}
+              {!!section.education.honors && <Highlighted style={styles.previewBullet} text={section.education.honors} keywords={keywordSet} />}
+            </>
+          )}
         </View>
       )}
 
       {Array.isArray(section.experiences) && section.experiences.map((exp: any, ei: number) => (
         <View key={ei} style={styles.previewEntry}>
-          <Text style={styles.previewEntryTitle}>
-            {exp.role}{exp.company ? `, ${exp.company}` : ''}
-          </Text>
-          <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' · ')}</Text>
-          {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
-            <Highlighted
-              key={bi}
-              style={styles.previewBullet}
-              text={`• ${typeof b === 'string' ? b : b.text}`}
-              keywords={keywordSet}
-            />
-          ))}
+          {editable ? (
+            <>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryTitle} value={exp.role || ''} onSave={edit(`experiences.${ei}.role`)} placeholder="Role" />
+                <Text style={styles.previewEntryTitle}>, </Text>
+                <EditableText style={styles.previewEntryTitle} value={exp.company || ''} onSave={edit(`experiences.${ei}.company`)} placeholder="Company" />
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <EditableText style={styles.previewEntryDates} value={exp.date || ''} onSave={edit(`experiences.${ei}.date`)} placeholder="dates" />
+                <Text style={styles.previewEntryDates}> · </Text>
+                <EditableText style={styles.previewEntryDates} value={exp.location || ''} onSave={edit(`experiences.${ei}.location`)} placeholder="location" />
+              </View>
+              {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
+                <View key={bi} style={{ flexDirection: 'row' }}>
+                  <Text style={styles.previewBullet}>• </Text>
+                  <View style={{ flex: 1 }}>
+                    <EditableText
+                      style={styles.previewBullet}
+                      value={typeof b === 'string' ? b : (b.text || '')}
+                      onSave={edit(typeof b === 'string' ? `experiences.${ei}.bullets.${bi}` : `experiences.${ei}.bullets.${bi}.text`)}
+                      multiline
+                      placeholder="Tap to add a bullet"
+                    />
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : (
+            <>
+              <Text style={styles.previewEntryTitle}>
+                {exp.role}{exp.company ? `, ${exp.company}` : ''}
+              </Text>
+              <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' · ')}</Text>
+              {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
+                <Highlighted
+                  key={bi}
+                  style={styles.previewBullet}
+                  text={`• ${typeof b === 'string' ? b : b.text}`}
+                  keywords={keywordSet}
+                />
+              ))}
+            </>
+          )}
         </View>
       ))}
 
       {Array.isArray(section.projects) && section.projects.map((proj: any, pi: number) => (
         <View key={pi} style={styles.previewEntry}>
-          <Text style={styles.previewEntryTitle}>{proj.name}</Text>
-          <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' · ')}</Text>
-          {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
-            <Highlighted
-              key={bi}
-              style={styles.previewBullet}
-              text={`• ${typeof b === 'string' ? b : b.text}`}
-              keywords={keywordSet}
-            />
-          ))}
+          {editable ? (
+            <>
+              <EditableText style={styles.previewEntryTitle} value={proj.name || ''} onSave={edit(`projects.${pi}.name`)} placeholder="Project name" />
+              {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
+                <View key={bi} style={{ flexDirection: 'row' }}>
+                  <Text style={styles.previewBullet}>• </Text>
+                  <View style={{ flex: 1 }}>
+                    <EditableText
+                      style={styles.previewBullet}
+                      value={typeof b === 'string' ? b : (b.text || '')}
+                      onSave={edit(typeof b === 'string' ? `projects.${pi}.bullets.${bi}` : `projects.${pi}.bullets.${bi}.text`)}
+                      multiline
+                      placeholder="Tap to add a bullet"
+                    />
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : (
+            <>
+              <Text style={styles.previewEntryTitle}>{proj.name}</Text>
+              <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' · ')}</Text>
+              {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
+                <Highlighted
+                  key={bi}
+                  style={styles.previewBullet}
+                  text={`• ${typeof b === 'string' ? b : b.text}`}
+                  keywords={keywordSet}
+                />
+              ))}
+            </>
+          )}
         </View>
       ))}
 
       {section.simple?.lines && (
         <View style={styles.previewEntry}>
           {section.simple.lines.map((line: string, li: number) => (
-            <Highlighted key={li} style={styles.previewBullet} text={line} keywords={keywordSet} />
+            editable ? (
+              <EditableText
+                key={li}
+                style={styles.previewBullet}
+                value={line}
+                onSave={edit(`simple.lines.${li}`)}
+                multiline
+                placeholder="Tap to edit"
+              />
+            ) : (
+              <Highlighted key={li} style={styles.previewBullet} text={line} keywords={keywordSet} />
+            )
           ))}
         </View>
       )}

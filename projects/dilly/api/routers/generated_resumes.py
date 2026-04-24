@@ -139,6 +139,64 @@ async def save_generated_resume(request: Request, body: SaveResumeRequest):
         conn.close()
 
 
+class UpdateResumeRequest(BaseModel):
+    """PATCH body for inline resume edits from the mobile preview.
+
+    Only `sections` is typically sent — the user is tweaking bullet
+    text, a company name, or a role title in the preview and we
+    upsert the whole sections JSON. job_title / company / cohort are
+    optional for the rare case where those get edited too."""
+    sections: Optional[list[dict]] = None
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    job_description: Optional[str] = None
+
+
+@router.patch("/generated-resumes/{resume_id}")
+async def update_generated_resume(request: Request, resume_id: str, body: UpdateResumeRequest):
+    """Update an existing generated resume row. Ownership is enforced
+    by the student_id filter in the WHERE clause — callers can only
+    touch their own rows. Fields not in the body are left alone."""
+    user = deps.require_auth(request)
+    email = user.get("email", "")
+    student_id = _get_student_id(email)
+    if not student_id:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    updates: list[str] = []
+    params: list = []
+    if body.sections is not None:
+        updates.append("sections = %s")
+        params.append(json.dumps(body.sections))
+    if body.job_title is not None:
+        updates.append("job_title = %s")
+        params.append(body.job_title)
+    if body.company is not None:
+        updates.append("company = %s")
+        params.append(body.company)
+    if body.job_description is not None:
+        updates.append("job_description = %s")
+        params.append(body.job_description)
+
+    if not updates:
+        return {"ok": True, "changed": False}
+
+    sql = f"UPDATE generated_resumes SET {', '.join(updates)} WHERE id = %s AND student_id = %s"
+    params.extend([resume_id, student_id])
+
+    conn = _get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            changed = cur.rowcount
+        conn.commit()
+        if changed == 0:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        return {"ok": True, "changed": True}
+    finally:
+        conn.close()
+
+
 @router.get("/generated-resumes")
 async def list_generated_resumes(request: Request):
     user = deps.require_auth(request)
