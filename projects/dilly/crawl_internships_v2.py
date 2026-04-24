@@ -1288,6 +1288,171 @@ PINPOINT_COMPANIES = {
     "milkround":          ("Milkround", "Education"),
 }
 
+TEAMTAILOR_COMPANIES = {
+    # Teamtailor (teamtailor.com) — popular in Scandinavia + EU tech
+    # Slugs are the company's subdomain prefix on teamtailor.com
+    "klarna":             ("Klarna", "Finance"),
+    "spotify":            ("Spotify", "Media"),
+    "king":               ("King (Candy Crush)", "Media"),
+    "mojang":             ("Mojang Studios", "Media"),
+    "ingka-group":        ("IKEA/Ingka Group", "Consumer"),
+    "hm-group":           ("H&M Group", "Consumer"),
+    "electrolux":         ("Electrolux", "Consumer"),
+    "volvogroup":         ("Volvo Group", "Tech"),
+    "scania":             ("Scania", "Tech"),
+    "sandvik":            ("Sandvik", "Tech"),
+    "skf":                ("SKF", "Tech"),
+    "abb":                ("ABB", "Tech"),
+    "atlas-copco":        ("Atlas Copco", "Tech"),
+    "tele2":              ("Tele2", "Tech"),
+    "telia":              ("Telia", "Tech"),
+    "swisscom":           ("Swisscom", "Tech"),
+    "elgiganten":         ("Elgiganten", "Consumer"),
+    "coop":               ("Coop", "Consumer"),
+    "norgesgruppen":      ("NorgesGruppen", "Consumer"),
+    "reitan":             ("Reitan", "Consumer"),
+    "tradeshift":         ("Tradeshift", "Tech"),
+    "peltarion":          ("Peltarion", "Tech"),
+    "bambora":            ("Bambora", "Finance"),
+    "izettle":            ("iZettle/PayPal", "Finance"),
+    "lendo":              ("Lendo", "Finance"),
+    "qred":               ("Qred", "Finance"),
+    "capcito":            ("Capcito", "Finance"),
+    "lysa":               ("Lysa", "Finance"),
+    "zensum":             ("Zensum", "Finance"),
+    "northmill":          ("Northmill", "Finance"),
+    "rocker":             ("Rocker", "Finance"),
+    "anyfin":             ("Anyfin", "Finance"),
+    "mynt":               ("Mynt", "Finance"),
+    "froda":              ("Froda", "Finance"),
+    "enkla":              ("Enkla", "Finance"),
+    "loanstep":           ("LoanStep", "Finance"),
+    "hedvig":             ("Hedvig", "Finance"),
+    "insurely":           ("Insurely", "Finance"),
+    "treyd":              ("Treyd", "Finance"),
+    "capcito-finance":    ("Capcito Finance", "Finance"),
+    "kaddio":             ("Kaddio", "Healthcare"),
+    "mindoktor":          ("Min Doktor", "Healthcare"),
+    "doktor24":           ("Doktor24", "Healthcare"),
+    "health-navigator":   ("Health Navigator", "Healthcare"),
+    "wellstreet":         ("Wellstreet", "Consulting"),
+    "dfinderjobs":        ("Dfinder", "Consulting"),
+    "oddwork":            ("Oddwork", "Consulting"),
+    "bravura":            ("Bravura", "Consulting"),
+}
+
+JOBVITE_COMPANIES = {
+    # Jobvite company IDs. Each is the identifier in the Jobvite
+    # public API: jobs.jobvite.com/api/1/company/<id>/jobs
+    "twitter":            ("Twitter/X", "Tech"),
+    "linkedin":           ("LinkedIn", "Tech"),
+    "airbnb":             ("Airbnb", "Tech"),
+    "lyft":               ("Lyft", "Tech"),
+    "square":             ("Block (Square)", "Tech"),
+    "cloudera":           ("Cloudera", "Tech"),
+    "splunk":             ("Splunk", "Tech"),
+    "pandora":            ("Pandora", "Media"),
+    "amc":                ("AMC Networks", "Media"),
+    "npr":                ("NPR", "Media"),
+    "buzzfeed":           ("BuzzFeed", "Media"),
+    "vox-media":          ("Vox Media", "Media"),
+    "iheartmedia":        ("iHeartMedia", "Media"),
+    "sirius-xm":          ("SiriusXM", "Media"),
+    "discovery":          ("Discovery", "Media"),
+    "univision":          ("Univision", "Media"),
+    "hearst-tv":          ("Hearst TV", "Media"),
+    "nexstar":            ("Nexstar Media", "Media"),
+    "gray-television":    ("Gray Television", "Media"),
+    "sinclair":           ("Sinclair Broadcast", "Media"),
+    "raycom":             ("Raycom Media", "Media"),
+    "emmis":              ("Emmis Communications", "Media"),
+    "cumulus":            ("Cumulus Media", "Media"),
+    "entercom":           ("Entercom/Audacy", "Media"),
+    "hubbard":            ("Hubbard Broadcasting", "Media"),
+    "saga":               ("Saga Communications", "Media"),
+    "beasley":            ("Beasley Media", "Media"),
+    "townsquare":         ("Townsquare Media", "Media"),
+    "sun-broadcasting":   ("Sun Broadcasting", "Media"),
+    "scripps":            ("E.W. Scripps", "Media"),
+    "univision-pr":       ("Univision Puerto Rico", "Media"),
+    "medscape":           ("Medscape/WebMD", "Healthcare"),
+    "healtheon":          ("Healtheon", "Healthcare"),
+    "healthstream":       ("HealthStream", "Healthcare"),
+    "allscripts":         ("Allscripts", "Healthcare"),
+    "streamline-health":  ("Streamline Health", "Healthcare"),
+    "nant-health":        ("NantHealth", "Healthcare"),
+    "apixio":             ("Apixio", "Healthcare"),
+    "accretive-health":   ("Accretive Health", "Healthcare"),
+    "aecom":              ("AECOM", "Consulting"),
+    "jacobs":             ("Jacobs Engineering", "Consulting"),
+    "parsons":            ("Parsons Corporation", "Consulting"),
+    "wsp":                ("WSP Global", "Consulting"),
+    "burns-mcdonnell":    ("Burns & McDonnell", "Consulting"),
+    "black-veatch":       ("Black & Veatch", "Consulting"),
+    "cdw":                ("CDW", "Tech"),
+    "insight-direct":     ("Insight Direct", "Tech"),
+    "sps-commerce":       ("SPS Commerce", "Tech"),
+    "digital-river":      ("Digital River", "Tech"),
+    "overstock":          ("Overstock.com", "Consumer"),
+    "wayfair":            ("Wayfair", "Consumer"),
+}
+
+COMEET_COMPANIES = {
+    # Comeet company IDs for the positions API.
+    # Format: company_token → (display_name, industry)
+    "wix":                ("Wix", "Tech"),
+    "monday":             ("Monday.com", "Tech"),
+    "ironSource":         ("ironSource", "Tech"),
+    "appsflyer":          ("AppsFlyer", "Tech"),
+    "similarweb":         ("SimilarWeb", "Tech"),
+    "fiverr":             ("Fiverr", "Tech"),
+    "bringg":             ("Bringg", "Tech"),
+    "kaltura":            ("Kaltura", "Tech"),
+    "checkmarx":          ("Checkmarx", "Tech"),
+    "illusive-networks":  ("Illusive Networks", "Tech"),
+    "armis":              ("Armis Security", "Tech"),
+    "sygnia":             ("Sygnia", "Tech"),
+    "panorays":           ("Panorays", "Tech"),
+    "sternum":            ("Sternum IoT", "Tech"),
+    "cato-networks":      ("Cato Networks", "Tech"),
+    "radware":            ("Radware", "Tech"),
+    "tufin":              ("Tufin", "Tech"),
+    "sasa-software":      ("Sasa Software", "Tech"),
+    "guardicore":         ("Guardicore", "Tech"),
+    "perception-point":   ("Perception Point", "Tech"),
+    "cybereason":         ("Cybereason", "Tech"),
+    "hunters":            ("Hunters", "Tech"),
+    "sysdig":             ("Sysdig", "Tech"),
+    "gong":               ("Gong", "Tech"),
+    "yotpo":              ("Yotpo", "Tech"),
+    "glassbox":           ("Glassbox", "Tech"),
+    "optibus":            ("Optibus", "Tech"),
+    "riskified":          ("Riskified", "Tech"),
+    "walk-me":            ("WalkMe", "Tech"),
+    "papaya-global":      ("Papaya Global", "Tech"),
+    "guesty":             ("Guesty", "Tech"),
+    "trigo":              ("Trigo", "Tech"),
+    "vayyar":             ("Vayyar", "Tech"),
+    "mobileye":           ("Mobileye", "Tech"),
+    "partner":            ("Partner Communications", "Tech"),
+    "bezeq":              ("Bezeq", "Tech"),
+    "pelephone":          ("Pelephone", "Tech"),
+    "hot":                ("HOT Mobile", "Tech"),
+    "mizrahi-tefahot":    ("Mizrahi-Tefahot Bank", "Finance"),
+    "discount-bank":      ("Discount Bank", "Finance"),
+    "leumi":              ("Bank Leumi", "Finance"),
+    "hapoalim":           ("Bank Hapoalim", "Finance"),
+    "fibi":               ("First International Bank", "Finance"),
+    "isracard":           ("Isracard", "Finance"),
+    "shva":               ("Shva", "Finance"),
+    "visa-cal":           ("Cal Credit Card", "Finance"),
+    "max-it-finance":     ("Max-It Finance", "Finance"),
+    "clalit":             ("Clalit Health", "Healthcare"),
+    "maccabi":            ("Maccabi Healthcare", "Healthcare"),
+    "meuhedet":           ("Meuhedet", "Healthcare"),
+    "assuta":             ("Assuta Medical Centers", "Healthcare"),
+}
+
 INTERN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
     r'\bintern\b', r'\binternship\b', r'\bco-op\b', r'\bcoop\b',
     r'\bsummer\s+\d{4}\b', r'\bsummer\s+analyst\b', r'\bsummer\s+associate\b',
@@ -1683,6 +1848,130 @@ def crawl_pinpoint(slug, company_name):
     return results
 
 
+def crawl_teamtailor(slug, company_name):
+    """Teamtailor public jobs API: https://career.teamtailor.com/api/v1/jobs?company=<slug>
+    Alternatively: https://<slug>.teamtailor.com/api/v1/jobs"""
+    data = fetch_json(f"https://{slug}.teamtailor.com/api/v1/jobs?include=locations,department")
+    if not data:
+        data = fetch_json(f"https://{slug}.teamtailor.com/api/v1/job-applications")
+    if not data:
+        return []
+    jobs = data.get("data", []) if isinstance(data, dict) else data
+    results = []
+    for job in jobs:
+        attrs = job.get("attributes", {}) if isinstance(job, dict) else {}
+        title = (attrs.get("title") or job.get("title") or "").strip()
+        if not title:
+            continue
+        desc = strip_html(attrs.get("body") or attrs.get("description") or "")
+        job_type = classify_listing(title, desc)
+        location = (attrs.get("location") or "").strip()
+        city, state = parse_location(location)
+        is_remote_job = bool(attrs.get("remote-status") == "Fully remote") or is_remote(location)
+        links = job.get("links", {}) or {}
+        apply_url = links.get("careersite-job-url") or f"https://{slug}.teamtailor.com/jobs/{job.get('id', '')}"
+        posted = (attrs.get("created-at") or "")[:10]
+        results.append({
+            "external_id": f"teamtailor-{slug}-{job.get('id', '')}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": state,
+            "work_mode": "remote" if is_remote_job else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "teamtailor",
+            "team": "",
+            "remote": is_remote_job,
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
+def crawl_jobvite(company_id, company_name):
+    """Jobvite public jobs feed: https://jobs.jobvite.com/api/1/company/<id>/jobs"""
+    data = fetch_json(f"https://jobs.jobvite.com/api/1/company/{company_id}/jobs")
+    if not data:
+        return []
+    jobs = data.get("jobs", data.get("requisitions", [])) if isinstance(data, dict) else data
+    results = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        title = (job.get("title") or "").strip()
+        job_id = str(job.get("id") or job.get("jobId") or "")
+        if not title or not job_id:
+            continue
+        desc = strip_html(job.get("description") or job.get("jobDescription") or "")
+        job_type = classify_listing(title, desc)
+        location = (job.get("location") or job.get("city") or "").strip()
+        city, state = parse_location(location)
+        is_remote_job = is_remote(location) or is_remote(title)
+        apply_url = job.get("applyUrl") or job.get("url") or f"https://jobs.jobvite.com/company/{company_id}/job/{job_id}"
+        posted = (job.get("datePosted") or job.get("postedDate") or "")[:10]
+        dept = (job.get("department") or "").strip()
+        results.append({
+            "external_id": f"jobvite-{company_id}-{job_id}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": state,
+            "work_mode": "remote" if is_remote_job else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "jobvite",
+            "team": dept,
+            "remote": is_remote_job,
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
+def crawl_comeet(company_id, company_name):
+    """Comeet public jobs feed: https://www.comeet.com/jobs/<company_id>/all"""
+    data = fetch_json(f"https://www.comeet.com/jobs-api/company/{company_id}/positions?coref=1")
+    if not data:
+        return []
+    jobs = data if isinstance(data, list) else data.get("positions", [])
+    results = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        title = (job.get("name") or job.get("title") or "").strip()
+        job_id = str(job.get("uid") or job.get("id") or "")
+        if not title or not job_id:
+            continue
+        desc = strip_html(job.get("details") or job.get("description") or "")
+        job_type = classify_listing(title, desc)
+        location = (job.get("location") or {}).get("name", "") if isinstance(job.get("location"), dict) else str(job.get("location") or "")
+        city, state = parse_location(location)
+        is_remote_job = is_remote(location) or is_remote(title)
+        apply_url = job.get("url") or f"https://www.comeet.com/jobs/{company_id}/all/{job_id}"
+        posted = (job.get("date_posted") or "")[:10]
+        dept = (job.get("department") or {}).get("name", "") if isinstance(job.get("department"), dict) else str(job.get("department") or "")
+        results.append({
+            "external_id": f"comeet-{company_id}-{job_id}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": state,
+            "work_mode": "remote" if is_remote_job else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "comeet",
+            "team": dept,
+            "remote": is_remote_job,
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
 def ensure_company(cur, name, ats_type, industry, website=None):
     """Get or create a companies row. When website is provided and the
     row either doesn't exist or has a NULL website, we set it — that
@@ -1972,6 +2261,45 @@ def crawl_all():
             time.sleep(0.4)
     except Exception as e:
         print(f"[bamboohr] load failed: {e}")
+
+    # ── Teamtailor (Scandinavia + EU tech companies) ──────────────────
+    print(f"\n[Teamtailor] Crawling {len(TEAMTAILOR_COMPANIES)} companies...")
+    for slug, (name, industry) in TEAMTAILOR_COMPANIES.items():
+        print(f"  {name} ({slug})...", end=" ", flush=True)
+        try:
+            jobs = crawl_teamtailor(slug, name)
+            new = write_listings(conn, jobs, name, "teamtailor", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.4)
+
+    # ── Jobvite (media, healthcare, engineering/gov contractors) ──────
+    print(f"\n[Jobvite] Crawling {len(JOBVITE_COMPANIES)} companies...")
+    for company_id, (name, industry) in JOBVITE_COMPANIES.items():
+        print(f"  {name} ({company_id})...", end=" ", flush=True)
+        try:
+            jobs = crawl_jobvite(company_id, name)
+            new = write_listings(conn, jobs, name, "jobvite", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.4)
+
+    # ── Comeet (Israeli tech + EU companies) ─────────────────────────
+    print(f"\n[Comeet] Crawling {len(COMEET_COMPANIES)} companies...")
+    for company_id, (name, industry) in COMEET_COMPANIES.items():
+        print(f"  {name} ({company_id})...", end=" ", flush=True)
+        try:
+            jobs = crawl_comeet(company_id, name)
+            new = write_listings(conn, jobs, name, "comeet", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.4)
 
     # ── Discovered boards (from the discovery cron) ──────────────────
     # Run /cron/discover-boards once to populate. After that every

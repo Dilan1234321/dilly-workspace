@@ -318,6 +318,44 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"bamboohr: {type(e).__name__}: {str(e)[:200]}")
 
+    # Teamtailor, Jobvite, Comeet via crawl_internships_v2 crawlers
+    try:
+        import sys as _sys, os as _os
+        _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", ".."))
+        from projects.dilly.crawl_internships_v2 import (
+            TEAMTAILOR_COMPANIES, crawl_teamtailor,
+            JOBVITE_COMPANIES, crawl_jobvite,
+            COMEET_COMPANIES, crawl_comeet,
+        )
+        for company_dict, crawl_fn, label in [
+            (TEAMTAILOR_COMPANIES, crawl_teamtailor, "teamtailor"),
+            (JOBVITE_COMPANIES, crawl_jobvite, "jobvite"),
+            (COMEET_COMPANIES, crawl_comeet, "comeet"),
+        ]:
+            fetched = 0
+            inserted_count = 0
+            for slug, (name, industry) in company_dict.items():
+                try:
+                    jobs = crawl_fn(slug, name)
+                    fetched += len(jobs)
+                    for job in jobs:
+                        item = {
+                            **job,
+                            "external_id": job.get("external_id", f"{label}-{slug}-{job.get('title','')}"),
+                            "source_ats": label,
+                            "cohorts": [],
+                            "industry": industry.lower(),
+                        }
+                        if _upsert_listing(cur, item):
+                            inserted_count += 1
+                except Exception:
+                    pass
+            stats["sources"][label] = {"fetched": fetched, "inserted": inserted_count}
+            stats["total_fetched"] += fetched
+            stats["total_inserted"] += inserted_count
+    except Exception as e:
+        stats["errors"].append(f"teamtailor_jobvite_comeet: {type(e).__name__}: {str(e)[:200]}")
+
     conn.commit()
     return stats
 
