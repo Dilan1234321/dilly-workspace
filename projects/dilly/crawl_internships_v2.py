@@ -1864,6 +1864,21 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.3)
 
+    # ── iCIMS (enterprise hospitals, pharma, retail, defense) ───────────
+    # iCIMS doesn't have a clean single-call API like Greenhouse —
+    # each tenant has its own subdomain. We call each tenant's JSON
+    # widget endpoint and write via write_multi_company_feed.
+    try:
+        from dilly_core.job_source_icims import fetch_all_icims
+        print(f"\n[iCIMS] Fetching enterprise tenants...")
+        icims_jobs = fetch_all_icims()
+        print(f"[iCIMS] Ingesting {len(icims_jobs)} jobs...")
+        new = write_multi_company_feed(conn, icims_jobs, "icims")
+        print(f"  {len(icims_jobs)} jobs ({new} new)")
+        total_found += len(icims_jobs); total_new += new
+    except Exception as e:
+        print(f"[icims] load failed: {e}")
+
     print(f"\n[JazzHR] Crawling {len(JAZZHR_COMPANIES)} companies...")
     for slug, (name, industry) in JAZZHR_COMPANIES.items():
         print(f"  {name} ({slug})...", end=" ", flush=True)
