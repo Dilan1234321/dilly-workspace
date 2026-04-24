@@ -15,20 +15,14 @@
  */
 
 import { Stack } from 'expo-router';
-import { useResolvedTheme } from '../../../hooks/useTheme';
 
 export default function SkillsLayout() {
-  const theme = useResolvedTheme();
   return (
     <Stack
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
         animationDuration: 260,
-        // Set the native screen background to match the theme surface so
-        // the OS-level transition doesn't flash white (or system gray)
-        // for the one frame before React renders the screen's content.
-        contentStyle: { backgroundColor: theme.surface.bg },
       }}
     />
   );
