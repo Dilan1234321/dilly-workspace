@@ -1017,6 +1017,52 @@ SMARTRECRUITERS_COMPANIES = {
     "Xerox":("Xerox","Tech"),"Fujitsu":("Fujitsu","Tech"),
     "Samsung":("Samsung","Tech"),"Sony":("Sony","Tech"),
     "LG":("LG","Tech"),
+
+    # ── Batch added 2026-04-24: SmartRecruiters expansion ──
+    # More enterprise / big employer slugs on SmartRecruiters
+    "Airbus":("Airbus","Tech"),"RollsRoyce":("Rolls-Royce","Tech"),
+    "Thales":("Thales","Tech"),"BAESystems":("BAE Systems","Tech"),
+    "BASF":("BASF","Tech"),"DowChemical":("Dow","Tech"),
+    "3M":("3M","Tech"),"Eaton":("Eaton","Tech"),
+    "Emerson":("Emerson","Tech"),"Rockwell":("Rockwell Automation","Tech"),
+    "ParkerHannifin":("Parker Hannifin","Tech"),
+    "IllinoisTool":("Illinois Tool Works","Tech"),
+    "Danaher":("Danaher","Tech"),"Fortive":("Fortive","Tech"),
+    "Dover":("Dover","Tech"),"Graco":("Graco","Tech"),
+    "Xylem":("Xylem","Tech"),"Roper":("Roper Technologies","Tech"),
+    "Mettler":("Mettler-Toledo","Tech"),
+    "WattsWater":("Watts Water","Tech"),
+    "Mueller":("Mueller Industries","Tech"),
+    "Watts":("Watts Water Technologies","Tech"),
+    # Retail / consumer global
+    "Ikea":("IKEA","Consumer"),"H&M":("H&M","Consumer"),
+    "Zara":("Zara/Inditex","Consumer"),"Uniqlo":("Uniqlo","Consumer"),
+    "Primark":("Primark","Consumer"),"TopShop":("Topshop","Consumer"),
+    "Asos":("ASOS","Consumer"),"Boohoo":("Boohoo","Consumer"),
+    "PrettyLittleThing":("PrettyLittleThing","Consumer"),
+    "FarFetch":("Farfetch","Consumer"),
+    # Consulting Europe
+    "RolandBerger":("Roland Berger","Consulting"),
+    "McKinseyEurope":("McKinsey","Consulting"),
+    "BostonConsulting":("BCG","Consulting"),
+    "CapgeminiConsulting":("Capgemini Consulting","Consulting"),
+    "InfosysConsulting":("Infosys","Consulting"),
+    "WiproConsulting":("Wipro","Consulting"),
+    "TCS":("Tata Consultancy Services","Consulting"),
+    "HCL":("HCL Technologies","Consulting"),
+    "CognizantGlobal":("Cognizant","Consulting"),
+    "DXC":("DXC Technology","Consulting"),
+    # Financial institutions Europe/Global
+    "HSBC":("HSBC","Finance"),"Barclays":("Barclays","Finance"),
+    "DeutscheBank":("Deutsche Bank","Finance"),
+    "CreditSuisse":("Credit Suisse","Finance"),
+    "UBS":("UBS","Finance"),"BNPParibas":("BNP Paribas","Finance"),
+    "SocieteGenerale":("Société Générale","Finance"),
+    "ING":("ING","Finance"),"ABN":("ABN AMRO","Finance"),
+    "RaboBank":("Rabobank","Finance"),
+    "AllianzGlobal":("Allianz","Finance"),
+    "AXA":("AXA","Finance"),"MunichRe":("Munich Re","Finance"),
+    "SwissRe":("Swiss Re","Finance"),
 }
 
 JAZZHR_COMPANIES = {
@@ -1996,6 +2042,38 @@ def crawl_all():
             # Health / consumer DTC
             "warby-parker-careers", "casper-careers", "allbirds-careers",
             "glossier-careers", "harrys-careers",
+            # ── Batch added 2026-04-24: Workable expansion ──
+            # More tech companies on Workable
+            "aircall", "lemlist", "hunter-io", "lemwarm", "instantly",
+            "reply-io", "outreach-io", "salesloft", "apollo-io",
+            "close-crm", "pipedrive", "copper-crm", "affinity",
+            "attio", "folk-app", "twenty-crm",
+            # European tech on Workable
+            "datadog-eu", "elastic-eu", "hashicorp-eu",
+            "confluent-eu", "mongodb-eu", "redis-eu",
+            "grafana-eu", "sentry-eu", "posthog-eu",
+            "linear-eu", "notion-eu", "figma-eu",
+            "canva-eu", "miro-eu", "webflow-eu",
+            "framer-eu", "readymag", "vev-design",
+            # Recruitment / HR tech on Workable
+            "workable-platform", "recruitee-com",
+            "teamtailor-com", "pinpointhq",
+            "breezy-hr", "applytojob",
+            "greenhouse-io", "lever-co-ats",
+            "ashby-hq", "rippling-hr",
+            "gusto-payroll", "justworks-hr",
+            "bamboohr-platform", "hibob-hr",
+            # Media / creative on Workable
+            "contentful-cms", "sanity-io", "strapi-cms",
+            "prismic-io", "storyblok", "butter-cms",
+            "ghost-cms", "wordpress-vip",
+            "substack-pro", "ghost-pro",
+            # SaaS / PLG on Workable
+            "loom-inc", "notion-inc", "coda-io",
+            "airtable-inc", "rows-com", "baserow",
+            "nocodb", "appsmith", "tooljet", "budibase",
+            "retool-hq", "internal-io", "airplane-dev",
+            "pipedream", "trigger-dev",
         ]
         print(f"\n[Workable] Fetching {len(workable_slugs)} boards...")
         wk_jobs = fetch_all_workable(workable_slugs, max_per_company=100)
