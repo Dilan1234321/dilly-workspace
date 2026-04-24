@@ -428,12 +428,13 @@ export default function JobsScreen() {
       countByKey.set(key, (countByKey.get(key) || 0) + 1);
     }
     const seen = new Set<string>();
-    const out: Array<{ label: string; n: number }> = [];
+    const out: Array<{ label: string; key: string; n: number }> = [];
     for (const c of profileCities) {
-      const key = c.toLowerCase();
+      // Strip trailing ", ST" so "San Francisco, CA" matches location_city "San Francisco"
+      const key = c.toLowerCase().replace(/,\s*[a-z]{2}$/, '').trim();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ label: c, n: countByKey.get(key) || 0 });
+      out.push({ label: c, key, n: countByKey.get(key) || 0 });
     }
     return out.sort((a, b) => b.n - a.n);
   }, [jobs, profile?.job_locations]);
@@ -709,7 +710,7 @@ export default function JobsScreen() {
           />
           <Text style={[styles.filterChipText, { color: cityFilter ? '#FFF' : theme.surface.t1 }]}>
             {cityFilter
-              ? (cityOptions.find(o => o.label.toLowerCase() === cityFilter)?.label || cityFilter)
+              ? (cityOptions.find(o => o.key === cityFilter)?.label || cityFilter)
               : 'City'}
           </Text>
           <Ionicons
@@ -805,13 +806,13 @@ export default function JobsScreen() {
 
             <ScrollView>
               {cityOptions.map(opt => {
-                const active = cityFilter === opt.label.toLowerCase();
+                const active = cityFilter === opt.key;
                 return (
                   <TouchableOpacity
                     key={opt.label}
                     activeOpacity={0.85}
                     onPress={() => {
-                      setCityFilter(opt.label.toLowerCase());
+                      setCityFilter(opt.key);
                       setShowCityPicker(false);
                     }}
                     style={[
