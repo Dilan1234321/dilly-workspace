@@ -1864,6 +1864,21 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.3)
 
+    # ── Taleo / Oracle (telecom, automotive, energy, banking, defense) ──
+    # Taleo's REST JSON endpoint is unauthenticated. Each tenant 404s
+    # gracefully if the company moved off Taleo. Volume: ~100-400 jobs
+    # per large enterprise tenant.
+    try:
+        from dilly_core.job_source_taleo import fetch_all_taleo
+        print(f"\n[Taleo] Fetching enterprise tenants...")
+        taleo_jobs = fetch_all_taleo()
+        print(f"[Taleo] Ingesting {len(taleo_jobs)} jobs...")
+        new = write_multi_company_feed(conn, taleo_jobs, "taleo")
+        print(f"  {len(taleo_jobs)} jobs ({new} new)")
+        total_found += len(taleo_jobs); total_new += new
+    except Exception as e:
+        print(f"[taleo] load failed: {e}")
+
     # ── iCIMS (enterprise hospitals, pharma, retail, defense) ───────────
     # iCIMS doesn't have a clean single-call API like Greenhouse —
     # each tenant has its own subdomain. We call each tenant's JSON

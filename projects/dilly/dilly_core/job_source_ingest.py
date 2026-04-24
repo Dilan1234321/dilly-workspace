@@ -234,6 +234,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"weworkremotely: {type(e).__name__}: {str(e)[:200]}")
 
+    # Taleo / Oracle (telecom, automotive, energy, banking, defense, retail)
+    try:
+        from dilly_core.job_source_taleo import fetch_all_taleo
+        taleo = fetch_all_taleo() or []
+        inserted = sum(1 for item in taleo if _upsert_listing(cur, item))
+        stats["sources"]["taleo"] = {"fetched": len(taleo), "inserted": inserted}
+        stats["total_fetched"] += len(taleo)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"taleo: {type(e).__name__}: {str(e)[:200]}")
+
     # iCIMS (enterprise: hospitals, pharma, defense, retail, insurance)
     try:
         from dilly_core.job_source_icims import fetch_all_icims
