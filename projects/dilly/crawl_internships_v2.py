@@ -1864,6 +1864,20 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.3)
 
+    # ── SAP SuccessFactors (big tech, pharma, consumer goods, consulting) ──
+    # OData JSON API is public for open postings. Filters to US/CA/UK only
+    # to avoid irrelevant international noise. Gracefully handles 404s.
+    try:
+        from dilly_core.job_source_successfactors import fetch_all_successfactors
+        print(f"\n[SuccessFactors] Fetching enterprise tenants...")
+        sfsf_jobs = fetch_all_successfactors()
+        print(f"[SuccessFactors] Ingesting {len(sfsf_jobs)} jobs...")
+        new = write_multi_company_feed(conn, sfsf_jobs, "successfactors")
+        print(f"  {len(sfsf_jobs)} jobs ({new} new)")
+        total_found += len(sfsf_jobs); total_new += new
+    except Exception as e:
+        print(f"[successfactors] load failed: {e}")
+
     # ── Taleo / Oracle (telecom, automotive, energy, banking, defense) ──
     # Taleo's REST JSON endpoint is unauthenticated. Each tenant 404s
     # gracefully if the company moved off Taleo. Volume: ~100-400 jobs

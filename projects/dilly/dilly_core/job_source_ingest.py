@@ -234,6 +234,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"weworkremotely: {type(e).__name__}: {str(e)[:200]}")
 
+    # SAP SuccessFactors (big tech, pharma, consumer goods, consulting)
+    try:
+        from dilly_core.job_source_successfactors import fetch_all_successfactors
+        sfsf = fetch_all_successfactors() or []
+        inserted = sum(1 for item in sfsf if _upsert_listing(cur, item))
+        stats["sources"]["successfactors"] = {"fetched": len(sfsf), "inserted": inserted}
+        stats["total_fetched"] += len(sfsf)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"successfactors: {type(e).__name__}: {str(e)[:200]}")
+
     # Taleo / Oracle (telecom, automotive, energy, banking, defense, retail)
     try:
         from dilly_core.job_source_taleo import fetch_all_taleo
