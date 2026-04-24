@@ -372,17 +372,23 @@ def discover_boards_cron(
     token: str = "",
     vendor: str = "all",
     limit: int = 0,
+    sync: bool = False,
 ):
     """Run ATS slug discovery. Persists every hit to discovered_boards
     so the next crawl picks them up. Candidate list lives in
-    api/ingest/candidate_slugs.py (~800 slugs today).
+    api/ingest/candidate_slugs.py (~900 slugs today).
 
     Query params:
       - vendor: 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'all' (default)
       - limit:  max slugs to probe per vendor (0 = no cap)
+      - sync:   false (default) -> run in background thread, return
+                immediately. true -> caller blocks for completion (used
+                for local testing; Railway's HTTP gateway times out at
+                ~30s so sync=true will 500 on large vendors).
 
     Greenhouse ~3 min per 1k probes; Workday ~8 min (up to 16 variants
-    per slug). Runs SYNC — caller waits for completion.
+    per slug). ALWAYS use sync=false in prod; poll /cron/discovery-stats
+    to see progress.
     """
     _require_cron_secret(token)
     from projects.dilly.api.ingest.candidate_slugs import CANDIDATE_SLUGS
@@ -392,33 +398,107 @@ def discover_boards_cron(
 
     cap = int(limit) if limit and int(limit) > 0 else None
     v = (vendor or "all").lower().strip()
-    results: list[dict] = []
-    if v in ("greenhouse", "all"):
-        results.append(discover_greenhouse(CANDIDATE_SLUGS, limit=cap))
-    if v in ("lever", "all"):
-        results.append(discover_lever(CANDIDATE_SLUGS, limit=cap))
-    if v in ("ashby", "all"):
-        results.append(discover_ashby(CANDIDATE_SLUGS, limit=cap))
-    if v in ("workday", "all"):
-        # Workday discovery is slow — default to 200 unless user overrides
-        wd_cap = cap or 200
-        results.append(discover_workday(CANDIDATE_SLUGS, limit=wd_cap))
-    return {"ok": True, "results": results}
+
+    def _run_all():
+        try:
+            if v in ("greenhouse", "all"):
+                r = discover_greenhouse(CANDIDATE_SLUGS, limit=cap)
+                print(f"[discover-boards] {r}", flush=True)
+            if v in ("lever", "all"):
+                r = discover_lever(CANDIDATE_SLUGS, limit=cap)
+                print(f"[discover-boards] {r}", flush=True)
+            if v in ("ashby", "all"):
+                r = discover_ashby(CANDIDATE_SLUGS, limit=cap)
+                print(f"[discover-boards] {r}", flush=True)
+            if v in ("workday", "all"):
+                wd_cap = cap or 200
+                r = discover_workday(CANDIDATE_SLUGS, limit=wd_cap)
+                print(f"[discover-boards] {r}", flush=True)
+        except Exception as e:
+            import sys as _s, traceback as _tb
+            _s.stderr.write(f"[discover-boards] fatal: {type(e).__name__}: {e}\n")
+            _tb.print_exc(file=_s.stderr)
+
+    if sync:
+        _run_all()
+        return {"ok": True, "mode": "sync"}
+
+    import threading
+    threading.Thread(target=_run_all, daemon=True).start()
+    return {
+        "ok": True,
+        "mode": "async",
+        "vendor": v,
+        "candidate_count": len(CANDIDATE_SLUGS),
+        "message": "Discovery running in background. Poll /cron/discovery-stats to see hits as they land, or tail Railway logs.",
+    }
+
+
+@router.get("/discovery-stats", summary="Show persisted discovered_boards counts by vendor")
+def discovery_stats(token: str = ""):
+    """Report how many boards the discovery pass has persisted so far
+    per vendor. Zero-cost — just a COUNT over the discovered_boards
+    table."""
+    _require_cron_secret(token)
+    from projects.dilly.api.ingest.slug_discovery import _get_db, ensure_discovered_boards_table
+    ensure_discovered_boards_table()
+    conn = _get_db()
+    try:
+        import psycopg2.extras
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT vendor, COUNT(*) as n, SUM(job_count_sample) as jobs "
+                "FROM discovered_boards GROUP BY vendor ORDER BY vendor"
+            )
+            rows = [dict(r) for r in cur.fetchall()]
+            # Recent hits for quick visual check
+            cur.execute(
+                "SELECT vendor, slug, display_name, job_count_sample, last_seen_at "
+                "FROM discovered_boards ORDER BY last_seen_at DESC LIMIT 20"
+            )
+            recent = [dict(r) for r in cur.fetchall()]
+        # Convert timestamps for JSON serialization
+        for r in recent:
+            if r.get("last_seen_at"):
+                r["last_seen_at"] = r["last_seen_at"].isoformat()
+        return {"by_vendor": rows, "recent_20": recent}
+    finally:
+        conn.close()
 
 
 @router.get("/ingest-quality-sweep", summary="Dedup + stale + spam + reclassify the internships table")
-def ingest_quality_sweep(token: str = ""):
+def ingest_quality_sweep(token: str = "", sync: bool = False):
     """Run the full ingest quality pipeline:
       1. Fingerprint dedup (cross-source same-job merge)
       2. Stale pruning (posted_date > 45 days -> expired)
       3. Spam filter (MLM / scam patterns -> spam)
       4. Level classifier sweep (fill job_type=NULL/'other' rows)
 
-    Idempotent. Run daily or after a big crawl."""
+    Async by default — takes 1-3 minutes on a 100k-row table which
+    exceeds Railway's HTTP gateway timeout. Use sync=true only for
+    local testing. Idempotent."""
     _require_cron_secret(token)
     from projects.dilly.api.ingest.quality_pipeline import run_all
-    stats = run_all()
-    return {"ok": True, "stats": stats}
+    if sync:
+        stats = run_all()
+        return {"ok": True, "mode": "sync", "stats": stats}
+
+    import threading
+    def _bg():
+        try:
+            stats = run_all()
+            print(f"[ingest-quality-sweep] {stats}", flush=True)
+        except Exception as e:
+            import sys as _s, traceback as _tb
+            _s.stderr.write(f"[ingest-quality-sweep] fatal: {type(e).__name__}: {e}\n")
+            _tb.print_exc(file=_s.stderr)
+
+    threading.Thread(target=_bg, daemon=True).start()
+    return {
+        "ok": True,
+        "mode": "async",
+        "message": "Quality sweep running in background. Tail Railway logs or query /v2/internships/feed for active counts.",
+    }
 
 
 @router.get("/crawl-niche-sources", summary="Scrape NSF REU + USAJobs into internships table")
