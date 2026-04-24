@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -804,6 +804,111 @@ function BlindCard({
   );
 }
 
+// ─── Reflection Panel ─────────────────────────────────────────────────────────
+//
+// Shown after all three candidates are revealed. The argument of the entire
+// product compressed into one panel: profile depth is the new signal, and a
+// resume would have lost it. Deliberately quiet — no gauges, no match
+// percentages, just three real numbers and the industry claim.
+function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
+  const sorted = useMemo(
+    () => [...candidates].sort((a, b) => b.factCount - a.factCount),
+    [candidates],
+  );
+  const maxFacts = Math.max(1, ...sorted.map((c) => c.factCount));
+  const total = sorted.reduce((sum, c) => sum + c.factCount, 0);
+  const richest = sorted[0];
+  const thinnest = sorted[sorted.length - 1];
+  const spread = richest && thinnest ? richest.factCount - thinnest.factCount : 0;
+
+  return (
+    <motion.section
+      className="border border-zinc-200 rounded-2xl overflow-hidden bg-white mt-6"
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.55, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      aria-labelledby="reflection-panel-heading"
+    >
+      <div className="px-6 pt-6 pb-2">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-1.5">
+          What this just proved
+        </p>
+        <h3
+          id="reflection-panel-heading"
+          className="text-lg font-bold text-zinc-900 leading-snug mb-1"
+        >
+          The difference was profile depth, not prestige
+        </h3>
+        <p className="text-sm text-zinc-500 leading-relaxed">
+          Every line of every profile above came from a real conversation between
+          a student and Dilly. Not a resume. Not a form.
+        </p>
+      </div>
+
+      <div className="px-6 pt-5 pb-4 space-y-3">
+        {sorted.map((c) => {
+          const pct = Math.round((c.factCount / maxFacts) * 100);
+          return (
+            <div key={c.id} className="flex items-center gap-3">
+              <div className="w-28 flex-shrink-0 text-sm font-semibold text-zinc-900 truncate">
+                {c.revealName}
+              </div>
+              <div className="flex-1 relative h-2 bg-zinc-100 rounded-full overflow-hidden">
+                <motion.div
+                  className="absolute inset-y-0 left-0 bg-zinc-900 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                />
+              </div>
+              <div className="text-sm font-semibold text-zinc-900 tabular-nums w-20 text-right">
+                {c.factCount}
+                <span className="text-zinc-400 font-normal text-xs ml-1">
+                  fact{c.factCount === 1 ? "" : "s"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="px-6 pt-3 pb-5 border-t border-zinc-100">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div className="text-xl font-bold text-zinc-900 tabular-nums">{total}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-0.5">
+              Facts total
+            </div>
+          </div>
+          <div>
+            <div className="text-xl font-bold text-zinc-900 tabular-nums">{spread}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-0.5">
+              Depth spread
+            </div>
+          </div>
+          <div>
+            <div className="text-xl font-bold text-zinc-900 tabular-nums">3</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-0.5">
+              Live profiles
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-5 bg-zinc-900 text-white">
+        <p className="text-base font-semibold leading-snug mb-1">
+          A resume would have made these three look similar.
+        </p>
+        <p className="text-sm text-zinc-300 leading-relaxed">
+          Dilly didn't. Every claim above has a receipt — where it came from,
+          when it was said, how confident the system is. That is what a living
+          profile looks like when hiring is run on signal instead of polish.
+        </p>
+      </div>
+    </motion.section>
+  );
+}
+
 // ─── Ranking Screen ───────────────────────────────────────────────────────────
 
 function RankingScreen({
@@ -811,20 +916,46 @@ function RankingScreen({
   roleLabel,
   roleDescription,
   recruiter,
-  onRevealAll,
 }: {
   candidates: Candidate[];
   roleLabel: string;
   roleDescription: string;
   recruiter: RecruiterInfo;
-  onRevealAll: () => void;
 }) {
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [interestedIds, setInterestedIds] = useState<Set<string>>(new Set());
   const [activeModal, setActiveModal] = useState<Candidate | null>(null);
+  const [revealing, setRevealing] = useState(false);
+  const revealTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const reveal = (id: string) => setRevealedIds((prev) => new Set([...prev, id]));
+  const reveal = (id: string) =>
+    setRevealedIds((prev) => new Set<string>([...Array.from(prev), id]));
   const allRevealed = revealedIds.size >= candidates.length;
+
+  // Stagger-reveals each remaining candidate with ~1.4s between each. Makes the
+  // "Reveal all at once" button a real moment instead of an instant flip — the
+  // pause between names is where the thesis lands.
+  const handleRevealAllStaggered = () => {
+    if (revealing || allRevealed) return;
+    setRevealing(true);
+    const remaining = candidates.filter((c) => !revealedIds.has(c.id));
+    remaining.forEach((c, i) => {
+      const t = setTimeout(() => {
+        setRevealedIds((prev) => new Set<string>([...Array.from(prev), c.id]));
+        if (i === remaining.length - 1) {
+          setTimeout(() => setRevealing(false), 400);
+        }
+      }, 400 + i * 1400);
+      revealTimeouts.current.push(t);
+    });
+  };
+
+  useEffect(() => {
+    const timeouts = revealTimeouts.current;
+    return () => {
+      timeouts.forEach(clearTimeout);
+    };
+  }, []);
 
   return (
     <motion.div
@@ -863,25 +994,29 @@ function RankingScreen({
 
         {!allRevealed && (
           <button
-            onClick={onRevealAll}
-            className="w-full py-3.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors"
+            onClick={handleRevealAllStaggered}
+            disabled={revealing}
+            className="w-full py-3.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="button-reveal-all"
           >
-            Reveal all at once
+            {revealing ? "Revealing…" : "Reveal all at once"}
           </button>
         )}
+
+        {allRevealed && <ReflectionPanel candidates={candidates} />}
 
         {allRevealed && interestedIds.size === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-5"
+            transition={{ duration: 0.5, delay: 0.65 }}
+            className="bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-5 mt-4"
           >
-            <p className="text-sm font-semibold text-zinc-900 mb-1">All three revealed.</p>
+            <p className="text-sm font-semibold text-zinc-900 mb-1">What happens next.</p>
             <p className="text-sm text-zinc-500 leading-relaxed">
-              Dilly built these profiles from conversations, not documents. If someone stood out,
-              hit "I'm interested" to get their contact info and a Dilly intro drafted for you.
+              If one of these candidates fits your role, hit "I'm interested."
+              Dilly drafts the intro, unlocks contact info, and notifies the candidate
+              that a recruiter found them through Dilly.
             </p>
           </motion.div>
         )}
@@ -915,7 +1050,7 @@ function RankingScreen({
             roleDescription={roleDescription}
             onClose={(didUnlock) => {
               if (didUnlock) {
-                setInterestedIds((prev) => new Set([...prev, activeModal.id]));
+                setInterestedIds((prev) => new Set<string>([...Array.from(prev), activeModal.id]));
               }
               setActiveModal(null);
             }}
@@ -968,10 +1103,6 @@ export default function BlindAudition() {
     searchMutation.mutate(role.description);
   };
 
-  const handleRevealAll = () => {
-    // No-op: reveal-all is handled inside RankingScreen now
-  };
-
   return (
     <div className="min-h-screen bg-white font-sans">
       <AnimatePresence mode="wait">
@@ -1012,7 +1143,6 @@ export default function BlindAudition() {
                 roleLabel={selectedRole?.label || ""}
                 roleDescription={selectedRole?.description || ""}
                 recruiter={recruiter!}
-                onRevealAll={handleRevealAll}
               />
             )}
           </motion.div>
