@@ -581,11 +581,12 @@ async def chapters_generate(request: Request):
 
     # Persist + consume notes + clear any reschedule override.
     now = datetime.now(timezone.utc)
-    chapters_store.save_chapter(email, title=title, screens=screens, scheduled_for=now)
+    new_id = chapters_store.save_chapter(email, title=title, screens=screens, scheduled_for=now)
     chapters_store.consume_open_notes(email)
     chapters_store.clear_override(email)
 
     return {
+        "id": new_id,
         "title": title,
         "screens": screens,
         "generated_at": now.isoformat(),

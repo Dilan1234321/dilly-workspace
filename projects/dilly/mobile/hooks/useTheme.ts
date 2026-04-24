@@ -76,11 +76,15 @@ export interface AccentPreset {
   id: AccentId;
   label: string;
   color: string;
+  /** Replacement color used on dark surfaces when `color` is too dark to be
+   *  visible. Without this, resolveTheme falls back to '#FFFFFF' which makes
+   *  accent-background buttons invisible (white bg + white text). */
+  darkColor?: string;
 }
 
 export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'indigo',    label: 'Dilly',     color: '#2B3A8E' },
-  { id: 'navy',      label: 'Navy',      color: '#0F2A6B' },
+  { id: 'navy',      label: 'Navy',      color: '#0F2A6B', darkColor: '#7EB5FF' },
   { id: 'sky',       label: 'Sky',       color: '#0A84FF' },
   { id: 'teal',      label: 'Teal',      color: '#0D9488' },
   { id: 'emerald',   label: 'Emerald',   color: '#0E9F6E' },
@@ -90,7 +94,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'rose',      label: 'Rose',      color: '#E11D74' },
   { id: 'plum',      label: 'Plum',      color: '#9D174D' },
   { id: 'violet',    label: 'Violet',    color: '#7C3AED' },
-  { id: 'graphite',  label: 'Graphite',  color: '#1F2937' },
+  { id: 'graphite',  label: 'Graphite',  color: '#1F2937', darkColor: '#9CA3AF' },
 ];
 
 export interface SurfacePreset {
@@ -322,10 +326,6 @@ function hexToAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function accentFor(id: AccentId): string {
-  return (ACCENT_PRESETS.find(a => a.id === id) || ACCENT_PRESETS[0]).color;
-}
-
 function darken(hex: string, amount: number = 0.15): string {
   const m = /^#?([a-f\d]{6})$/i.exec(hex);
   if (!m) return hex;
@@ -364,12 +364,14 @@ export function resolveTheme(config: ThemeConfig, systemIsDark: boolean): Resolv
 
   // Resolve the accent. When the surface is dark and the chosen accent
   // is very dark (luminance < 0.05 — covers graphite, navy, and any
-  // near-black the user might have picked), flip it to white so it
-  // remains visible. We do this in the resolution layer only — the
-  // stored config is never mutated, so it auto-reverts on light mode.
-  const rawAccent = accentFor(config.accent);
+  // near-black the user might have picked), use the preset's darkColor
+  // override. Previously this fell back to '#FFFFFF', which made any
+  // button using backgroundColor:accent + white text invisible
+  // (white background + white text = nothing visible).
+  const rawAccentPreset = ACCENT_PRESETS.find(a => a.id === config.accent) || ACCENT_PRESETS[0];
+  const rawAccent = rawAccentPreset.color;
   const accent = (surface.dark && relativeLuminance(rawAccent) < 0.05)
-    ? '#FFFFFF'
+    ? (rawAccentPreset.darkColor ?? '#A0A8B8')
     : rawAccent;
 
   // Flip the global `colors` Proxy to dark when the resolved surface
