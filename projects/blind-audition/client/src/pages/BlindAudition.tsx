@@ -854,8 +854,8 @@ function BlindCard({
     >
       {/* Header */}
       <div className="px-5 pt-5 pb-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div
               className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                 rank === 0 ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
@@ -863,14 +863,18 @@ function BlindCard({
             >
               {rank + 1}
             </div>
-            <div>
-              <p className="text-base font-semibold text-zinc-900">
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-semibold text-zinc-900 truncate">
                 {revealed ? candidate.revealName : candidate.displayName}
               </p>
-              <p className="text-xs text-zinc-500">{candidate.track || candidate.major || "Student"}</p>
+              <p className="text-xs text-zinc-500 truncate">
+                {candidate.track || candidate.major || "Student"}
+              </p>
             </div>
           </div>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${depthBg}`}>
+          <span
+            className={`text-xs font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap flex-shrink-0 ${depthBg}`}
+          >
             {candidate.fitLabel}
           </span>
         </div>
@@ -1099,15 +1103,15 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
         </p>
       </div>
 
-      <div className="px-6 pt-5 pb-4 space-y-3">
+      <div className="px-5 sm:px-6 pt-5 pb-4 space-y-3">
         {sorted.map((c) => {
           const pct = Math.round((c.factCount / maxFacts) * 100);
           return (
             <div key={c.id} className="flex items-center gap-3">
-              <div className="w-28 flex-shrink-0 text-sm font-semibold text-zinc-900 truncate">
+              <div className="w-24 sm:w-28 flex-shrink-0 text-sm font-semibold text-zinc-900 truncate">
                 {c.revealName}
               </div>
-              <div className="flex-1 relative h-2 bg-zinc-100 rounded-full overflow-hidden">
+              <div className="flex-1 min-w-0 relative h-2 bg-zinc-100 rounded-full overflow-hidden">
                 <motion.div
                   className="absolute inset-y-0 left-0 bg-zinc-900 rounded-full"
                   initial={{ width: 0 }}
@@ -1115,9 +1119,9 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
                   transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
                 />
               </div>
-              <div className="text-sm font-semibold text-zinc-900 tabular-nums w-20 text-right">
+              <div className="text-sm font-semibold text-zinc-900 tabular-nums w-16 sm:w-20 text-right flex-shrink-0">
                 {c.factCount}
-                <span className="text-zinc-400 font-normal text-xs ml-1">
+                <span className="text-zinc-400 font-normal text-xs ml-1 hidden sm:inline">
                   fact{c.factCount === 1 ? "" : "s"}
                 </span>
               </div>
@@ -1126,7 +1130,7 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
         })}
       </div>
 
-      <div className="px-6 pt-3 pb-5 border-t border-zinc-100">
+      <div className="px-5 sm:px-6 pt-3 pb-5 border-t border-zinc-100">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <div className="text-xl font-bold text-zinc-900 tabular-nums">{total}</div>
