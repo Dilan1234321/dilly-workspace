@@ -462,7 +462,7 @@ function SavedInterestsBlock({ recruiterEmail }: { recruiterEmail: string }) {
       data-testid="saved-interests-block"
     >
       <div className="px-5 pt-4 pb-3 border-b border-zinc-100 bg-zinc-50">
-        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-[#294199]">
           Dilly remembers
         </p>
         <p className="text-sm font-semibold text-zinc-900 mt-1">
@@ -1004,7 +1004,7 @@ function BlindCard({
         {/* Role-specific top matches — why Dilly ranked this candidate here */}
         {candidate.topMatches && candidate.topMatches.length > 0 && (
           <div className="mt-4 pt-4 border-t border-zinc-100">
-            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 text-[#294199]">
               Why Dilly ranked them here, for this role
             </p>
             <ul className="space-y-1.5">
@@ -1196,7 +1196,7 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
       aria-labelledby="reflection-panel-heading"
     >
       <div className="px-6 pt-7 pb-3">
-        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-widest mb-2.5 text-[#294199]">
           What this just proved
         </p>
         <h3
