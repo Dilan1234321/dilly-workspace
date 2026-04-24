@@ -70,6 +70,13 @@ All at `projects/blind-audition/client/src/pages/BlindAudition.tsx`.
 - [x] **"Last grew Nd ago" freshness signal** — `8df28bc`. `lastGrewRelative()` folds `max(created_at)` into a relative phrase shown next to the depth note. Reinforces the live-from-production claim at the card level. Hidden when no timestamps exist (seed fallback).
 - [x] **Cache invalidation + meaningful custom-JD labels** — `668a823`. On successful interest, invalidates the saved-interests query scoped to recruiter email so the "Dilly remembers" block reflects the just-unlocked candidate on the next visit. Also derives a proper label from the first sentence of a pasted custom JD (trimmed to 60 chars) so "Custom Role" no longer appears in saved-interests history.
 
+### 2026-04-24 — UI pass (Dilan asked to "work on the UI")
+All at `projects/blind-audition/client/**`.
+
+- [x] **Editorial typography pass** — `dd666f8`. Introduces `.font-serif-display` and `.font-serif-numeric` classes (Playfair Display, already loaded via index.html). Applied at hero moments only: intro h1 (5xl–6xl), screen headlines, ranking card rank numerals, revealed candidate names, ReflectionPanel headline + stat numbers + closing quote. Everything else stays Inter — the serif earns the moment feel precisely because it's rare. Black closing panel also got a subtle radial highlight so it reads as a moment, not just a colored box.
+- [x] **Brand accent pass** — `fb0a280`. DillyLogo square switched from near-black `#18181B` to brand indigo `#294199` (matches the `--primary` CSS variable and the Dilly design system). #1 candidate card now has a 3px indigo top-accent bar + indigo-tinted drop shadow — deliberate top-match distinction without making every card loud. Primary CTAs kept zinc-900 (Linear/Vercel quiet-premium aesthetic).
+- [x] **Animated reveal + hover polish** — `472d242`. Name swap now uses AnimatePresence with a fade+slide (old placeholder fades up-and-out, revealed serif name slides in). Cards get a -1px hover lift with softer shadow; #1 gets a deeper indigo-tinted hover shadow. 200ms easing.
+
 ### Deferred / nice-to-have (next batch candidates)
 - **Saved-interests panel** — `/api/blind-audition/interests?recruiter_email=...` already exists server-side; build the client surface so returning recruiters see their candidate history.
 - **Mobile polish pass** on the full flow — verify ≤390px, fix any overflow/stacking in the role-select grid and the ReflectionPanel bars.
