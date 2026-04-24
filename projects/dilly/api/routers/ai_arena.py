@@ -102,6 +102,45 @@ async def get_weekly_signal(request: Request, role: str = ""):
                         if r:
                             role_key = r["role_key"]
                             break
+
+                # Cohort fallback: role aliases don't cover majors like "Finance" or
+                # "Data Science" directly, but major taxonomy does. Translate to the
+                # nearest signal role key so students get field-relevant content.
+                if not role_key:
+                    _COHORT_TO_SIGNAL: dict[str, str] = {
+                        "tech_data_science": "data_analyst",
+                        "tech_software_engineering": "software_engineer",
+                        "tech_cybersecurity": "software_engineer",
+                        "business_accounting": "accountant",
+                        "business_finance": "operations",
+                        "business_consulting": "project_manager",
+                        "business_marketing": "marketing_manager",
+                        "pre_health": "nurse",
+                        "health_nursing_allied": "nurse",
+                        "pre_law": "lawyer",
+                        "humanities_communications": "writer_copywriter",
+                        "arts_design": "graphic_designer",
+                        "quantitative_math_stats": "data_analyst",
+                    }
+                    _ALL_COHORT_KEYS = frozenset(_COHORT_TO_SIGNAL.keys()) | frozenset({
+                        "science_research", "social_sciences", "sport_management",
+                    })
+                    from dilly_core.major_taxonomy import lookup_major as _lookup_major
+                    for cand in (profile.get("cohort"), profile.get("major"), profile.get("track")):
+                        if not cand:
+                            continue
+                        cand_str = str(cand).strip()
+                        cohort_key = cand_str if cand_str in _ALL_COHORT_KEYS else None
+                        if not cohort_key:
+                            try:
+                                res = _lookup_major(cand_str)
+                                if res:
+                                    cohort_key = res[1]
+                            except Exception:
+                                pass
+                        if cohort_key and cohort_key in _COHORT_TO_SIGNAL:
+                            role_key = _COHORT_TO_SIGNAL[cohort_key]
+                            break
         except Exception:
             pass  # anonymous is fine; fall through to all_roles
 
