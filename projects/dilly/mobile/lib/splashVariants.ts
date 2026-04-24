@@ -194,12 +194,14 @@ const VARIANTS: VariantDef[] = [
     id: 'generic_noticed',
     weight: 1,
     available: () => true,
-    generate: () => ({
+    generate: (p) => ({
       eyebrow: 'DILLY NOTICED',
       eyebrow_color: 'gold',
-      headline: 'Something new every time you open this.',
-      headline_gold: 'Something new',
-      sub: 'Dilly reads your profile. The more you add, the sharper it gets.',
+      headline: p.name
+        ? `${firstName(p.name)}, your next opportunity is one conversation away.`
+        : 'Your next opportunity is one conversation away.',
+      headline_gold: 'one conversation away.',
+      sub: 'Tell Dilly what you\'re after. She\'ll help you get there.',
     }),
   },
   {
