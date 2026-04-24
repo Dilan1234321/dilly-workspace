@@ -2664,6 +2664,23 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.4)
 
+    # ── ADP Recruiting (food distribution, finance, homebuilding) ────────
+    try:
+        from dilly_core.job_source_adp import ADP_COMPANIES, fetch_adp_jobs
+        print(f"\n[ADP] Crawling {len(ADP_COMPANIES)} companies...")
+        for client_id, (name, industry) in ADP_COMPANIES.items():
+            print(f"  {name} ({client_id})...", end=" ", flush=True)
+            try:
+                jobs = fetch_adp_jobs(client_id, name)
+                new = write_listings(conn, jobs, name, "adp", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[adp] load failed: {e}")
+
     # ── UKG Pro + Dayforce (healthcare, hospitality, retail, trucking) ───
     try:
         from dilly_core.job_source_ukg import UKG_COMPANIES, DAYFORCE_COMPANIES
