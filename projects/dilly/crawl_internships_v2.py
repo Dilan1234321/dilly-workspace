@@ -1453,6 +1453,60 @@ COMEET_COMPANIES = {
     "assuta":             ("Assuta Medical Centers", "Healthcare"),
 }
 
+FOUNTAIN_COMPANIES = {
+    # Fountain (getfountain.com) — high-volume frontline / hourly hiring
+    # Many on-demand / gig / logistics companies use Fountain
+    "gopuff":             ("Gopuff", "Consumer"),
+    "doordash":           ("DoorDash", "Consumer"),
+    "instacart":          ("Instacart", "Consumer"),
+    "amazon-flex":        ("Amazon Flex", "Consumer"),
+    "shipt":              ("Shipt", "Consumer"),
+    "favor":              ("Favor Delivery", "Consumer"),
+    "caviar":             ("Caviar", "Consumer"),
+    "shef":               ("Shef", "Consumer"),
+    "misfits-market":     ("Misfits Market", "Consumer"),
+    "gorillas":           ("Gorillas", "Consumer"),
+    "flink":              ("Flink", "Consumer"),
+    "getir":              ("Getir", "Consumer"),
+    "zapp":               ("Zapp", "Consumer"),
+    "jiffy":              ("Jiffy", "Consumer"),
+    "jokr":               ("JOKR", "Consumer"),
+    "buyk":               ("Buyk", "Consumer"),
+    "oja":                ("Oja", "Consumer"),
+    "duffl":              ("Duffl", "Consumer"),
+    "zepto":              ("Zepto", "Consumer"),
+    "blinkit":            ("Blinkit", "Consumer"),
+    "dunzo":              ("Dunzo", "Consumer"),
+    "lalamove":           ("Lalamove", "Consumer"),
+    "borzo":              ("Borzo", "Consumer"),
+    "stuart":             ("Stuart Delivery", "Consumer"),
+    "yango":              ("Yango Delivery", "Consumer"),
+    "glovo":              ("Glovo", "Consumer"),
+    "wolt":               ("Wolt", "Consumer"),
+    "bolt-food":          ("Bolt Food", "Consumer"),
+    "deliveroo":          ("Deliveroo", "Consumer"),
+    "uber-eats":          ("Uber Eats", "Consumer"),
+    "lyft-driver":        ("Lyft", "Consumer"),
+    "via":                ("Via", "Consumer"),
+    "zum":                ("Zum", "Consumer"),
+    "hop-skip-drive":     ("HopSkipDrive", "Consumer"),
+    "alto":               ("Alto", "Consumer"),
+    "empower":            ("Empower Rideshare", "Consumer"),
+    "revel":              ("Revel", "Consumer"),
+    "check":              ("Check", "Consumer"),
+    "nimble":             ("Nimble Robotics", "Tech"),
+    "locus-robotics":     ("Locus Robotics", "Tech"),
+    "6-river":            ("6 River Systems", "Tech"),
+    "kindred":            ("Kindred", "Tech"),
+    "attabotics":         ("Attabotics", "Tech"),
+    "geek-plus":          ("Geek+", "Tech"),
+    "greyorange":         ("GreyOrange", "Tech"),
+    "berkshire-grey":     ("Berkshire Grey", "Tech"),
+    "hai-robotics":       ("HAI Robotics", "Tech"),
+    "mujin":              ("Mujin", "Tech"),
+    "vecna-robotics":     ("Vecna Robotics", "Tech"),
+}
+
 INTERN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
     r'\bintern\b', r'\binternship\b', r'\bco-op\b', r'\bcoop\b',
     r'\bsummer\s+\d{4}\b', r'\bsummer\s+analyst\b', r'\bsummer\s+associate\b',
@@ -1972,6 +2026,50 @@ def crawl_comeet(company_id, company_name):
     return results
 
 
+def crawl_fountain(handle, company_name):
+    """Fountain public jobs API: https://jobs.fountain.com/api/v1/applicant_tracking/<handle>/jobs
+    Fountain is used for high-volume frontline / hourly hiring."""
+    data = fetch_json(f"https://jobs.fountain.com/api/v1/applicant_tracking/{handle}/jobs")
+    if not data:
+        # Try alternate endpoint pattern
+        data = fetch_json(f"https://jobs.fountain.com/c/{handle}")
+    if not data:
+        return []
+    jobs = data if isinstance(data, list) else data.get("jobs", data.get("positions", []))
+    results = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        title = (job.get("title") or job.get("name") or "").strip()
+        job_id = str(job.get("id") or job.get("uid") or "")
+        if not title or not job_id:
+            continue
+        desc = strip_html(job.get("description") or job.get("jobDescription") or "")
+        job_type = classify_listing(title, desc)
+        location = (job.get("location") or job.get("city") or "").strip()
+        city, state = parse_location(location)
+        is_remote_job = is_remote(location) or is_remote(title)
+        apply_url = job.get("applicationUrl") or job.get("applyUrl") or f"https://jobs.fountain.com/c/{handle}/apply/{job_id}"
+        posted = (job.get("postedAt") or job.get("createdAt") or "")[:10]
+        results.append({
+            "external_id": f"fountain-{handle}-{job_id}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": state,
+            "work_mode": "remote" if is_remote_job else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "fountain",
+            "team": "",
+            "remote": is_remote_job,
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
 def ensure_company(cur, name, ats_type, industry, website=None):
     """Get or create a companies row. When website is provided and the
     row either doesn't exist or has a NULL website, we set it — that
@@ -2295,6 +2393,19 @@ def crawl_all():
         try:
             jobs = crawl_comeet(company_id, name)
             new = write_listings(conn, jobs, name, "comeet", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.4)
+
+    # ── Fountain (high-volume frontline / on-demand / gig hiring) ─────
+    print(f"\n[Fountain] Crawling {len(FOUNTAIN_COMPANIES)} companies...")
+    for handle, (name, industry) in FOUNTAIN_COMPANIES.items():
+        print(f"  {name} ({handle})...", end=" ", flush=True)
+        try:
+            jobs = crawl_fountain(handle, name)
+            new = write_listings(conn, jobs, name, "fountain", industry)
             print(f"{len(jobs)} jobs ({new} new)")
             total_found += len(jobs); total_new += new
         except Exception as e:
