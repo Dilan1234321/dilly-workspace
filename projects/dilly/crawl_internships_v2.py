@@ -2664,6 +2664,23 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.4)
 
+    # ── Personio (European HR platform — DACH, France, Spain, Nordics) ──
+    try:
+        from dilly_core.job_source_personio import PERSONIO_COMPANIES, fetch_personio_jobs
+        print(f"\n[Personio] Crawling {len(PERSONIO_COMPANIES)} companies...")
+        for slug, (name, industry) in PERSONIO_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_personio_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "personio", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[personio] load failed: {e}")
+
     # ── Fountain (high-volume frontline / on-demand / gig hiring) ─────
     print(f"\n[Fountain] Crawling {len(FOUNTAIN_COMPANIES)} companies...")
     for handle, (name, industry) in FOUNTAIN_COMPANIES.items():

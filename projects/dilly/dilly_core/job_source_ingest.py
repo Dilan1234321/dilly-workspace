@@ -307,6 +307,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
 
+    # Personio (European companies in Germany, France, Spain, Nordics)
+    try:
+        from dilly_core.job_source_personio import fetch_all_personio
+        personio = fetch_all_personio() or []
+        inserted = sum(1 for item in personio if _upsert_listing(cur, item))
+        stats["sources"]["personio"] = {"fetched": len(personio), "inserted": inserted}
+        stats["total_fetched"] += len(personio)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"personio: {type(e).__name__}: {str(e)[:200]}")
+
     # BambooHR (tech SMBs, HR tools, design, e-commerce, cybersecurity)
     try:
         from dilly_core.job_source_bamboohr import fetch_all_bamboohr
