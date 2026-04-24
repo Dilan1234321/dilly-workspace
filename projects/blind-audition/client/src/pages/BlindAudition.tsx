@@ -1079,6 +1079,13 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
   const thinnest = sorted[sorted.length - 1];
   const spread = richest && thinnest ? richest.factCount - thinnest.factCount : 0;
 
+  // Candidates with no profile yet — the "before picture." Gabriel-shaped
+  // candidates were getting read as a demo bug (why is an empty profile in here?)
+  // when they're actually the strongest contrast in the whole audition: this
+  // is what a candidate looks like without Dilly conversations. Without the
+  // app, every candidate is the empty one.
+  const emptyProfiles = sorted.filter((c) => c.factCount === 0);
+
   return (
     <motion.section
       className="border border-zinc-200 rounded-2xl overflow-hidden bg-white mt-6"
@@ -1152,6 +1159,30 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
           </div>
         </div>
       </div>
+
+      {emptyProfiles.length > 0 && (
+        <div className="px-5 sm:px-6 py-4 border-t border-zinc-100 bg-zinc-50">
+          <div className="flex items-start gap-3">
+            <div className="w-1 self-stretch bg-zinc-300 rounded-full flex-shrink-0" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-1">
+                The before picture
+              </p>
+              <p className="text-sm text-zinc-700 leading-relaxed">
+                <span className="font-semibold text-zinc-900">
+                  {emptyProfiles.map((c) => c.revealName).join(" and ")}
+                </span>{" "}
+                {emptyProfiles.length === 1 ? "has" : "have"} not had a real
+                conversation with Dilly yet. {emptyProfiles.length === 1 ? "Their" : "Their"}{" "}
+                profile is empty — no facts, no narrative, no signal. This is
+                what every candidate looks like before the conversations start.
+                Without Dilly, every candidate above is{" "}
+                {emptyProfiles[0]?.revealName.split(" ")[0] || "this one"}.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="px-6 py-5 bg-zinc-900 text-white">
         <p className="text-base font-semibold leading-snug mb-1">
