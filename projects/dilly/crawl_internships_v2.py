@@ -736,6 +736,229 @@ SMARTRECRUITERS_COMPANIES = {
     "LG":("LG","Tech"),
 }
 
+JAZZHR_COMPANIES = {
+    # JazzHR (applytojob.com) — used by SMBs, agencies, healthcare, staffing.
+    # Slugs that 404 are silently skipped by crawl_jazzhr's try/except.
+    # ── Verified/likely JazzHR slugs ──
+    "lullabot":           ("Lullabot", "Tech"),
+    "hirequest":          ("HireQuest", "Consulting"),
+    "fundrise":           ("Fundrise", "Finance"),
+    "vidyard":            ("Vidyard", "Tech"),
+    "appcues":            ("Appcues", "Tech"),
+    "pagely":             ("Pagely", "Tech"),
+    "wpengine-careers":   ("WP Engine", "Tech"),
+    "builtinchicago":     ("Built In", "Tech"),
+    "lever-co":           ("Lever", "Tech"),
+    "bark":               ("Bark", "Consumer"),
+    "homebase":           ("Homebase", "Tech"),
+    "workstream":         ("Workstream", "Tech"),
+    "gusto-hr":           ("Gusto", "Tech"),
+    "sprout":             ("Sprout Social", "Tech"),
+    "brainware":          ("Brainware", "Tech"),
+    "aon-hewitt":         ("Aon", "Finance"),
+    "zywave":             ("Zywave", "Tech"),
+    "resultant":          ("Resultant", "Consulting"),
+    "credera":            ("Credera", "Consulting"),
+    "pariveda":           ("Pariveda", "Consulting"),
+    "west-monroe":        ("West Monroe", "Consulting"),
+    "kin-insurance":      ("Kin Insurance", "Finance"),
+    "clearcover":         ("Clearcover", "Finance"),
+    "hippo-insurance":    ("Hippo", "Finance"),
+    "branch-insurance":   ("Branch", "Finance"),
+    "openly":             ("Openly", "Finance"),
+    "pie-insurance":      ("Pie Insurance", "Finance"),
+    "ethos-life":         ("Ethos", "Finance"),
+    "ladder":             ("Ladder", "Finance"),
+    "bestow":             ("Bestow", "Finance"),
+    "canvas-dental":      ("Canvas Dental", "Healthcare"),
+    "dental-care":        ("Dental Care Alliance", "Healthcare"),
+    "pacific-dental":     ("Pacific Dental Services", "Healthcare"),
+    "dentalworks":        ("DentalWorks", "Healthcare"),
+    "heartland-dental":   ("Heartland Dental", "Healthcare"),
+    "smiledirectclub":    ("SmileDirectClub", "Healthcare"),
+    "byte-aligners":      ("Byte", "Healthcare"),
+    "candid-co":          ("Candid", "Healthcare"),
+    "tend-dental":        ("Tend", "Healthcare"),
+    # Staffing / workforce
+    "integrity-staffing": ("Integrity Staffing", "Consulting"),
+    "aerotek":            ("Aerotek", "Consulting"),
+    "kelly-services":     ("Kelly Services", "Consulting"),
+    "staffmark":          ("Staffmark", "Consulting"),
+    "trueblue":           ("TrueBlue", "Consulting"),
+    "employbridge":       ("Employbridge", "Consulting"),
+    "spherion":           ("Spherion", "Consulting"),
+    "elwood-staffing":    ("Elwood Staffing", "Consulting"),
+    # Marketing agencies
+    "publicis-sapient":   ("Publicis Sapient", "Consulting"),
+    "ogilvy":             ("Ogilvy", "Media"),
+    "havas":              ("Havas", "Media"),
+    "wunderman-thompson": ("Wunderman Thompson", "Media"),
+    "grey-group":         ("Grey Group", "Media"),
+    "droga5":             ("Droga5", "Media"),
+    "huge":               ("Huge", "Tech"),
+    "razorfish":          ("Razorfish", "Tech"),
+    "sapient":            ("Sapient", "Tech"),
+}
+
+RECRUITEE_COMPANIES = {
+    # Recruitee (recruitee.com) — popular with European tech companies.
+    # Slugs that 404 are silently skipped.
+    "buffer":             ("Buffer", "Tech"),
+    "toggl":              ("Toggl", "Tech"),
+    "smallpdf":           ("Smallpdf", "Tech"),
+    "prezly":             ("Prezly", "Tech"),
+    "mews":               ("Mews", "Tech"),
+    "framer":             ("Framer", "Tech"),
+    "gitguardian":        ("GitGuardian", "Tech"),
+    "swarmia":            ("Swarmia", "Tech"),
+    "luno":               ("Luno", "Finance"),
+    "spendesk":           ("Spendesk", "Finance"),
+    "qonto":              ("Qonto", "Finance"),
+    "billie":             ("Billie", "Finance"),
+    "treez":              ("Treez", "Tech"),
+    "aircall":            ("Aircall", "Tech"),
+    "ringover":           ("Ringover", "Tech"),
+    "dialpad":            ("Dialpad", "Tech"),
+    "loom-video":         ("Loom", "Tech"),
+    "remote-com":         ("Remote", "Tech"),
+    "omnipresent":        ("Omnipresent", "Tech"),
+    "deel-hr":            ("Deel", "Tech"),
+    "multiplier":         ("Multiplier", "Tech"),
+    "velocity-global":    ("Velocity Global", "Tech"),
+    "globalization":      ("Globalization Partners", "Tech"),
+    "oysterhr":           ("Oyster HR", "Tech"),
+    "workmotion":         ("WorkMotion", "Tech"),
+    "pento":              ("Pento", "Tech"),
+    "humaans":            ("Humaans", "Tech"),
+    "personio-careers":   ("Personio", "Tech"),
+    "kenjo":              ("Kenjo", "Tech"),
+    "factorial":          ("Factorial", "Tech"),
+    "holded":             ("Holded", "Tech"),
+    "sesame-hr":          ("Sesame HR", "Tech"),
+    "bamboohr-inc":       ("BambooHR", "Tech"),
+    "15five-inc":         ("15Five", "Tech"),
+    "lattice-hq":         ("Lattice", "Tech"),
+    "hi-bob":             ("HiBob", "Tech"),
+    "workable-inc":       ("Workable", "Tech"),
+    "manatal":            ("Manatal", "Tech"),
+    # Non-tech European
+    "delivery-hero":      ("Delivery Hero", "Consumer"),
+    "gorillas":           ("Gorillas", "Consumer"),
+    "flink":              ("Flink", "Consumer"),
+    "getir":              ("Getir", "Consumer"),
+    "jokr":               ("JOKR", "Consumer"),
+    "zapp":               ("Zapp", "Consumer"),
+    "rohlik":             ("Rohlik", "Consumer"),
+    "picnic":             ("Picnic", "Consumer"),
+    "flaschenpost":       ("Flaschenpost", "Consumer"),
+    "urban-sports":       ("Urban Sports Club", "Consumer"),
+    "gympass":            ("Gympass", "Consumer"),
+    "classpass":          ("ClassPass", "Consumer"),
+}
+
+BREEZYHR_COMPANIES = {
+    # BreezyHR (breezy.hr) — used by SMBs in tech, healthcare, marketing.
+    # Slugs that 404 are silently skipped.
+    "anthropic-ai":       ("Anthropic", "Tech"),
+    "scale-ai-inc":       ("Scale AI", "Tech"),
+    "stability-ai":       ("Stability AI", "Tech"),
+    "midjourney":         ("Midjourney", "Tech"),
+    "inflection-ai":      ("Inflection AI", "Tech"),
+    "adept-ai":           ("Adept", "Tech"),
+    "atlas-ai":           ("Atlas AI", "Tech"),
+    "primer":             ("Primer AI", "Tech"),
+    "govini-ai":          ("Govini", "Tech"),
+    "veritas":            ("Veritas", "Tech"),
+    "nuvolo":             ("Nuvolo", "Tech"),
+    "servicemax":         ("ServiceMax", "Tech"),
+    "maint":              ("UpKeep", "Tech"),
+    "upkeep-maintenance": ("UpKeep", "Tech"),
+    "limble-cmms":        ("Limble CMMS", "Tech"),
+    "fiix-software":      ("Fiix Software", "Tech"),
+    "emaint":             ("eMaint", "Tech"),
+    "hexagon-ppm":        ("Hexagon PPM", "Tech"),
+    "infor-eam":          ("Infor EAM", "Tech"),
+    "ibm-maximo":         ("IBM Maximo", "Tech"),
+    "accruent":           ("Accruent", "Tech"),
+    "planon":             ("Planon", "Tech"),
+    "archibus":           ("Archibus", "Tech"),
+    "iwms":               ("IWMS", "Tech"),
+    "fm-systems":         ("FM Systems", "Tech"),
+    "spaceiq":            ("SpaceIQ", "Tech"),
+    # Marketing tech SMBs
+    "sprinklr-inc":       ("Sprinklr", "Tech"),
+    "hootsuite-inc":      ("Hootsuite", "Tech"),
+    "buffer-social":      ("Buffer", "Tech"),
+    "later-app":          ("Later", "Tech"),
+    "loomly":             ("Loomly", "Tech"),
+    "sendible":           ("Sendible", "Tech"),
+    "agorapulse":         ("Agorapulse", "Tech"),
+    "meltwater":          ("Meltwater", "Tech"),
+    "cision":             ("Cision", "Tech"),
+    "pr-newswire":        ("PR Newswire", "Media"),
+    "businesswire":       ("Business Wire", "Media"),
+    # Healthcare SMBs
+    "athenahealth":       ("Athenahealth", "Healthcare"),
+    "drchrono":           ("DrChrono", "Healthcare"),
+    "modernizing-med":    ("Modernizing Medicine", "Healthcare"),
+    "practice-fusion":    ("Practice Fusion", "Healthcare"),
+    "eclinicalworks":     ("eClinicalWorks", "Healthcare"),
+    "kareo":              ("Kareo", "Healthcare"),
+    "advancedmd":         ("AdvancedMD", "Healthcare"),
+    "clinicient":         ("Clinicient", "Healthcare"),
+    "webpt":              ("WebPT", "Healthcare"),
+    "netsmart":           ("Netsmart", "Healthcare"),
+    # Finance / insurance SMBs
+    "openly-insurance":   ("Openly", "Finance"),
+    "clover-health":      ("Clover Health", "Finance"),
+    "oscar-health":       ("Oscar Health", "Finance"),
+    "alignment-health":   ("Alignment Healthcare", "Finance"),
+    "devoted-health":     ("Devoted Health", "Finance"),
+    "bright-health":      ("Bright Health", "Finance"),
+    "friday-health":      ("Friday Health Plans", "Finance"),
+    "sana-benefits":      ("Sana Benefits", "Finance"),
+}
+
+PINPOINT_COMPANIES = {
+    # Pinpoint (pinpointhq.com) — used by UK/EU tech companies.
+    # Slugs that 404 are silently skipped.
+    "tide":               ("Tide", "Finance"),
+    "cleo":               ("Cleo", "Finance"),
+    "chip":               ("Chip", "Finance"),
+    "dozens":             ("Dozens", "Finance"),
+    "hyperjar":           ("HyperJar", "Finance"),
+    "penfold":            ("Penfold", "Finance"),
+    "wealthify":          ("Wealthify", "Finance"),
+    "moneybox":           ("Moneybox", "Finance"),
+    "plum":               ("Plum", "Finance"),
+    "nude":               ("Nude", "Finance"),
+    "acorn":              ("Acorns UK", "Finance"),
+    "moneyfarm":          ("Moneyfarm", "Finance"),
+    "pensionbee":         ("PensionBee", "Finance"),
+    "cushon":             ("Cushon", "Finance"),
+    "salary-finance":     ("Salary Finance", "Finance"),
+    "hastee":             ("Hastee", "Finance"),
+    "wagestream":         ("Wagestream", "Finance"),
+    "earnd":              ("Earnd", "Finance"),
+    "level":              ("Level", "Finance"),
+    "payday":             ("Payday", "Finance"),
+    "birdie":             ("Birdie", "Healthcare"),
+    "beamery":            ("Beamery", "Tech"),
+    "otta":               ("Otta", "Tech"),
+    "cord":               ("Cord", "Tech"),
+    "workshape":          ("Workshape", "Tech"),
+    "hired":              ("Hired", "Tech"),
+    "hackajob":           ("Hackajob", "Tech"),
+    "talent-works":       ("TalentWorks", "Tech"),
+    "headfirst":          ("HeadFirst", "Tech"),
+    "eden-scott":         ("Eden Scott", "Consulting"),
+    "bright-network":     ("Bright Network", "Tech"),
+    "gradcafe":           ("GradCafe", "Education"),
+    "targetjobs":         ("TargetJobs", "Education"),
+    "prospects":          ("Prospects", "Education"),
+    "milkround":          ("Milkround", "Education"),
+}
+
 INTERN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
     r'\bintern\b', r'\binternship\b', r'\bco-op\b', r'\bcoop\b',
     r'\bsummer\s+\d{4}\b', r'\bsummer\s+analyst\b', r'\bsummer\s+associate\b',
@@ -966,6 +1189,171 @@ def crawl_smartrecruiters(company_id, company_name):
         time.sleep(0.3)
     return results
 
+def crawl_jazzhr(slug, company_name):
+    """JazzHR public listing API: https://<slug>.applytojob.com/apply.json"""
+    data = fetch_json(f"https://{slug}.applytojob.com/apply.json")
+    if not data:
+        return []
+    jobs = data if isinstance(data, list) else data.get("jobs", [])
+    results = []
+    for job in jobs:
+        title = (job.get("title") or "").strip()
+        if not title:
+            continue
+        desc = strip_html(job.get("description") or "")
+        job_type = classify_listing(title, desc)
+        city = (job.get("city") or "").strip() or None
+        state = (job.get("state") or "").strip() or None
+        country = (job.get("country") or "").strip().upper()
+        if country and country not in ("US", "USA", "UNITED STATES", "CA", "CAN", "CANADA", ""):
+            continue
+        location = f"{city or ''} {state or ''}"
+        apply_url = job.get("applyUrl") or f"https://{slug}.applytojob.com/apply/{job.get('id', '')}"
+        posted = (job.get("postedDate") or "")[:10]
+        results.append({
+            "external_id": f"jazzhr-{slug}-{job.get('id', '')}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": state,
+            "work_mode": "remote" if is_remote(location) else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "jazzhr",
+            "team": job.get("category") or "",
+            "remote": is_remote(location),
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
+def crawl_recruitee(slug, company_name):
+    """Recruitee public offers API: https://<slug>.recruitee.com/api/offers/"""
+    data = fetch_json(f"https://{slug}.recruitee.com/api/offers/")
+    if not data:
+        return []
+    offers = data.get("offers", []) if isinstance(data, dict) else data
+    results = []
+    for job in offers:
+        title = (job.get("title") or "").strip()
+        if not title:
+            continue
+        desc = strip_html(job.get("description") or "")
+        job_type = classify_listing(title, desc)
+        city = (job.get("city") or "").strip() or None
+        country = (job.get("country_code") or "").strip().upper()
+        is_remote_job = bool(job.get("remote") or job.get("remote_allowed"))
+        apply_url = job.get("url") or f"https://{slug}.recruitee.com/o/{job.get('id', '')}"
+        posted = (job.get("created_at") or "")[:10]
+        dept = (job.get("department") or "").strip()
+        results.append({
+            "external_id": f"recruitee-{slug}-{job.get('id', '')}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": None,
+            "work_mode": "remote" if is_remote_job else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "recruitee",
+            "team": dept,
+            "remote": is_remote_job,
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
+def crawl_breezyhr(slug, company_name):
+    """BreezyHR public JSON feed: https://<slug>.breezy.hr/json"""
+    data = fetch_json(f"https://{slug}.breezy.hr/json")
+    if not data:
+        return []
+    positions = data if isinstance(data, list) else data.get("jobs", data.get("positions", []))
+    results = []
+    for job in positions:
+        title = (job.get("name") or job.get("title") or "").strip()
+        if not title:
+            continue
+        desc = strip_html(job.get("description") or "")
+        job_type = classify_listing(title, desc)
+        loc = job.get("location") or {}
+        if isinstance(loc, dict):
+            city = (loc.get("city") or "").strip() or None
+            state = (loc.get("state") or "").strip() or None
+            country = (loc.get("country") or "").strip().upper()
+        else:
+            city = str(loc).strip() or None
+            state = None
+            country = ""
+        if country and country not in ("US", "USA", "UNITED STATES", "CA", "CAN", "CANADA", "GB", "GBR", "UNITED KINGDOM", ""):
+            continue
+        is_remote_job = is_remote(f"{city or ''} {state or ''}")
+        apply_url = f"https://{slug}.breezy.hr/p/{job.get('id', '')}"
+        posted = (job.get("published_date") or job.get("created_date") or "")[:10]
+        dept_raw = job.get("department") or {}
+        dept = dept_raw.get("name", "") if isinstance(dept_raw, dict) else str(dept_raw)
+        results.append({
+            "external_id": f"breezy-{slug}-{job.get('id', '')}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": state,
+            "work_mode": "remote" if is_remote_job else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "breezyhr",
+            "team": dept,
+            "remote": is_remote_job,
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
+def crawl_pinpoint(slug, company_name):
+    """Pinpoint public jobs API: https://<slug>.pinpointhq.com/api/v1/jobs"""
+    data = fetch_json(f"https://{slug}.pinpointhq.com/api/v1/jobs")
+    if not data:
+        return []
+    jobs = data.get("data", []) if isinstance(data, dict) else data
+    results = []
+    for job in jobs:
+        attrs = job.get("attributes", {}) if isinstance(job, dict) else {}
+        title = (attrs.get("title") or job.get("title") or "").strip()
+        if not title:
+            continue
+        desc = strip_html(attrs.get("description") or "")
+        job_type = classify_listing(title, desc)
+        location = (attrs.get("location") or "").strip()
+        city, state = parse_location(location)
+        is_remote_job = bool(attrs.get("remote")) or is_remote(location)
+        apply_url = attrs.get("url") or f"https://{slug}.pinpointhq.com/jobs/{job.get('id', '')}"
+        posted = (attrs.get("created_at") or attrs.get("published_at") or "")[:10]
+        dept = (attrs.get("department") or attrs.get("team") or "").strip()
+        results.append({
+            "external_id": f"pinpoint-{slug}-{job.get('id', '')}",
+            "title": title,
+            "company": company_name,
+            "description": desc,
+            "apply_url": apply_url,
+            "location_city": city,
+            "location_state": state,
+            "work_mode": "remote" if is_remote_job else "unknown",
+            "posted_date": posted or None,
+            "source_ats": "pinpoint",
+            "team": dept,
+            "remote": is_remote_job,
+            "tags": extract_tags(title, desc),
+            "job_type": job_type,
+        })
+    return results
+
+
 def ensure_company(cur, name, ats_type, industry, website=None):
     """Get or create a companies row. When website is provided and the
     row either doesn't exist or has a NULL website, we set it — that
@@ -1141,6 +1529,54 @@ def crawl_all():
         try:
             jobs = crawl_smartrecruiters(slug, name)
             new = write_listings(conn, jobs, name, "smartrecruiters", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.3)
+
+    print(f"\n[JazzHR] Crawling {len(JAZZHR_COMPANIES)} companies...")
+    for slug, (name, industry) in JAZZHR_COMPANIES.items():
+        print(f"  {name} ({slug})...", end=" ", flush=True)
+        try:
+            jobs = crawl_jazzhr(slug, name)
+            new = write_listings(conn, jobs, name, "jazzhr", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.3)
+
+    print(f"\n[Recruitee] Crawling {len(RECRUITEE_COMPANIES)} companies...")
+    for slug, (name, industry) in RECRUITEE_COMPANIES.items():
+        print(f"  {name} ({slug})...", end=" ", flush=True)
+        try:
+            jobs = crawl_recruitee(slug, name)
+            new = write_listings(conn, jobs, name, "recruitee", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.3)
+
+    print(f"\n[BreezyHR] Crawling {len(BREEZYHR_COMPANIES)} companies...")
+    for slug, (name, industry) in BREEZYHR_COMPANIES.items():
+        print(f"  {name} ({slug})...", end=" ", flush=True)
+        try:
+            jobs = crawl_breezyhr(slug, name)
+            new = write_listings(conn, jobs, name, "breezyhr", industry)
+            print(f"{len(jobs)} jobs ({new} new)")
+            total_found += len(jobs); total_new += new
+        except Exception as e:
+            print(f"ERROR: {e}")
+        time.sleep(0.3)
+
+    print(f"\n[Pinpoint] Crawling {len(PINPOINT_COMPANIES)} companies...")
+    for slug, (name, industry) in PINPOINT_COMPANIES.items():
+        print(f"  {name} ({slug})...", end=" ", flush=True)
+        try:
+            jobs = crawl_pinpoint(slug, name)
+            new = write_listings(conn, jobs, name, "pinpoint", industry)
             print(f"{len(jobs)} jobs ({new} new)")
             total_found += len(jobs); total_new += new
         except Exception as e:
