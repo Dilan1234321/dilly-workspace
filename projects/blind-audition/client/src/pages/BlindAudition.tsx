@@ -1174,11 +1174,13 @@ function RankingScreen({
   roleLabel,
   roleDescription,
   recruiter,
+  onTryDifferentRole,
 }: {
   candidates: Candidate[];
   roleLabel: string;
   roleDescription: string;
   recruiter: RecruiterInfo;
+  onTryDifferentRole: () => void;
 }) {
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [interestedIds, setInterestedIds] = useState<Set<string>>(new Set());
@@ -1296,6 +1298,36 @@ function RankingScreen({
             </p>
           </motion.div>
         )}
+
+        {/* Try a different role — the single action that viscerally proves
+            the profile-first thesis. Same candidates, different role, different
+            ranking. Recruiters who run this for two roles back-to-back
+            understand what Dilly is in a way five pitch decks can't convey. */}
+        {allRevealed && (
+          <motion.button
+            onClick={onTryDifferentRole}
+            className="mt-4 w-full py-3.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors flex items-center justify-center gap-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.8 }}
+            data-testid="button-try-different-role"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            See these same candidates for a different role
+          </motion.button>
+        )}
       </div>
 
       {/* Interest modal */}
@@ -1402,6 +1434,14 @@ export default function BlindAudition() {
                 roleLabel={selectedRole?.label || ""}
                 roleDescription={selectedRole?.description || ""}
                 recruiter={recruiter!}
+                onTryDifferentRole={() => {
+                  // Step back to role-select without losing recruiter context.
+                  // Picking a new role re-runs /api/blind-audition/search which
+                  // re-scores the SAME candidates against the new JD — that is
+                  // the single move that viscerally demonstrates the thesis.
+                  setStage("role-select");
+                  setSearchError(null);
+                }}
               />
             )}
           </motion.div>
