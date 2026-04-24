@@ -82,17 +82,17 @@ def verify_verification_code(email: str, code: str) -> bool:
 
 # ── 4. create_user (upsert) ────────────────────────────────────────────────────
 
-def _upsert_user(email: str) -> dict:
+def _upsert_user(email: str, account_type: str = "student") -> dict:
     """Insert user if not exists. Returns the row."""
     with get_db() as conn:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
-            INSERT INTO users (email, subscribed)
-            VALUES (%s, false)
+            INSERT INTO users (email, subscribed, account_type)
+            VALUES (%s, false, %s)
             ON CONFLICT (email) DO NOTHING
             """,
-            (email,),
+            (email, account_type),
         )
         cur.execute("SELECT * FROM users WHERE email = %s", (email,))
         return dict(cur.fetchone())
@@ -125,12 +125,12 @@ def get_user_by_id(user_id: str) -> dict | None:
 
 # ── 7. create_session ─────────────────────────────────────────────────────────
 
-def create_session(email: str) -> str:
+def create_session(email: str, account_type: str = "student") -> str:
     """Create a 30-day session for email. Returns session token."""
     email = (email or "").strip().lower()
     if not email:
         raise ValueError("Email required")
-    user = _upsert_user(email)
+    user = _upsert_user(email, account_type=account_type)
     token = secrets.token_urlsafe(32)
     expires_at = _pg_ts(time.time() + _SESSION_EXPIRY_SEC)
     with get_db() as conn:
@@ -148,14 +148,18 @@ def create_session(email: str) -> str:
 # ── 8. validate_session (get_session) ─────────────────────────────────────────
 
 def get_session(token: str) -> dict | None:
-    """Validate session token. Returns {email, subscribed} or None."""
+    """Validate session token. Returns user dict or None."""
     if not token or not token.strip():
         return None
     with get_db() as conn:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
-            SELECT u.email, u.subscribed, u.id
+            SELECT u.email, u.subscribed, u.id,
+                   u.account_type,
+                   u.company_name, u.company_domain,
+                   u.company_verified_at, u.company_logo_url,
+                   u.company_jobs_count
             FROM sessions s
             JOIN users u ON u.id = s.user_id
             WHERE s.token = %s AND s.expires_at > now()
@@ -165,7 +169,15 @@ def get_session(token: str) -> dict | None:
         row = cur.fetchone()
         if not row:
             return None
-        return {"email": row["email"], "subscribed": bool(row["subscribed"])}
+        account_type = row.get("account_type") or "student"
+        result = {"email": row["email"], "subscribed": bool(row["subscribed"]), "account_type": account_type}
+        if account_type == "recruiter":
+            result["company_name"] = row.get("company_name")
+            result["company_domain"] = row.get("company_domain")
+            result["company_verified_at"] = str(row["company_verified_at"]) if row.get("company_verified_at") else None
+            result["company_logo_url"] = row.get("company_logo_url")
+            result["company_jobs_count"] = row.get("company_jobs_count")
+        return result
 
 
 # ── delete_session (logout) ───────────────────────────────────────────────────
@@ -190,6 +202,51 @@ def set_subscribed(email: str, subscribed: bool) -> None:
         cur.execute(
             "UPDATE users SET subscribed = %s, updated_at = now() WHERE email = %s",
             (subscribed, email),
+        )
+
+
+# ── set_account_type ─────────────────────────────────────────────────────────
+
+def set_account_type(email: str, account_type: str) -> None:
+    email = (email or "").strip().lower()
+    if not email:
+        return
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "UPDATE users SET account_type = %s, updated_at = now() WHERE email = %s",
+            (account_type, email),
+        )
+
+
+# ── update_company_fields ─────────────────────────────────────────────────────
+
+def update_company_fields(
+    email: str,
+    *,
+    company_name: str | None = None,
+    company_domain: str | None = None,
+    company_logo_url: str | None = None,
+    company_jobs_count: int | None = None,
+    company_verified_at: str | None = None,
+) -> None:
+    email = (email or "").strip().lower()
+    if not email:
+        return
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            """
+            UPDATE users SET
+                company_name = COALESCE(%s, company_name),
+                company_domain = COALESCE(%s, company_domain),
+                company_logo_url = COALESCE(%s, company_logo_url),
+                company_jobs_count = COALESCE(%s, company_jobs_count),
+                company_verified_at = COALESCE(%s::TIMESTAMPTZ, company_verified_at),
+                updated_at = now()
+            WHERE email = %s
+            """,
+            (company_name, company_domain, company_logo_url, company_jobs_count, company_verified_at, email),
         )
 
 
