@@ -100,6 +100,20 @@ GREENHOUSE_COMPANIES = {
     # ── Batch added 2026-04-17: broad expansion for feed diversity ──
     # YC + Series A-C startups that publish to Greenhouse. Many of
     # these slugs may 404 — the scraper logs and skips cleanly.
+    # ── Batch added 2026-04-24: verified Greenhouse slugs ──
+    'andurilindustries':('Anduril Industries','Tech'),
+    'waymo':('Waymo','Tech'),
+    'point72':('Point72','Finance'),
+    'virtu':('Virtu Financial','Finance'),
+    'akunacapital':('Akuna Capital','Finance'),
+    'janestreet':('Jane Street','Finance'),
+    'imc':('IMC Trading','Finance'),
+    'worldquant':('WorldQuant','Finance'),
+    'squarepointcapital':('Squarepoint Capital','Finance'),
+    'deepmind':('DeepMind','Tech'),
+    'epicgames':('Epic Games','Media'),
+
+    # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
     'weave':('Weave','Tech'),'clickup':('ClickUp','Tech'),
     'monday':('Monday.com','Tech'),'freshworks':('Freshworks','Tech'),
