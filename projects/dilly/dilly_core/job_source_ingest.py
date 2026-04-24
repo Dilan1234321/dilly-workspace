@@ -201,6 +201,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"usajobs: {type(e).__name__}: {str(e)[:200]}")
 
+    # SimplifyJobs (Summer internships + New-Grad entry-level)
+    try:
+        from dilly_core.job_source_simplify import fetch_simplify_listings
+        simplify = fetch_simplify_listings() or []
+        inserted = sum(1 for item in simplify if _upsert_listing(cur, item))
+        stats["sources"]["simplify"] = {"fetched": len(simplify), "inserted": inserted}
+        stats["total_fetched"] += len(simplify)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"simplify: {type(e).__name__}: {str(e)[:200]}")
+
     conn.commit()
     return stats
 
