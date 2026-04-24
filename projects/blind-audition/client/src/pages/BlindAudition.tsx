@@ -225,10 +225,14 @@ function formatProvenance(fact: ProfileFact): string | null {
 
 // ─── Dilly Logo ───────────────────────────────────────────────────────────────
 
+// Dilly brand mark. Square uses the product's indigo brand color (matches the
+// --primary token hsl(228 60% 40%) and the app's design system). Giving the
+// logo a brand color instead of generic near-black makes every screen read as
+// a Dilly surface rather than a zinc-colored template.
 function DillyLogo() {
   return (
     <svg viewBox="0 0 48 48" fill="none" aria-label="Dilly" className="w-8 h-8">
-      <rect width="48" height="48" rx="12" fill="#18181B" />
+      <rect width="48" height="48" rx="12" fill="#294199" />
       <circle cx="24" cy="20" r="7" fill="white" />
       <rect x="12" y="32" width="24" height="3" rx="1.5" fill="white" opacity="0.4" />
       <rect x="16" y="37" width="16" height="3" rx="1.5" fill="white" opacity="0.25" />
@@ -902,10 +906,21 @@ function BlindCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: rank * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className={`bg-white border rounded-2xl overflow-hidden transition-shadow ${
-        rank === 0 ? "border-zinc-900 shadow-sm" : "border-zinc-200"
+      className={`bg-white border rounded-2xl overflow-hidden transition-shadow relative ${
+        rank === 0
+          ? "border-zinc-900 shadow-[0_1px_0_rgba(41,65,153,0.06),0_8px_24px_-12px_rgba(41,65,153,0.18)]"
+          : "border-zinc-200"
       }`}
     >
+      {/* Indigo accent bar on #1 — brand color reads as a deliberate
+          top-match distinction rather than a louder generic accent. */}
+      {rank === 0 && (
+        <div
+          className="absolute inset-x-0 top-0 h-[3px] bg-[#294199]"
+          aria-hidden
+        />
+      )}
+
       {/* Header */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-start justify-between gap-3 mb-3">
