@@ -169,6 +169,13 @@ def _normalize(item: Dict[str, Any], job_type: str) -> Optional[Dict[str, Any]]:
     else:
         date_posted = str(raw_date or "")[:20]
 
+    # Detect the real ATS from the apply URL so resume tailoring uses correct rules
+    try:
+        from dilly_core.ats_detector import detect_ats_or_keep
+        source_ats = detect_ats_or_keep(url, "simplify")
+    except ImportError:
+        source_ats = "simplify"
+
     return {
         "external_id": f"simplify_{external_id}",
         "company": company,
@@ -179,7 +186,7 @@ def _normalize(item: Dict[str, Any], job_type: str) -> Optional[Dict[str, Any]]:
         "location_state": state,
         "work_mode": work_mode,
         "remote": is_remote,
-        "source_ats": "simplify",
+        "source_ats": source_ats,
         "job_type": job_type,
         "cohorts": cohorts,
         "tags": [],

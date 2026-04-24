@@ -3759,9 +3759,442 @@ def _get_ats_formatting(ats: str) -> str:
             "- Ashby extracts well from any clean single-column layout.\n"
             "- KEYWORD STRATEGY: semantic matching — bridge language works."
         ),
+
+        # ── JazzHR (native parser, mid-market) ───────────────────────
+        # JazzHR uses its own proprietary parser with a simple keyword
+        # extraction model. Common at companies with 50–500 employees.
+        'jazzhr': (
+            "ATS: JazzHR (proprietary parser, mid-market).\n"
+            + BASELINE + "\n"
+            "- JazzHR's parser is relatively forgiving on layout but weak "
+            "on complex formatting. Single-column, clean section breaks.\n"
+            "- Section headers: 'Experience', 'Education', 'Skills'. "
+            "'Professional Experience' parses; 'Career History' does not.\n"
+            "- KEYWORD STRATEGY: JazzHR displays a keyword match score "
+            "to recruiters. Mirror the JD's required-skills list exactly "
+            "in your Skills section. Include both spelled-out terms and "
+            "common abbreviations (e.g. 'Machine Learning (ML)').\n"
+            "- AVOID: tables, columns, headers with decorative chars. "
+            "The parser reads left-to-right and ignores visual styling."
+        ),
+
+        # ── BreezyHR (modern, HireAbility-based) ─────────────────────
+        # BreezyHR uses HireAbility, same engine as Workable. Lenient
+        # on layout, but the auto-fill relies on the top header block.
+        'breezyhr': (
+            "ATS: BreezyHR (HireAbility parser).\n"
+            + BASELINE + "\n"
+            "- Same parser family as Workable. Top 3-4 lines must be: "
+            "name, phone, email, city/state. No taglines or summaries "
+            "above the contact block.\n"
+            "- Section headers from standard set: Experience, Education, "
+            "Skills, Projects. Both 'Experience' and 'Work Experience' parse.\n"
+            "- KEYWORD STRATEGY: HireAbility scores Skills section + bullet "
+            "text equally. Mirror required skills from the JD in Skills, "
+            "then weave the top 5 into your most-recent-role bullets."
+        ),
+
+        # ── Recruitee (modern, REST-API-driven) ───────────────────────
+        # Recruitee is used widely in Europe and growing in the US.
+        # It uses a Textkernel-based parser (same family as SmartRecruiters).
+        'recruitee': (
+            "ATS: Recruitee (Textkernel parser).\n"
+            + BASELINE + "\n"
+            "- Textkernel is strict about date ranges — missing or "
+            "malformed dates drop the entire role. Use 'Aug 2024 – May 2025'.\n"
+            "- Company and role title on the same line, separated by comma "
+            "or pipe.\n"
+            "- KEYWORD STRATEGY: Textkernel normalizes skill aliases. Use "
+            "the canonical form of each skill (e.g. 'JavaScript' not 'JS', "
+            "'Machine Learning' not 'ML').\n"
+            "- Strong on: structured experience blocks, explicit Skills list."
+        ),
+
+        # ── Teamtailor (modern, European-first) ───────────────────────
+        # Teamtailor has a native parser that's lenient but does use
+        # a scoring engine for candidate ranking.
+        'teamtailor': (
+            "ATS: Teamtailor (native parser, modern).\n"
+            + BASELINE + "\n"
+            "- Lenient parser. Clean single-column structure is enough.\n"
+            "- KEYWORD STRATEGY: Teamtailor's candidate-scoring model "
+            "compares resume text against JD text holistically. Include "
+            "exact JD keywords in your Skills section and reference them "
+            "at least once in an experience bullet.\n"
+            "- DATES: 'Mon YYYY' or 'MM/YYYY'. Both parse correctly.\n"
+            "- AVOID: multi-column layouts and tables (parsed as a blob)."
+        ),
+
+        # ── Pinpoint (UK-focused, modern) ─────────────────────────────
+        'pinpoint': (
+            "ATS: Pinpoint (native parser, modern).\n"
+            + BASELINE + "\n"
+            "- Pinpoint uses a modern extraction engine. Standard single-"
+            "column layouts parse cleanly.\n"
+            "- KEYWORD STRATEGY: Pinpoint highlights exact phrase matches "
+            "from the JD to recruiters. Use the JD's phrasing verbatim "
+            "where accurate.\n"
+            "- DATES: 'Mon YYYY' format preferred."
+        ),
+
+        # ── Fountain (hourly/gig-focused) ─────────────────────────────
+        # Fountain is used primarily for hourly, retail, and logistics roles.
+        'fountain': (
+            "ATS: Fountain (workflow-first ATS, hourly/gig).\n"
+            + BASELINE + "\n"
+            "- Fountain is application-flow focused. Resume parsing is "
+            "secondary to structured form data.\n"
+            "- Keep the resume SHORT (1 page) and dense — Fountain recruiter "
+            "views typically show a small preview pane.\n"
+            "- KEYWORD STRATEGY: Emphasize reliability, availability, and "
+            "relevant experience. Skills section should list tools/certs "
+            "relevant to the role type (e.g. forklift license, food safety "
+            "cert, specific software).\n"
+            "- AVOID: multi-page resumes. Format for quick human skimming."
+        ),
+
+        # ── UKG / UltiPro (enterprise HR suite) ───────────────────────
+        # UKG (formerly Kronos/UltiPro) has a native parser that is
+        # notoriously basic. Treat as a plain-text legacy parser.
+        'ukg': (
+            "ATS: UKG / UltiPro (native parser, legacy enterprise).\n"
+            + BASELINE + "\n"
+            "- UKG's parser is basic. Treat as a near-plain-text reader.\n"
+            "- Section headers EXACTLY: 'Education', 'Experience', 'Skills'. "
+            "Non-standard names (e.g. 'Professional Background') may not "
+            "register as section breaks.\n"
+            "- DATES: 'MM/YYYY' format strongly preferred. UKG auto-fills "
+            "application fields; ambiguous dates cause data-entry errors.\n"
+            "- KEYWORD STRATEGY: UKG's keyword scoring is count-based on "
+            "the Skills section. Include every JD skill the candidate has.\n"
+            "- AVOID: tables, columns, fancy section headers, Unicode."
+        ),
+
+        # ── ADP Recruiting / Workforce Now ───────────────────────────
+        # ADP uses a basic internal parser. Very common at large employers.
+        'adp': (
+            "ATS: ADP Recruiting / Workforce Now (basic internal parser).\n"
+            + BASELINE + "\n"
+            "- ADP's parser is minimal. Plain-text reading, no layout "
+            "interpretation. Standard section headers only.\n"
+            "- Section headers: 'Education', 'Work Experience', 'Skills'.\n"
+            "- DATES: 'MM/YYYY' or 'YYYY'. Spell out months if using names.\n"
+            "- KEYWORD STRATEGY: Like Taleo, count-dominant on Skills. "
+            "Dense, comma-separated skills list near the top.\n"
+            "- AVOID: columns, tables, Unicode bullets. Use plain hyphens."
+        ),
+
+        # ── Cornerstone OnDemand ──────────────────────────────────────
+        'cornerstone': (
+            "ATS: Cornerstone OnDemand (native parser, enterprise).\n"
+            + BASELINE + "\n"
+            "- Cornerstone uses an internal parser with Sovren fallback "
+            "for complex documents. Follow Greenhouse rules as a baseline.\n"
+            "- KEYWORD STRATEGY: Skills section is primary scoring surface. "
+            "Include every JD keyword legitimately held.\n"
+            "- DATES: 'Mon YYYY' or 'MM/YYYY'. Both parse."
+        ),
+
+        # ── Paylocity (SMB-focused) ───────────────────────────────────
+        'paylocity': (
+            "ATS: Paylocity (native parser, SMB).\n"
+            + BASELINE + "\n"
+            "- Paylocity serves small-to-mid businesses. Parser is basic "
+            "but functional on clean single-column layouts.\n"
+            "- Keep the resume straightforward. Standard section headers.\n"
+            "- KEYWORD STRATEGY: Human review is common at Paylocity shops. "
+            "Write for both parser and recruiter. Clear bullets, strong verbs."
+        ),
+
+        # ── Dayforce / Ceridian ───────────────────────────────────────
+        'dayforce': (
+            "ATS: Dayforce / Ceridian (native parser, enterprise).\n"
+            + BASELINE + "\n"
+            "- Dayforce's parser handles standard layouts. Section headers "
+            "must be recognizable (Education, Experience, Skills).\n"
+            "- DATES: 'MM/YYYY' format preferred for auto-fill accuracy.\n"
+            "- KEYWORD STRATEGY: Mirror JD skill requirements in Skills. "
+            "Dayforce recruiters often use keyword search on the platform."
+        ),
+
+        # ── Paycom (SMB/enterprise) ───────────────────────────────────
+        'paycom': (
+            "ATS: Paycom (native parser).\n"
+            + BASELINE + "\n"
+            "- Paycom's parser is modern but conservative. Standard section "
+            "headers and single-column layout work best.\n"
+            "- KEYWORD STRATEGY: Skills section + experience bullets both "
+            "contribute to match scoring. Cover JD keywords in both places."
+        ),
+
+        # ── Personio (European mid-market) ────────────────────────────
+        'personio': (
+            "ATS: Personio (native parser, European mid-market).\n"
+            + BASELINE + "\n"
+            "- Personio is popular in DACH/EU markets. Parser handles "
+            "standard European CV formats plus US-style resumes.\n"
+            "- Include LinkedIn URL if applicable — Personio surfaces it.\n"
+            "- DATES: 'MM/YYYY' or 'Mon YYYY'. Both work.\n"
+            "- KEYWORD STRATEGY: Semantic match + keyword density. Write "
+            "skills naturally in bullets and list them in Skills section."
+        ),
+
+        # ── Eightfold AI (skills-based matching) ─────────────────────
+        # Eightfold uses its own LLM-based skills inference engine.
+        # It goes beyond keywords to infer latent skills from experience.
+        'eightfold': (
+            "ATS: Eightfold AI (skills-inference engine).\n"
+            + BASELINE + "\n"
+            "- Eightfold infers skills from job title, company, and bullet "
+            "context — not just keyword matches. Write experience bullets "
+            "that clearly demonstrate the skill, not just name it.\n"
+            "- Example: instead of 'Used Python', write 'Built and deployed "
+            "a Python ETL pipeline processing 50M rows daily'.\n"
+            "- KEYWORD STRATEGY: Show depth via quantified bullets. Eightfold "
+            "weights demonstrated ability over keyword count.\n"
+            "- Skills section still helps — list every relevant tool. But "
+            "bullets carry more weight here than on other platforms."
+        ),
+
+        # ── Phenom People (AI-powered, enterprise) ────────────────────
+        'phenom': (
+            "ATS: Phenom (AI-powered candidate matching).\n"
+            + BASELINE + "\n"
+            "- Phenom uses AI to match candidates. Semantic understanding "
+            "means bridge language works (e.g. 'built data pipelines' "
+            "matches 'ETL development').\n"
+            "- KEYWORD STRATEGY: Blend exact JD keywords with demonstrative "
+            "bullets. Phenom scores both keyword hits AND contextual match.\n"
+            "- Ensure the Skills section lists every tool/cert in the JD "
+            "the candidate actually has."
+        ),
+
+        # ── Avature (enterprise CRM/ATS) ──────────────────────────────
+        'avature': (
+            "ATS: Avature (enterprise CRM/ATS hybrid).\n"
+            + BASELINE + "\n"
+            "- Avature uses a Textkernel-based parser. Strict on dates "
+            "and experience blocks. Follow SmartRecruiters date rules.\n"
+            "- KEYWORD STRATEGY: Textkernel normalizes aliases. Use "
+            "canonical skill names. Mirror JD's required-skills list exactly."
+        ),
+
+        # ── Beamery (talent CRM) ──────────────────────────────────────
+        'beamery': (
+            "ATS: Beamery (talent CRM/ATS).\n"
+            + BASELINE + "\n"
+            "- Beamery parses resume data for talent pool matching, not just "
+            "single-role parsing. Structure is important for profile quality.\n"
+            "- KEYWORD STRATEGY: Include skills, tools, and certifications "
+            "thoroughly — Beamery indexes profiles for multiple future roles.\n"
+            "- Clear company/role/date structure is critical for accurate "
+            "experience timeline construction in the candidate profile."
+        ),
+
+        # ── Zoho Recruit ──────────────────────────────────────────────
+        'zoho_recruit': (
+            "ATS: Zoho Recruit (cloud ATS, mid-market).\n"
+            + BASELINE + "\n"
+            "- Zoho Recruit uses its own parser. Standard section headers "
+            "and single-column layout parse well.\n"
+            "- KEYWORD STRATEGY: Zoho scores keyword density on both Skills "
+            "section and experience text. Mirror JD keywords in both places.\n"
+            "- DATES: 'Mon YYYY' or 'MM/YYYY'. 'Present' is recognized."
+        ),
+
+        # ── Bullhorn (staffing agency ATS) ───────────────────────────
+        'bullhorn': (
+            "ATS: Bullhorn (staffing/agency ATS).\n"
+            + BASELINE + "\n"
+            "- Bullhorn is the dominant ATS at staffing agencies. Recruiters "
+            "use it to search across a large candidate database — searchability "
+            "is paramount.\n"
+            "- KEYWORD STRATEGY: Think like a recruiter Boolean-searching: "
+            "'Python AND SQL AND machine learning'. Every critical skill "
+            "must appear as an exact string, not a paraphrase.\n"
+            "- Include a dense, comma-separated Skills section at the top. "
+            "Add both the spelled-out term and its common abbreviation "
+            "where they differ (e.g. 'JavaScript (JS), Python, SQL, "
+            "Tableau / Power BI').\n"
+            "- AVOID: hiding skills inside bullet prose only — they must "
+            "also appear in the Skills list for Boolean search to hit."
+        ),
+
+        # ── Hireology (automotive/retail/franchise) ───────────────────
+        'hireology': (
+            "ATS: Hireology (retail/franchise/automotive ATS).\n"
+            + BASELINE + "\n"
+            "- Hireology is used heavily in automotive, retail, and franchise "
+            "sectors. Human review is typical; parser is supporting role.\n"
+            "- KEYWORD STRATEGY: Emphasize customer service, reliability, "
+            "schedule availability, and relevant technical certs.\n"
+            "- Keep format clean and skimmable — 1 page preferred."
+        ),
+
+        # ── HireHive (SMB, European) ──────────────────────────────────
+        'hirehive': (
+            "ATS: HireHive (SMB, European).\n"
+            + BASELINE + "\n"
+            "- HireHive serves small companies. Human review is primary. "
+            "Write for readability first, keyword density second.\n"
+            "- Standard section headers. Clean layout. No gimmicks."
+        ),
+
+        # ── Comeet (collaborative hiring) ────────────────────────────
+        'comeet': (
+            "ATS: Comeet (collaborative hiring platform).\n"
+            + BASELINE + "\n"
+            "- Comeet emphasizes team-based review. Multiple people evaluate "
+            "each candidate simultaneously. Write for human skimmability.\n"
+            "- KEYWORD STRATEGY: Lead each bullet with the most impressive "
+            "metric — Comeet reviewers scan bullets for standout numbers.\n"
+            "- Skills section: exhaustive, mirrors JD requirements."
+        ),
+
+        # ── Freshteam / Freshworks ────────────────────────────────────
+        'freshteam': (
+            "ATS: Freshteam (Freshworks ATS, SMB).\n"
+            + BASELINE + "\n"
+            "- Freshteam is popular at tech startups. Modern parser, "
+            "relatively lenient on layout.\n"
+            "- KEYWORD STRATEGY: Skills section + bullet text. Mirror JD "
+            "keywords. Semantic matching helps for common tech skills.\n"
+            "- Include a GitHub or portfolio link if applicable."
+        ),
+
+        # ── LinkedIn Jobs (aggregator, varied underlying ATS) ─────────
+        'linkedin': (
+            "ATS: LinkedIn Easy Apply (varies by employer).\n"
+            + BASELINE + "\n"
+            "- LinkedIn Easy Apply submissions go to the employer's native "
+            "ATS. Follow Greenhouse (Sovren) rules as a safe default.\n"
+            "- KEYWORD STRATEGY: LinkedIn's own search uses keyword matching "
+            "on headline and experience. Ensure your top experience bullets "
+            "contain the role's primary skill keywords.\n"
+            "- Keep LinkedIn profile headline + resume Skills section aligned."
+        ),
+
+        # ── Darwinbox (South/Southeast Asia, enterprise) ──────────────
+        'darwinbox': (
+            "ATS: Darwinbox (enterprise HRMS, Asia-Pacific).\n"
+            + BASELINE + "\n"
+            "- Darwinbox has a modern parser. Standard single-column layout "
+            "with clear section headers parses cleanly.\n"
+            "- KEYWORD STRATEGY: Mirror JD skill requirements in Skills section. "
+            "Include both technical and soft-skill keywords from the JD."
+        ),
+
+        # ── Keka (India-focused HR suite) ─────────────────────────────
+        'keka': (
+            "ATS: Keka (HR suite, India).\n"
+            + BASELINE + "\n"
+            "- Keka's ATS is used primarily at Indian companies. Clean single-"
+            "column layout parses well. Standard section headers.\n"
+            "- Include years of experience prominently — Keka filtering often "
+            "uses exact year counts for screening.\n"
+            "- KEYWORD STRATEGY: Skills section + experience bullets both "
+            "contribute. Mirror JD language exactly."
+        ),
+
+        # ── Manatal (cloud ATS, Asia-focused) ────────────────────────
+        'manatal': (
+            "ATS: Manatal (cloud ATS).\n"
+            + BASELINE + "\n"
+            "- Manatal uses AI-based profile enrichment from LinkedIn. "
+            "Keep resume and LinkedIn profile in sync.\n"
+            "- KEYWORD STRATEGY: Manatal scores semantic skill matches. "
+            "Write experience bullets that demonstrate skills in context, "
+            "not just list them."
+        ),
+
+        # ── Jobsoid (cloud ATS, SMB) ──────────────────────────────────
+        'jobsoid': (
+            "ATS: Jobsoid (cloud ATS, SMB).\n"
+            + BASELINE + "\n"
+            "- Standard parsing. Single-column layout. Clear section headers.\n"
+            "- KEYWORD STRATEGY: Skills section is primary scoring surface. "
+            "Dense, JD-mirrored skills list."
+        ),
+
+        # ── ClearCompany ──────────────────────────────────────────────
+        'clearcompany': (
+            "ATS: ClearCompany (mid-market ATS).\n"
+            + BASELINE + "\n"
+            "- ClearCompany uses Sovren parser (same as Greenhouse). "
+            "Follow Greenhouse rules. Skills section + bullet-level keywords.\n"
+            "- KEYWORD STRATEGY: repeat every JD keyword in Skills list AND "
+            "in at least one experience bullet."
+        ),
+
+        # ── TalentLyft (European mid-market) ──────────────────────────
+        'talentlyft': (
+            "ATS: TalentLyft (modern ATS, European).\n"
+            + BASELINE + "\n"
+            "- TalentLyft uses a modern parsing engine. Tolerant of clean "
+            "single-column layouts. Standard section headers.\n"
+            "- KEYWORD STRATEGY: semantic + keyword matching. Mirror JD "
+            "terminology and include bridge language for adjacent skills."
+        ),
+
+        # ── JobAdder (recruitment software, ANZ/UK) ───────────────────
+        'jobadder': (
+            "ATS: JobAdder (recruitment CRM/ATS, ANZ/UK).\n"
+            + BASELINE + "\n"
+            "- JobAdder is common at recruitment agencies. Recruiter search "
+            "by Boolean keywords is the primary discovery mechanism.\n"
+            "- KEYWORD STRATEGY: Same as Bullhorn — think Boolean search. "
+            "Every key skill must appear verbatim as an exact string in "
+            "Skills and/or bullets.\n"
+            "- Include both spelled-out and abbreviated skill names."
+        ),
+
+        # ── Turbohire (AI-powered, India/Global) ─────────────────────
+        'turbohire': (
+            "ATS: TurboHire (AI-powered ATS).\n"
+            + BASELINE + "\n"
+            "- TurboHire uses NLP-based skill extraction. Bullet context "
+            "matters — demonstrated skills score higher than listed ones.\n"
+            "- KEYWORD STRATEGY: Show depth. Quantified bullets with clear "
+            "skill application beat keyword-stuffed lists."
+        ),
+
+        # ── Odoo Recruitment ──────────────────────────────────────────
+        'odoo': (
+            "ATS: Odoo Recruitment (open-source ERP/ATS).\n"
+            + BASELINE + "\n"
+            "- Odoo's parser is basic. Plain-text reading. Standard section "
+            "headers only. Single-column layout is safest.\n"
+            "- KEYWORD STRATEGY: Skills section primary. Dense skill list "
+            "matching the JD."
+        ),
+
+        # ── SimplifyJobs (aggregator — fall back to Greenhouse rules) ──
+        'simplify': (
+            "ATS: Unknown (applied via SimplifyJobs aggregator).\n"
+            + BASELINE + "\n"
+            "- The underlying ATS is unknown. Use Greenhouse/Sovren rules "
+            "as a safe default — they cover ~60% of all tech-company roles.\n"
+            "- KEYWORD STRATEGY: Skills section + bullet-level keywords."
+        ),
+
+        # ── RemoteOK / WeWorkRemotely (aggregators) ────────────────────
+        'remoteok': (
+            "ATS: Unknown (applied via RemoteOK).\n"
+            + BASELINE + "\n"
+            "- The underlying ATS varies. Use Greenhouse rules as safe default.\n"
+            "- All roles are remote. Highlight remote-work readiness: "
+            "async communication, self-direction, remote tooling (Slack, "
+            "Jira, Notion, GitHub)."
+        ),
+        'weworkremotely': (
+            "ATS: Unknown (applied via WeWorkRemotely).\n"
+            + BASELINE + "\n"
+            "- The underlying ATS varies. Use Greenhouse rules as safe default.\n"
+            "- All roles are remote. Highlight remote-work readiness."
+        ),
     }
-    # Default to Greenhouse rules — safe because ~94% of Dilly's jobs are
-    # on Greenhouse-parsed systems (Greenhouse + Jobvite use Sovren).
+    # Default to Greenhouse rules — safe because ~60%+ of Dilly's jobs are
+    # on Greenhouse-parsed systems (Greenhouse + Jobvite + ClearCompany use Sovren).
     return rules.get((ats or '').lower().strip(), rules['greenhouse'])
 
 

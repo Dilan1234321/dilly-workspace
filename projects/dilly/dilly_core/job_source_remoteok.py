@@ -137,6 +137,13 @@ def _normalize(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             _clf = None
     job_type = _clf(title, description) if _clf else "other"
 
+    # Detect real ATS from the apply URL (RemoteOK URL → company's actual ATS)
+    try:
+        from dilly_core.ats_detector import detect_ats_or_keep
+        source_ats = detect_ats_or_keep(apply_url, "remoteok")
+    except ImportError:
+        source_ats = "remoteok"
+
     # All RemoteOK jobs are remote
     return {
         "external_id": f"remoteok_{slug}",
@@ -148,7 +155,7 @@ def _normalize(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "location_state": None,
         "work_mode": "remote",
         "remote": True,
-        "source_ats": "remoteok",
+        "source_ats": source_ats,
         "job_type": job_type,
         "cohorts": cohorts,
         "tags": tags[:10],

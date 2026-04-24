@@ -115,6 +115,13 @@ def _normalize(item: ET.Element) -> Optional[Dict[str, Any]]:
             _clf = None
     job_type = _clf(title, description) if _clf else "other"
 
+    # Detect real ATS from apply URL
+    try:
+        from dilly_core.ats_detector import detect_ats_or_keep
+        source_ats = detect_ats_or_keep(link, "weworkremotely")
+    except ImportError:
+        source_ats = "weworkremotely"
+
     return {
         "external_id": f"wwr_{slug}",
         "company": company,
@@ -125,7 +132,7 @@ def _normalize(item: ET.Element) -> Optional[Dict[str, Any]]:
         "location_state": None,
         "work_mode": "remote",
         "remote": True,
-        "source_ats": "weworkremotely",
+        "source_ats": source_ats,
         "job_type": job_type,
         "cohorts": cohorts,
         "tags": [category] if category else [],

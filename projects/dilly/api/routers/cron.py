@@ -651,6 +651,59 @@ def classify_jobs(token: str = "", max: int = 200):
         return {"ok": False, "error": str(e)[:500]}
 
 
+@router.get("/backfill-ats-detection", summary="Detect real ATS from apply_url + update source_ats for aggregator rows")
+def backfill_ats_detection(token: str = "", limit: int = 5000):
+    """Re-detect the real ATS (Greenhouse/Lever/Workday/etc.) from apply_url
+    for jobs that came through aggregators (simplify, remoteok, weworkremotely)
+    or that have source_ats='unknown'. Updates source_ats in-place so the
+    resume tailorer uses the correct ATS formatting rules.
+
+    Safe to run multiple times — only touches rows where source_ats is an
+    aggregator or unknown. ?limit=N controls max rows per call (default 5000).
+    Call with ?token=CRON_SECRET."""
+    _require_cron_secret(token)
+    from projects.dilly.api.database import get_db as _get_db_ctx
+    try:
+        from dilly_core.ats_detector import detect_ats_or_keep
+    except ImportError:
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        from dilly_core.ats_detector import detect_ats_or_keep
+
+    AGGREGATORS = ("simplify", "remoteok", "weworkremotely", "unknown", "")
+    updated = 0
+    errors = 0
+    with _get_db_ctx() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, apply_url, source_ats
+            FROM internships
+            WHERE status = 'active'
+              AND (source_ats IS NULL OR source_ats = ANY(%s))
+            LIMIT %s
+            """,
+            (list(AGGREGATORS), int(limit)),
+        )
+        rows = cur.fetchall()
+        for row in rows:
+            rid = row[0] if not isinstance(row, dict) else row["id"]
+            url = row[1] if not isinstance(row, dict) else row["apply_url"]
+            existing = row[2] if not isinstance(row, dict) else row["source_ats"]
+            try:
+                new_ats = detect_ats_or_keep(url or "", existing or "")
+                if new_ats != existing:
+                    cur.execute(
+                        "UPDATE internships SET source_ats = %s WHERE id = %s",
+                        (new_ats, rid),
+                    )
+                    updated += 1
+            except Exception:
+                errors += 1
+        conn.commit()
+    return {"ok": True, "rows_checked": len(rows), "updated": updated, "errors": errors}
+
+
 @router.get("/daily-pipeline", summary="Run full daily job pipeline: scrape → dedup → rescore → classify")
 def daily_pipeline(token: str = ""):
     """Master endpoint: runs the full daily job pipeline in order.
@@ -703,6 +756,14 @@ def daily_pipeline(token: str = ""):
         results["classify"] = r
     except Exception as e:
         results["classify"] = {"error": str(e)}
+
+    # 6. Backfill ATS detection — fix source_ats for aggregator rows so
+    #    resume tailoring uses the correct ATS formatting rules.
+    try:
+        r = backfill_ats_detection(token=token, limit=5000)
+        results["ats_detection"] = r
+    except Exception as e:
+        results["ats_detection"] = {"error": str(e)}
 
     return {"ok": True, "pipeline": results}
 
