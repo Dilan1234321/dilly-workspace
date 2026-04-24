@@ -501,6 +501,8 @@ def _fallback_feed(
     h1b_sponsor: Optional[bool] = None,
     fair_chance: Optional[bool] = None,
     remote_only: Optional[bool] = None,
+    work_mode_filter: Optional[str] = None,
+    city_filter: Optional[str] = None,
     profile_signals: Optional[dict] = None,
     has_audit: bool = True,
 ):
@@ -535,7 +537,14 @@ def _fallback_feed(
         where.append(f"({_intl_clauses})")
         params.extend([f"%{c}%" for c in _intl_exclude])
 
-    if tab != "all":
+    # tab filtering: 'opportunities' and 'internship' both include entry_level + research_internship
+    if tab == "opportunities" or tab == "internship":
+        where.append("i.job_type IN ('internship', 'entry_level', 'research_internship', 'part_time')")
+    elif tab == "entry_level":
+        where.append("i.job_type IN ('entry_level', 'internship', 'research_internship')")
+    elif tab == "part_time":
+        where.append("i.job_type = 'part_time'")
+    elif tab != "all":
         where.append("i.job_type = %s")
         params.append(tab)
     if company_filter:
@@ -545,10 +554,17 @@ def _fallback_feed(
         where.append("(i.title ILIKE %s OR c.name ILIKE %s OR i.description ILIKE %s)")
         like = f"%{search}%"
         params.extend([like, like, like])
-    # Cohort filter: only jobs that list this cohort in cohort_requirements
     if cohort_filter:
         where.append("i.cohort_requirements::text ILIKE %s")
         params.append(f"%{cohort_filter}%")
+    if remote_only:
+        where.append("(i.remote = true OR i.work_mode = 'remote' OR LOWER(COALESCE(i.location_city,'')) LIKE '%remote%')")
+    if work_mode_filter:
+        where.append("i.work_mode = %s")
+        params.append(work_mode_filter)
+    if city_filter:
+        where.append("i.location_city ILIKE %s")
+        params.append(f"%{city_filter}%")
 
     # no_degree filter (same logic as the precomputed path): prefer the
     # classified column; fall back to keyword heuristic for NULL rows so
@@ -791,7 +807,7 @@ def _fallback_stats(cur, student_id: str, student_smart, student_grit, student_b
 @router.get("/v2/internships/feed")
 async def get_internship_feed(
     request: Request,
-    tab: str = Query("internship", description="internship, entry_level, part_time, or all"),
+    tab: str = Query("internship", description="internship, entry_level, part_time, all, or opportunities (internship+entry_level+research)"),
     readiness: Optional[str] = Query(None),
     cohort: Optional[str] = Query(None),
     company: Optional[str] = Query(None),
@@ -803,7 +819,9 @@ async def get_internship_feed(
     no_degree: Optional[bool] = Query(None, description="If true, only return jobs that do not require a degree."),
     h1b_sponsor: Optional[bool] = Query(None, description="If true, only return jobs where H-1B sponsorship is confirmed or possible."),
     fair_chance: Optional[bool] = Query(None, description="If true, only return jobs that are fair-chance friendly."),
-    remote_only: Optional[bool] = Query(None, description="If true, only return fully-remote roles (not hybrid)."),
+    remote: Optional[bool] = Query(None, description="Filter to remote-only listings"),
+    work_mode: Optional[str] = Query(None, description="Filter by work_mode: remote, onsite, hybrid"),
+    city: Optional[str] = Query(None, description="Filter by city (partial match)"),
 ):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
@@ -897,7 +915,9 @@ async def get_internship_feed(
             no_degree=no_degree,
             h1b_sponsor=h1b_sponsor,
             fair_chance=fair_chance,
-            remote_only=remote_only,
+            remote_only=remote,
+            work_mode_filter=work_mode,
+            city_filter=city,
             profile_signals=_profile_signals,
             has_audit=_has_audit,
         )
@@ -931,7 +951,14 @@ async def get_internship_feed(
         where.append(f"({_intl_clauses})")
         params.extend([f"%{c}%" for c in _intl_exclude])
 
-    if tab != "all":
+    # tab filtering: 'opportunities' and 'internship' both include entry_level + research_internship
+    if tab == "opportunities" or tab == "internship":
+        where.append("i.job_type IN ('internship', 'entry_level', 'research_internship', 'part_time')")
+    elif tab == "entry_level":
+        where.append("i.job_type IN ('entry_level', 'internship', 'research_internship')")
+    elif tab == "part_time":
+        where.append("i.job_type = 'part_time'")
+    elif tab != "all":
         where.append("i.job_type = %s")
         params.append(tab)
     if readiness:
@@ -947,6 +974,14 @@ async def get_internship_feed(
     if cohort:
         where.append("m.cohort_readiness::text ILIKE %s")
         params.append(f"%{cohort}%")
+    if remote:
+        where.append("(i.remote = true OR i.work_mode = 'remote' OR LOWER(COALESCE(i.location_city,'')) LIKE '%remote%')")
+    if work_mode:
+        where.append("i.work_mode = %s")
+        params.append(work_mode)
+    if city:
+        where.append("i.location_city ILIKE %s")
+        params.append(f"%{city}%")
 
     # "no_degree" filter: prefer the structured `degree_required` column
     # written by the Haiku classifier (see job_classifiers.py). It maps

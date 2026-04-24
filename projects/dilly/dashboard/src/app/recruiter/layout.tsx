@@ -1,18 +1,20 @@
-import { Cinzel, Montserrat } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import { RecruiterNavLeft } from "./RecruiterNavLeft";
 import { RecruiterNavRight } from "./RecruiterNavRight";
 import "./recruiter-talent.css";
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export default function RecruiterLayout({
@@ -22,10 +24,10 @@ export default function RecruiterLayout({
 }) {
   return (
     <div
-      className={`recruiter-talent ${cinzel.variable} ${montserrat.variable}`}
-      style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
+      className={`recruiter-v2 ${inter.variable} ${montserrat.variable}`}
+      style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
     >
-      <header className="te-nav">
+      <header className="dr-nav">
         <RecruiterNavLeft />
         <RecruiterNavRight />
       </header>

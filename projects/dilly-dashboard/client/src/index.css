@@ -1,0 +1,87 @@
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,900&f[]=satoshi@400,500,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark-first palette matching the Dilly brand */
+:root {
+  --background: 0 0% 4%;        /* #0a0a0a */
+  --foreground: 40 5% 93%;      /* #eeede9 */
+
+  --card: 0 0% 7%;              /* #111 */
+  --card-foreground: 40 5% 93%;
+
+  --popover: 0 0% 7%;
+  --popover-foreground: 40 5% 93%;
+
+  --primary: 66 87% 60%;        /* #e8f040 yellow-green accent */
+  --primary-foreground: 0 0% 4%;
+
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 40 5% 80%;
+
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 42%;
+
+  --accent: 0 0% 12%;
+  --accent-foreground: 40 5% 93%;
+
+  --destructive: 0 62% 48%;
+  --destructive-foreground: 40 5% 93%;
+
+  --border: 0 0% 13%;           /* #222 */
+  --input: 0 0% 13%;
+  --ring: 66 87% 60%;
+
+  --radius: 0.625rem;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: 'Satoshi', 'Helvetica Neue', sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  min-height: 100dvh;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+p { text-wrap: pretty; }
+
+::selection {
+  background: rgba(232, 240, 64, 0.2);
+  color: hsl(var(--foreground));
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Recharts text override */
+.recharts-text { fill: #666 !important; }
+.recharts-cartesian-axis-tick-value { fill: #555 !important; font-size: 10px; }

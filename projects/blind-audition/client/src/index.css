@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LIGHT MODE — Dilly Indigo palette */
+:root {
+  --button-outline: rgba(0, 0, 0, 0.1);
+  --badge-outline: rgba(0, 0, 0, 0.05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0, 0, 0, 0.03);
+  --elevate-2: rgba(0, 0, 0, 0.08);
+  --background: 0 0% 100%;
+  --foreground: 222 15% 12%;
+  --border: 220 13% 91%;
+  --card: 220 20% 98%;
+  --card-foreground: 222 15% 12%;
+  --card-border: 220 13% 93%;
+  --sidebar: 222 30% 96%;
+  --sidebar-foreground: 222 15% 12%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-primary: 228 60% 40%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 220 13% 91%;
+  --sidebar-accent-foreground: 222 15% 12%;
+  --sidebar-ring: 228 60% 40%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 15% 12%;
+  --popover-border: 220 13% 91%;
+  --primary: 228 60% 40%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 220 13% 93%;
+  --secondary-foreground: 222 15% 12%;
+  --muted: 220 13% 94%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 220 13% 92%;
+  --accent-foreground: 222 15% 12%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+  --input: 220 13% 82%;
+  --ring: 228 60% 40%;
+  --chart-1: 228 60% 40%;
+  --chart-2: 142 71% 45%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 0 72% 51%;
+  --chart-5: 262 83% 48%;
+  --font-sans: Inter, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.625rem;
+  --shadow-2xs: 0px 1px 2px 0px hsl(228 60% 40% / 0.04);
+  --shadow-xs: 0px 1px 3px 0px hsl(228 60% 40% / 0.06);
+  --shadow-sm: 0px 1px 3px 0px hsl(228 60% 40% / 0.08), 0px 1px 2px -1px hsl(228 60% 40% / 0.04);
+  --shadow: 0px 2px 6px 0px hsl(228 60% 40% / 0.08), 0px 1px 2px -1px hsl(228 60% 40% / 0.04);
+  --shadow-md: 0px 4px 12px 0px hsl(228 60% 40% / 0.1), 0px 2px 4px -1px hsl(228 60% 40% / 0.06);
+  --shadow-lg: 0px 8px 24px 0px hsl(228 60% 40% / 0.1), 0px 4px 6px -1px hsl(228 60% 40% / 0.06);
+  --shadow-xl: 0px 16px 40px 0px hsl(228 60% 40% / 0.12), 0px 8px 10px -1px hsl(228 60% 40% / 0.06);
+  --shadow-2xl: 0px 24px 48px 0px hsl(228 60% 40% / 0.14);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* Dilly custom tokens */
+  --dilly-indigo: #2B3A8E;
+  --dilly-indigo-light: rgba(43,58,142,0.08);
+  --dilly-indigo-border: rgba(43,58,142,0.2);
+  --dilly-green: #34C759;
+  --dilly-green-light: rgba(52,199,89,0.1);
+  --dilly-amber: #FF9F0A;
+  --dilly-amber-light: rgba(255,159,10,0.1);
+  --dilly-red: #FF3B30;
+  --dilly-red-light: rgba(255,59,48,0.07);
+}
+
+/* DARK MODE */
+.dark {
+  --background: 222 25% 9%;
+  --foreground: 220 14% 88%;
+  --border: 222 15% 18%;
+  --card: 222 20% 11%;
+  --card-foreground: 220 14% 88%;
+  --card-border: 222 15% 20%;
+  --sidebar: 222 22% 10%;
+  --sidebar-foreground: 220 14% 88%;
+  --sidebar-border: 222 15% 18%;
+  --sidebar-primary: 228 60% 62%;
+  --sidebar-primary-foreground: 0 0% 9%;
+  --sidebar-accent: 222 15% 16%;
+  --sidebar-accent-foreground: 220 14% 88%;
+  --sidebar-ring: 228 60% 62%;
+  --popover: 222 25% 10%;
+  --popover-foreground: 220 14% 88%;
+  --popover-border: 222 15% 18%;
+  --primary: 228 60% 62%;
+  --primary-foreground: 222 25% 9%;
+  --secondary: 222 15% 16%;
+  --secondary-foreground: 220 14% 88%;
+  --muted: 222 15% 15%;
+  --muted-foreground: 220 9% 55%;
+  --accent: 222 15% 17%;
+  --accent-foreground: 220 14% 88%;
+  --destructive: 0 72% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --input: 222 15% 22%;
+  --ring: 228 60% 62%;
+}
+
+/* Base */
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Montserrat for tight modern headings (app-style) */
+.font-display {
+  font-family: 'Montserrat', 'Inter', sans-serif;
+}
+
+/* Playfair Display for editorial hero moments — page title, revealed names,
+   rank numerals, ReflectionPanel closers. Keep rare; this font earns the
+   "moment" feel precisely because everything else is Inter. */
+.font-serif-display {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+/* Tabular numerals tuned to Playfair for vertical alignment in stat rows */
+.font-serif-numeric {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Shimmer animation */
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.shimmer { animation: shimmer 2s ease-in-out infinite; }
+
+/* Live pulse */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.live-pulse { animation: livePulse 2s ease-in-out infinite; }
+
+/* Typewriter cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink { animation: blink 0.8s step-end infinite; }
+
+/* Card flip perspective */
+.perspective-1000 { perspective: 1000px; }

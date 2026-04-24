@@ -97,7 +97,10 @@ def _normalize_memory_item(email: str, raw: dict[str, Any]) -> dict[str, Any] | 
     category = str(raw.get("category") or "").strip()
     label = str(raw.get("label") or "").strip()
     value = str(raw.get("value") or "").strip()
-    if category not in _MEMORY_CATEGORIES or not label or not value:
+    # Accept any non-empty category — the LLM decides what's meaningful.
+    # Previously this hard-filtered against _MEMORY_CATEGORIES and silently
+    # dropped valid categories like 'skill', 'education', 'project', etc.
+    if not category or not label or not value:
         return None
     source = str(raw.get("source") or "voice").strip().lower()
     if source not in {"voice", "audit", "profile", "application"}:

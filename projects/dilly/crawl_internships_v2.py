@@ -400,7 +400,12 @@ SMARTRECRUITERS_COMPANIES = {
     "LG":("LG","Tech"),
 }
 
-INTERN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [r'\bintern\b',r'\binternship\b',r'\bco-op\b',r'\bsummer\s+\d{4}\b',r'\bsummer\s+analyst\b',r'\bsummer\s+associate\b',r'\bfellowship\b']]
+INTERN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
+    r'\bintern\b', r'\binternship\b', r'\bco-op\b', r'\bcoop\b',
+    r'\bsummer\s+\d{4}\b', r'\bsummer\s+analyst\b', r'\bsummer\s+associate\b',
+    r'\bfellowship\b', r'\bsummer\s+program\b', r'\bstudent\s+program\b',
+    r'\bscholar\b',  # most scholarship programs are summer research
+]]
 
 NON_UNDERGRAD = [re.compile(p, re.IGNORECASE) for p in [r'\bPhD\b',r'\bPh\.D\b',r'\bMBA\b',r"\bMaster'?s\b",r'\bDoctoral\b',r'\bPost-?[Dd]oc\b',r'\bGraduate Student\b']]
 
@@ -411,38 +416,85 @@ ENTRY_LEVEL_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
     r'\brecent graduate\b', r'\bemerging talent\b', r'\bcampus\b',
     r'\bjunior\b', r'\bassociate\b(?!.*director)', r'\bcoordinator\b',
     r'\btrainee\b', r'\bapprenticeship\b', r'\bfellowship\b',
-    r'\brotational\b', r'\brotation program\b', r'\b0-1 years\b',
-    r'\bno experience\b', r'\bgraduate program\b',
+    r'\brotational\b', r'\brotation program\b',
+    r'\b0-1 years\b', r'\b0-2 years\b', r'\b1-2 years\b', r'\b0 to 2 years\b',
+    r'\bno experience\b', r'\bno prior experience\b', r'\bgreenfield\b',
+    r'\bgraduate program\b', r'\bfresh graduate\b', r'\bfreshly graduated\b',
+    r'\bgraduating\s+\d{4}\b', r'\bclass of \d{4}\b',
     r'\brepresentative\b', r'\bspecialist\b', r'\bassistant\b',
     r'\banalyst\b', r'\bclerk\b', r'\btechnician\b',
     r'\badvisor\b', r'\btutor\b', r'\bmentor\b',
+    r'\bassociate\s+[IiL1]\b',  # "Associate I", "Engineer I", "Level 1"
+    r'\blevel\s+[1IiL]\b', r'\bL[1-2]\b',
 ]]
 
 PART_TIME_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
-    r'\bcampus ambassador\b', r'\bbrand ambassador\b', r'\boffice assistant\b',
-    r'\bstudent worker\b', r'\bwork[ -]study\b', r'\bpart[ -]time\b',
-    r'\bcontent creator\b', r'\bsocial media\b(?=.*\b(assistant|creator|rep))',
+    r'\bpart[- ]time\b', r'\bpt\b(?=.*\b(role|position|job|hours)\b)',
+    r'\bcampus ambassador\b', r'\bbrand ambassador\b',
+    r'\boffice assistant\b', r'\blab assistant\b', r'\bresearch assistant\b',
+    r'\bteaching assistant\b', r'\b\bTA\b(?=.*\b(position|role|opening)\b)',
+    r'\bstudent worker\b', r'\bwork[- ]study\b',
+    r'\bper diem\b', r'\bhourly\b(?=.*\b(position|role|job|pay)\b)',
+    r'\bflexible hours\b', r'\bon[- ]call\b',
+    r'\bcontent creator\b', r'\bsocial media\b(?=.*\b(assistant|creator|rep|intern)\b)',
+    r'\bpeer tutor\b', r'\bstudent assistant\b', r'\bacademic coach\b',
+    r'\bstipend\b',  # stipend-based roles are typically part-time/research
 ]]
+
+# Description-level signals for internship (checked in addition to title)
+_INTERN_DESC_SIGNALS = [
+    'this is an internship', 'summer internship', 'internship program',
+    'co-op program', 'co-op opportunity', 'rotational program',
+    'student opportunity', 'undergraduate opportunity', 'undergrad position',
+    'for students', 'currently enrolled', 'pursuing a degree',
+    'academic year', 'school year', 'receive college credit',
+    'stipend', 'paid internship', 'unpaid internship',
+]
+
+# Description-level signals for part-time
+_PART_TIME_DESC_SIGNALS = [
+    'part-time', 'part time', 'hours per week', 'flexible schedule',
+    'work from home', 'remote opportunity', 'per diem', 'hourly rate',
+    'student worker', 'work-study', 'work study',
+]
+
+# Expanded description-level entry-level signals
+_ENTRY_DESC_SIGNALS = [
+    'entry level', 'entry-level', 'new grad', 'new graduate', 'recent graduate',
+    'early career', '0-1 years', '0-2 years', '1-2 years', '0 to 2 years',
+    'no experience required', 'no prior experience', 'fresh graduate',
+    'campus', 'university hiring', 'early talent', 'emerging talent',
+    'start your career', 'launch your career', 'begin your career',
+    'for students', 'seeking candidates who are', 'graduating students',
+    'bachelor\'s degree preferred', 'will train', 'no background required',
+    'open to all majors', 'career starter',
+]
+
 
 def classify_listing(title, description=""):
     """Classify a job listing. Returns: 'internship', 'entry_level', 'part_time', or 'other'.
-    All jobs are kept — classification is informational, not exclusionary."""
-    # Check internship first (highest priority)
+    All jobs are kept — classification is informational, not exclusionary.
+    Checks both title and description (first 2000 chars) for signals."""
+    desc_lower = (description or "")[:2000].lower()
+
+    # Internship: title first, then description
     if any(p.search(title) for p in INTERN_PATTERNS):
         return 'internship'
-    # Check part-time
+    if any(sig in desc_lower for sig in _INTERN_DESC_SIGNALS):
+        return 'internship'
+
+    # Part-time: title first, then description
     if any(p.search(title) for p in PART_TIME_PATTERNS):
         return 'part_time'
-    # Check entry-level
+    if any(sig in desc_lower for sig in _PART_TIME_DESC_SIGNALS):
+        return 'part_time'
+
+    # Entry-level: title first, then description
     if any(p.search(title) for p in ENTRY_LEVEL_PATTERNS):
         return 'entry_level'
-    # Check description for entry-level signals
-    desc_lower = (description or "")[:1000].lower()
-    entry_desc_signals = ['entry level', 'new grad', 'recent graduate', 'early career',
-        '0-1 years', 'no experience required', 'campus', 'university hiring',
-        'early talent', 'emerging talent', 'start your career']
-    if any(signal in desc_lower for signal in entry_desc_signals):
+    if any(sig in desc_lower for sig in _ENTRY_DESC_SIGNALS):
         return 'entry_level'
+
     return 'other'
 
 def is_internship(title):

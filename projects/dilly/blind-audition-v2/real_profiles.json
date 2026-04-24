@@ -1,0 +1,63 @@
+[
+  {
+    "id": "dilan-kochhar",
+    "email": "dilan.kochhar@spartans.ut.edu",
+    "displayName": "Candidate A",
+    "revealName": "Dilan Kochhar",
+    "track": "Data Science & Analytics",
+    "major": "Data Science",
+    "university": "University of Tampa",
+    "factCount": 20,
+    "dillyNarrative": "Dilan is a Data Science major at the University of Tampa who has been building things for revenue since high school. He currently runs freelance web development (6 active clients, monthly recurring revenue) and freelance app development (2 apps in progress for clients). He founded the Kochhar Foundation, which raised $22,000 and secured a national sponsor to build computer labs across southern India, reaching 100,000 people. He built an 88%-accurate lease prediction model for a Fort Lauderdale commercial real estate firm and is conducting $7,000-funded research using Apple Watch and Garmin data to predict mental health indicators. He founded a fraternity from scratch and wants to become president of the Data Science Club. His stated goal: raise Dilly into a million-dollar company.",
+    "facts": [
+      { "category": "achievement", "label": "Freelance Web Developer", "value": "Generating monthly revenue through 6 clients by providing them with top-tier sites that increase conversion and drive sales. Portfolio at dilankochhar.com" },
+      { "category": "achievement", "label": "Freelance App Developer", "value": "Currently working on 2 apps for clients to run their business on and generate future revenue." },
+      { "category": "achievement", "label": "Founder of the Kochhar Foundation", "value": "Raised $22,000 and garnered a national sponsor to purchase computers for poverty-stricken communities in Southern India, impacting 100,000 people." },
+      { "category": "achievement", "label": "Started a fraternity from scratch", "value": "Founded a fraternity organization, handled recruitment, culture building, and logistics from zero." },
+      { "category": "project_detail", "label": "Lease prediction model", "value": "Predicted lease signage with 88% accuracy using real data from a commercial real estate firm in Fort Lauderdale." },
+      { "category": "project_detail", "label": "AI Research in Psychology", "value": "Got $7,000 in funding to conduct research predicting mental health illness signs using Apple Watch and Garmin data." },
+      { "category": "skill_unlisted", "label": "TypeScript", "value": "Built various apps using TypeScript, including Dilly." },
+      { "category": "skill_unlisted", "label": "Python", "value": "Created projects and real-world applications using Python." },
+      { "category": "skill_unlisted", "label": "Full-stack Web Development", "value": "Built production apps and client websites generating real revenue." },
+      { "category": "skill_unlisted", "label": "Entrepreneurship", "value": "Spearheaded 4 ventures with co-founders. Founded Dilly on his own." },
+      { "category": "skill_unlisted", "label": "Team Leadership", "value": "Led teams across multiple ventures including fraternity founding and charity work." },
+      { "category": "soft_skill", "label": "Leadership and organization building", "value": "Demonstrated ability to recruit members, build organizational culture, and handle logistics for a new fraternity from the ground up." },
+      { "category": "personality", "label": "Motivated", "value": "If I put my mind to something, I will get it done." },
+      { "category": "strength", "label": "Hard working", "value": "One of the most hard working people you will meet. Gets things done and gets them done well." },
+      { "category": "goal", "label": "Raise Dilly into a million dollar company", "value": "Building Dilly as a real business while finishing school." },
+      { "category": "goal", "label": "Future president of the Data Science Club", "value": "Wants to become president of the college data science club due to passion for the subject and vast experience." },
+      { "category": "life_context", "label": "Born and raised outside New York City", "value": "Raised with the hustle culture of NYC and applied it to all his work. Always working non stop." },
+      { "category": "life_context", "label": "Coding since high school", "value": "Learned to code in high school and completed first projects there. Paved the way to building for revenue." },
+      { "category": "challenge", "label": "Fraternity awareness and marketing", "value": "Getting people to know about the new fraternity was the hardest part. Faced bottleneck in recruitment and visibility." },
+      { "category": "skill_unlisted", "label": "Entrepreneurship mindset", "value": "Spearheaded 4 ventures. Knows how to take an idea from zero to something real." }
+    ]
+  },
+  {
+    "id": "hamza-qureshi",
+    "email": "hamza.qureshi0420@gmail.com",
+    "displayName": "Candidate B",
+    "revealName": "Hamza Qureshi",
+    "track": "Software Engineering & CS",
+    "major": "Software Engineering",
+    "university": "University of Tampa",
+    "factCount": 3,
+    "dillyNarrative": "Hamza Qureshi is a software engineering student who builds applications from scratch in C. He gravitates toward low-level, technically demanding problems and is comfortable with memory management and complex system design. He has only used Dilly briefly, so his profile is early-stage. What Dilly knows about him comes entirely from one conversation: he loves the hardcore nature of building close to the metal, and he deliberately chooses the harder path when there is an easier option.",
+    "facts": [
+      { "category": "skill_unlisted", "label": "C programming expertise", "value": "Loves building apps from scratch in C programming language, comfortable with memory management." },
+      { "category": "personality", "label": "Enjoys technical challenges", "value": "Gravitates toward hardcore programming approaches, comfortable with complex technical challenges like memory management." },
+      { "category": "hobby", "label": "Building apps from scratch", "value": "Enjoys building applications from the ground up using C programming language." }
+    ]
+  },
+  {
+    "id": "gabriel-mfugale",
+    "email": "gabriel.mfugale@spartans.ut.edu",
+    "displayName": "Candidate C",
+    "revealName": "Gabriel Mfugale",
+    "track": "Cybersecurity & IT",
+    "major": "Cybersecurity",
+    "university": "University of Tampa",
+    "factCount": 0,
+    "dillyNarrative": "Gabriel is a Cybersecurity major who has not yet had a full conversation with Dilly. His profile is empty. No facts, no narrative, no signal. This is what a profile looks like before the conversations start.",
+    "facts": []
+  }
+]
