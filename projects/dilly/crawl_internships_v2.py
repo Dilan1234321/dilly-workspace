@@ -2664,6 +2664,38 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.4)
 
+    # ── Paylocity + Paycom (US mid-market HCM platforms) ────────────────
+    try:
+        from dilly_core.job_source_paylocity import (
+            PAYLOCITY_COMPANIES, fetch_paylocity_jobs,
+            PAYCOM_COMPANIES, fetch_paycom_jobs,
+        )
+        print(f"\n[Paylocity] Crawling {len(PAYLOCITY_COMPANIES)} companies...")
+        for cid, (name, industry) in PAYLOCITY_COMPANIES.items():
+            print(f"  {name} ({cid})...", end=" ", flush=True)
+            try:
+                jobs = fetch_paylocity_jobs(cid, name)
+                new = write_listings(conn, jobs, name, "paylocity", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+
+        print(f"\n[Paycom] Crawling {len(PAYCOM_COMPANIES)} companies...")
+        for token, (name, industry) in PAYCOM_COMPANIES.items():
+            print(f"  {name} ({token})...", end=" ", flush=True)
+            try:
+                jobs = fetch_paycom_jobs(token, name)
+                new = write_listings(conn, jobs, name, "paycom", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[paylocity/paycom] load failed: {e}")
+
     # ── TalentLyft (Eastern Europe / Balkans ATS) ───────────────────────
     try:
         from dilly_core.job_source_talentlyft import TALENTLYFT_COMPANIES, fetch_talentlyft_jobs

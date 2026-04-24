@@ -307,6 +307,23 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
 
+    # Paylocity + Paycom (US mid-market HCM platforms)
+    try:
+        from dilly_core.job_source_paylocity import fetch_all_paylocity, fetch_all_paycom
+        paylocity = fetch_all_paylocity() or []
+        inserted = sum(1 for item in paylocity if _upsert_listing(cur, item))
+        stats["sources"]["paylocity"] = {"fetched": len(paylocity), "inserted": inserted}
+        stats["total_fetched"] += len(paylocity)
+        stats["total_inserted"] += inserted
+
+        paycom = fetch_all_paycom() or []
+        inserted = sum(1 for item in paycom if _upsert_listing(cur, item))
+        stats["sources"]["paycom"] = {"fetched": len(paycom), "inserted": inserted}
+        stats["total_fetched"] += len(paycom)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"paylocity_paycom: {type(e).__name__}: {str(e)[:200]}")
+
     # TalentLyft (Eastern Europe / Balkans ATS)
     try:
         from dilly_core.job_source_talentlyft import fetch_all_talentlyft
