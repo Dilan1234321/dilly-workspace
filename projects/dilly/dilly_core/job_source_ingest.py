@@ -307,6 +307,28 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
 
+    # Zoho Recruit (India/SE Asia/MENA tech companies, global SMBs)
+    try:
+        from dilly_core.job_source_zoho import fetch_all_zoho
+        zoho = fetch_all_zoho() or []
+        inserted = sum(1 for item in zoho if _upsert_listing(cur, item))
+        stats["sources"]["zoho_recruit"] = {"fetched": len(zoho), "inserted": inserted}
+        stats["total_fetched"] += len(zoho)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"zoho_recruit: {type(e).__name__}: {str(e)[:200]}")
+
+    # Freshteam / Freshworks (SMB tech, SaaS, communications)
+    try:
+        from dilly_core.job_source_freshteam import fetch_all_freshteam
+        freshteam = fetch_all_freshteam() or []
+        inserted = sum(1 for item in freshteam if _upsert_listing(cur, item))
+        stats["sources"]["freshteam"] = {"fetched": len(freshteam), "inserted": inserted}
+        stats["total_fetched"] += len(freshteam)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"freshteam: {type(e).__name__}: {str(e)[:200]}")
+
     # ADP Recruiting (grocery/food distribution, financial services, homebuilding)
     try:
         from dilly_core.job_source_adp import fetch_all_adp

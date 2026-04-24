@@ -2664,6 +2664,40 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.4)
 
+    # ── Zoho Recruit (India / SE Asia / MENA tech companies) ────────────
+    try:
+        from dilly_core.job_source_zoho import ZOHO_COMPANIES, fetch_zoho_jobs
+        print(f"\n[Zoho Recruit] Crawling {len(ZOHO_COMPANIES)} companies...")
+        for slug, (name, industry) in ZOHO_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_zoho_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "zoho_recruit", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[zoho] load failed: {e}")
+
+    # ── Freshteam / Freshworks (SMB tech, SaaS, communications) ─────────
+    try:
+        from dilly_core.job_source_freshteam import FRESHTEAM_COMPANIES, fetch_freshteam_jobs
+        print(f"\n[Freshteam] Crawling {len(FRESHTEAM_COMPANIES)} companies...")
+        for slug, (name, industry) in FRESHTEAM_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_freshteam_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "freshteam", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[freshteam] load failed: {e}")
+
     # ── ADP Recruiting (food distribution, finance, homebuilding) ────────
     try:
         from dilly_core.job_source_adp import ADP_COMPANIES, fetch_adp_jobs
