@@ -324,6 +324,52 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"paylocity_paycom: {type(e).__name__}: {str(e)[:200]}")
 
+    # Darwinbox / Keka / TurboHire / Manatal / Skeeled / Springrecruit / X0PA
+    try:
+        from dilly_core.job_source_darwinbox import (
+            fetch_all_darwinbox, fetch_all_keka, fetch_all_turbohire,
+            fetch_all_manatal, fetch_all_skeeled, fetch_all_springrecruit, fetch_all_x0pa,
+        )
+        for fetch_fn, key in [
+            (fetch_all_darwinbox, "darwinbox"),
+            (fetch_all_keka, "keka"),
+            (fetch_all_turbohire, "turbohire"),
+            (fetch_all_manatal, "manatal"),
+            (fetch_all_skeeled, "skeeled"),
+            (fetch_all_springrecruit, "springrecruit"),
+            (fetch_all_x0pa, "x0pa"),
+        ]:
+            items = fetch_fn() or []
+            ins = sum(1 for item in items if _upsert_listing(cur, item))
+            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
+            stats["total_fetched"] += len(items)
+            stats["total_inserted"] += ins
+    except Exception as e:
+        stats["errors"].append(f"darwinbox_group: {type(e).__name__}: {str(e)[:200]}")
+
+    # ApplicantStack / ApplicantPro / ClearCompany / ExactHire / isolved / TalentReef / WorkBright
+    try:
+        from dilly_core.job_source_applicantstack import (
+            fetch_all_applicantstack, fetch_all_applicantpro, fetch_all_clearcompany,
+            fetch_all_exacthire, fetch_all_isolved, fetch_all_talentreef, fetch_all_workbright,
+        )
+        for fetch_fn, key in [
+            (fetch_all_applicantstack, "applicantstack"),
+            (fetch_all_applicantpro, "applicantpro"),
+            (fetch_all_clearcompany, "clearcompany"),
+            (fetch_all_exacthire, "exacthire"),
+            (fetch_all_isolved, "isolved"),
+            (fetch_all_talentreef, "talentreef"),
+            (fetch_all_workbright, "workbright"),
+        ]:
+            items = fetch_fn() or []
+            ins = sum(1 for item in items if _upsert_listing(cur, item))
+            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
+            stats["total_fetched"] += len(items)
+            stats["total_inserted"] += ins
+    except Exception as e:
+        stats["errors"].append(f"applicantstack_group: {type(e).__name__}: {str(e)[:200]}")
+
     # BreezyHR (SMB tech, agencies, field services)
     try:
         from dilly_core.job_source_breezyhr import fetch_all_breezyhr

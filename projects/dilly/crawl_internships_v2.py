@@ -2819,6 +2819,74 @@ def crawl_all():
     except Exception as e:
         print(f"[pinpoint/trakstar/gohire/jobylon] load failed: {e}")
 
+    # ── Darwinbox / Keka / TurboHire / Manatal / Skeeled / Springrecruit / X0PA ──
+    try:
+        from dilly_core.job_source_darwinbox import (
+            DARWINBOX_COMPANIES, fetch_darwinbox_jobs,
+            KEKA_COMPANIES, fetch_keka_jobs,
+            TURBOHIRE_COMPANIES, fetch_turbohire_jobs,
+            MANATAL_COMPANIES, fetch_manatal_jobs,
+            SKEELED_COMPANIES, fetch_skeeled_jobs,
+            SPRINGRECRUIT_COMPANIES, fetch_springrecruit_jobs,
+            X0PA_COMPANIES, fetch_x0pa_jobs,
+        )
+        for (companies_dict, fetch_fn, ats_type) in [
+            (DARWINBOX_COMPANIES, fetch_darwinbox_jobs, "darwinbox"),
+            (KEKA_COMPANIES, fetch_keka_jobs, "keka"),
+            (TURBOHIRE_COMPANIES, fetch_turbohire_jobs, "turbohire"),
+            (MANATAL_COMPANIES, fetch_manatal_jobs, "manatal"),
+            (SKEELED_COMPANIES, fetch_skeeled_jobs, "skeeled"),
+            (SPRINGRECRUIT_COMPANIES, fetch_springrecruit_jobs, "springrecruit"),
+            (X0PA_COMPANIES, fetch_x0pa_jobs, "x0pa"),
+        ]:
+            print(f"\n[{ats_type}] Crawling {len(companies_dict)} companies...")
+            for slug, (name, industry) in companies_dict.items():
+                print(f"  {name} ({slug})...", end=" ", flush=True)
+                try:
+                    jobs = fetch_fn(slug, name)
+                    new = write_listings(conn, jobs, name, ats_type, industry)
+                    print(f"{len(jobs)} jobs ({new} new)")
+                    total_found += len(jobs); total_new += new
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                time.sleep(0.4)
+    except Exception as e:
+        print(f"[darwinbox_group] load failed: {e}")
+
+    # ── ApplicantStack / ApplicantPro / ClearCompany / ExactHire / isolved / TalentReef / WorkBright ──
+    try:
+        from dilly_core.job_source_applicantstack import (
+            APPLICANTSTACK_COMPANIES, fetch_applicantstack_jobs,
+            APPLICANTPRO_COMPANIES, fetch_applicantpro_jobs,
+            CLEARCOMPANY_COMPANIES, fetch_clearcompany_jobs,
+            EXACTHIRE_COMPANIES, fetch_exacthire_jobs,
+            ISOLVED_COMPANIES, fetch_isolved_jobs,
+            TALENTREEF_COMPANIES, fetch_talentreef_jobs,
+            WORKBRIGHT_COMPANIES, fetch_workbright_jobs,
+        )
+        for (companies_dict, fetch_fn, ats_type) in [
+            (APPLICANTSTACK_COMPANIES, fetch_applicantstack_jobs, "applicantstack"),
+            (APPLICANTPRO_COMPANIES, fetch_applicantpro_jobs, "applicantpro"),
+            (CLEARCOMPANY_COMPANIES, fetch_clearcompany_jobs, "clearcompany"),
+            (EXACTHIRE_COMPANIES, fetch_exacthire_jobs, "exacthire"),
+            (ISOLVED_COMPANIES, fetch_isolved_jobs, "isolved"),
+            (TALENTREEF_COMPANIES, fetch_talentreef_jobs, "talentreef"),
+            (WORKBRIGHT_COMPANIES, fetch_workbright_jobs, "workbright"),
+        ]:
+            print(f"\n[{ats_type}] Crawling {len(companies_dict)} companies...")
+            for slug, (name, industry) in companies_dict.items():
+                print(f"  {name} ({slug})...", end=" ", flush=True)
+                try:
+                    jobs = fetch_fn(slug, name)
+                    new = write_listings(conn, jobs, name, ats_type, industry)
+                    print(f"{len(jobs)} jobs ({new} new)")
+                    total_found += len(jobs); total_new += new
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                time.sleep(0.4)
+    except Exception as e:
+        print(f"[applicantstack_group] load failed: {e}")
+
     # ── TalentLyft (Eastern Europe / Balkans ATS) ───────────────────────
     try:
         from dilly_core.job_source_talentlyft import TALENTLYFT_COMPANIES, fetch_talentlyft_jobs
