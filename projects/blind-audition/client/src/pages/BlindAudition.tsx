@@ -280,11 +280,11 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
         <DillyLogo />
       </div>
 
-      <h1 className="text-3xl font-bold text-zinc-900 tracking-tight mb-4 max-w-lg">
+      <h1 className="font-serif-display text-5xl sm:text-6xl font-semibold text-zinc-900 tracking-tight mb-5 max-w-xl leading-[1.02]">
         The Blind Audition
       </h1>
 
-      <p className="text-base text-zinc-500 max-w-md leading-relaxed mb-4">
+      <p className="text-base text-zinc-600 max-w-md leading-relaxed mb-3">
         Three real candidates. Actual students who used Dilly.
         Their profiles were built by talking to an AI, not uploading a resume.
       </p>
@@ -305,7 +305,9 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
           <LiveDot />
           <span className="text-xs font-medium text-zinc-700">
             Live from production ·{" "}
-            <span className="font-bold tabular-nums text-zinc-900">{liveFactCount}</span>{" "}
+            <span className="font-serif-numeric font-semibold text-zinc-900 text-sm">
+              {liveFactCount}
+            </span>{" "}
             fact{liveFactCount === 1 ? "" : "s"} across 3 profiles
           </span>
         </motion.div>
@@ -350,7 +352,7 @@ function RecruiterSetupScreen({
         <div className="mb-2">
           <DillyLogo />
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 mt-4 mb-1">
+        <h2 className="font-serif-display text-[1.625rem] sm:text-[1.875rem] font-semibold text-zinc-900 tracking-tight mt-5 mb-2 leading-[1.08]">
           Who are you hiring for?
         </h2>
         <p className="text-sm text-zinc-500 mb-8">
@@ -563,7 +565,7 @@ function RoleSelectScreen({
         <div className="mb-2">
           <DillyLogo />
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 mt-4 mb-1">
+        <h2 className="font-serif-display text-[1.625rem] sm:text-[1.875rem] font-semibold text-zinc-900 tracking-tight mt-5 mb-2 leading-[1.08]">
           What role are you hiring for?
         </h2>
         <p className="text-sm text-zinc-500 mb-8">
@@ -907,19 +909,26 @@ function BlindCard({
       {/* Header */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Editorial rank numeral — serif, oversized for a #1 moment,
+                quieter zinc for the rest. */}
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                rank === 0 ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
+              className={`font-serif-numeric text-[1.75rem] sm:text-[2rem] font-semibold leading-none tabular-nums flex-shrink-0 w-7 text-center ${
+                rank === 0 ? "text-zinc-900" : "text-zinc-300"
               }`}
+              aria-label={`Rank ${rank + 1}`}
             >
               {rank + 1}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-base font-semibold text-zinc-900 truncate">
+              <p
+                className={`${
+                  revealed ? "font-serif-display text-xl" : "text-base"
+                } font-semibold text-zinc-900 truncate leading-tight transition-all`}
+              >
                 {revealed ? candidate.revealName : candidate.displayName}
               </p>
-              <p className="text-xs text-zinc-500 truncate">
+              <p className="text-xs text-zinc-500 truncate mt-0.5">
                 {candidate.track || candidate.major || "Student"}
               </p>
             </div>
@@ -1159,13 +1168,13 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
       transition={{ duration: 0.55, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
       aria-labelledby="reflection-panel-heading"
     >
-      <div className="px-6 pt-6 pb-2">
-        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-1.5">
+      <div className="px-6 pt-7 pb-3">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-2.5">
           What this just proved
         </p>
         <h3
           id="reflection-panel-heading"
-          className="text-lg font-bold text-zinc-900 leading-snug mb-1"
+          className="font-serif-display text-2xl sm:text-[1.75rem] font-semibold text-zinc-900 leading-[1.12] tracking-tight mb-2"
         >
           The difference was profile depth, not prestige
         </h3>
@@ -1202,23 +1211,29 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
         })}
       </div>
 
-      <div className="px-5 sm:px-6 pt-3 pb-5 border-t border-zinc-100">
+      <div className="px-5 sm:px-6 pt-4 pb-6 border-t border-zinc-100">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <div className="text-xl font-bold text-zinc-900 tabular-nums">{total}</div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-0.5">
+            <div className="font-serif-numeric text-3xl sm:text-[2.25rem] font-semibold text-zinc-900 leading-none">
+              {total}
+            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-1.5">
               Facts total
             </div>
           </div>
           <div>
-            <div className="text-xl font-bold text-zinc-900 tabular-nums">{spread}</div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-0.5">
+            <div className="font-serif-numeric text-3xl sm:text-[2.25rem] font-semibold text-zinc-900 leading-none">
+              {spread}
+            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-1.5">
               Depth spread
             </div>
           </div>
           <div>
-            <div className="text-xl font-bold text-zinc-900 tabular-nums">3</div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-0.5">
+            <div className="font-serif-numeric text-3xl sm:text-[2.25rem] font-semibold text-zinc-900 leading-none">
+              {candidates.length}
+            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-1.5">
               Live profiles
             </div>
           </div>
@@ -1249,12 +1264,22 @@ function ReflectionPanel({ candidates }: { candidates: Candidate[] }) {
         </div>
       )}
 
-      <div className="px-6 py-5 bg-zinc-900 text-white">
-        <p className="text-base font-semibold leading-snug mb-1">
+      <div className="px-6 py-6 sm:py-7 bg-zinc-900 text-white relative overflow-hidden">
+        {/* Subtle radial highlight so the closing panel reads as a moment,
+            not just a colored box. Sits behind the text at low opacity. */}
+        <div
+          className="absolute inset-0 opacity-[0.08] pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 20% 0%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 55%)",
+          }}
+          aria-hidden
+        />
+        <p className="font-serif-display text-[1.4rem] sm:text-[1.625rem] font-medium leading-[1.2] tracking-tight mb-2 relative">
           A resume would have made these three look similar.
         </p>
-        <p className="text-sm text-zinc-300 leading-relaxed">
-          Dilly didn't. Every claim above has a receipt — where it came from,
+        <p className="text-sm text-zinc-400 leading-relaxed relative max-w-prose">
+          Dilly didn&apos;t. Every claim above has a receipt — where it came from,
           when it was said, how confident the system is. That is what a living
           profile looks like when hiring is run on signal instead of polish.
         </p>
@@ -1324,13 +1349,13 @@ function RankingScreen({
         <div className="mb-2">
           <DillyLogo />
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 mt-4 mb-1">
+        <h2 className="font-serif-display text-[1.75rem] sm:text-3xl font-semibold text-zinc-900 tracking-tight mt-5 mb-2 leading-[1.05]">
           Dilly ranked these three
         </h2>
         <p className="text-sm text-zinc-500 mb-1">
-          Role: <span className="font-medium text-zinc-700">{roleLabel}</span>
+          Role: <span className="font-medium text-zinc-800">{roleLabel}</span>
         </p>
-        <p className="text-xs text-zinc-400 mb-8">
+        <p className="text-xs text-zinc-400 mb-8 max-w-prose">
           Names hidden. Profiles built from real conversations. Reveal when ready. Express interest to get contact info and a Dilly intro.
         </p>
 

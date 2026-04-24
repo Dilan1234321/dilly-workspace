@@ -113,9 +113,24 @@ body {
   color: hsl(var(--foreground));
 }
 
-/* Montserrat for headings */
+/* Montserrat for tight modern headings (app-style) */
 .font-display {
   font-family: 'Montserrat', 'Inter', sans-serif;
+}
+
+/* Playfair Display for editorial hero moments — page title, revealed names,
+   rank numerals, ReflectionPanel closers. Keep rare; this font earns the
+   "moment" feel precisely because everything else is Inter. */
+.font-serif-display {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+/* Tabular numerals tuned to Playfair for vertical alignment in stat rows */
+.font-serif-numeric {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 /* Shimmer animation */
