@@ -364,7 +364,7 @@ function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
   return (
     <View style={[d.container, { paddingTop: insetTop }]}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-        <DillyFace size={120} />
+        <DillyFace size={120} mood="writing" accessory="pencil" />
         <Animated.Text
           style={{
             fontSize: 16,
