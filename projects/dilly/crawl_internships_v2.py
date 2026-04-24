@@ -1956,6 +1956,23 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.3)
 
+    # ── BambooHR (SMB tech, HR tech, e-commerce, design, cybersecurity) ──
+    try:
+        from dilly_core.job_source_bamboohr import BAMBOOHR_COMPANIES, fetch_bamboohr_jobs
+        print(f"\n[BambooHR] Crawling {len(BAMBOOHR_COMPANIES)} companies...")
+        for slug, (name, industry) in BAMBOOHR_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_bamboohr_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "bamboohr", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[bamboohr] load failed: {e}")
+
     # ── Discovered boards (from the discovery cron) ──────────────────
     # Run /cron/discover-boards once to populate. After that every
     # /cron/crawl-internships picks them up automatically here without

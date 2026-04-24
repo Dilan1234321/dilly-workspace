@@ -307,6 +307,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
 
+    # BambooHR (tech SMBs, HR tools, design, e-commerce, cybersecurity)
+    try:
+        from dilly_core.job_source_bamboohr import fetch_all_bamboohr
+        bamboo = fetch_all_bamboohr() or []
+        inserted = sum(1 for item in bamboo if _upsert_listing(cur, item))
+        stats["sources"]["bamboohr"] = {"fetched": len(bamboo), "inserted": inserted}
+        stats["total_fetched"] += len(bamboo)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"bamboohr: {type(e).__name__}: {str(e)[:200]}")
+
     conn.commit()
     return stats
 
