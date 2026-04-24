@@ -15,6 +15,9 @@ import { usePaywallState } from '../../hooks/usePaywall';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import useCelebration from '../../hooks/useCelebration';
 import ProfileGrowthToast from '../../components/ProfileGrowthToast';
+import { CONNECT_FEATURE_ENABLED } from '../../lib/connectConfig';
+import { useConnectOverlayState } from '../../hooks/useConnectOverlay';
+import ConnectModal from '../../components/connect/ConnectModal';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -121,6 +124,12 @@ function DillyTabIcon({ focused }: { focused: boolean }) {
       <Ionicons name="school" size={12} color={theme.accent} />
     </View>
   );
+}
+
+function ConnectModalWrapper() {
+  const { visible, options, close } = useConnectOverlayState();
+  if (!CONNECT_FEATURE_ENABLED) return null;
+  return <ConnectModal visible={visible} onClose={close} initialSection={options?.section} />;
 }
 
 function AppLayoutInner() {
@@ -396,6 +405,7 @@ export default function AppLayout() {
           <DillyGateWrapper />
           <DillyPaywallWrapper />
           <CelebrationWrapper />
+          <ConnectModalWrapper />
           {/* Global surfacing of Dilly's auto-writes to the user's
               profile. Listens to the extraction signal and shows a
               soft top-of-screen pill whenever new facts arrive.
