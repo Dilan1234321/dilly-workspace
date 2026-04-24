@@ -2887,6 +2887,40 @@ def crawl_all():
     except Exception as e:
         print(f"[applicantstack_group] load failed: {e}")
 
+    # ── CEIPAL / Avionte / PrismHR / JobAdder / Broadbean / Firefish / Vincere ──
+    try:
+        from dilly_core.job_source_staffing_ats import (
+            CEIPAL_COMPANIES, fetch_ceipal_jobs,
+            AVIONTE_COMPANIES, fetch_avionte_jobs,
+            PRISMHR_COMPANIES, fetch_prismhr_jobs,
+            JOBADDER_COMPANIES, fetch_jobadder_jobs,
+            BROADBEAN_COMPANIES, fetch_broadbean_jobs,
+            FIREFISH_COMPANIES, fetch_firefish_jobs,
+            VINCERE_COMPANIES, fetch_vincere_jobs,
+        )
+        for (companies_dict, fetch_fn, ats_type) in [
+            (CEIPAL_COMPANIES, fetch_ceipal_jobs, "ceipal"),
+            (AVIONTE_COMPANIES, fetch_avionte_jobs, "avionte"),
+            (PRISMHR_COMPANIES, fetch_prismhr_jobs, "prismhr"),
+            (JOBADDER_COMPANIES, fetch_jobadder_jobs, "jobadder"),
+            (BROADBEAN_COMPANIES, fetch_broadbean_jobs, "broadbean"),
+            (FIREFISH_COMPANIES, fetch_firefish_jobs, "firefish"),
+            (VINCERE_COMPANIES, fetch_vincere_jobs, "vincere"),
+        ]:
+            print(f"\n[{ats_type}] Crawling {len(companies_dict)} companies...")
+            for slug, (name, industry) in companies_dict.items():
+                print(f"  {name} ({slug})...", end=" ", flush=True)
+                try:
+                    jobs = fetch_fn(slug, name)
+                    new = write_listings(conn, jobs, name, ats_type, industry)
+                    print(f"{len(jobs)} jobs ({new} new)")
+                    total_found += len(jobs); total_new += new
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                time.sleep(0.4)
+    except Exception as e:
+        print(f"[staffing_ats_group] load failed: {e}")
+
     # ── TalentLyft (Eastern Europe / Balkans ATS) ───────────────────────
     try:
         from dilly_core.job_source_talentlyft import TALENTLYFT_COMPANIES, fetch_talentlyft_jobs

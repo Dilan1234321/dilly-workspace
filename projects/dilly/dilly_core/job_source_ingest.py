@@ -370,6 +370,29 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"applicantstack_group: {type(e).__name__}: {str(e)[:200]}")
 
+    # CEIPAL / Avionte / PrismHR / JobAdder / Broadbean / Firefish / Vincere (staffing ATSs)
+    try:
+        from dilly_core.job_source_staffing_ats import (
+            fetch_all_ceipal, fetch_all_avionte, fetch_all_prismhr,
+            fetch_all_jobadder, fetch_all_broadbean, fetch_all_firefish, fetch_all_vincere,
+        )
+        for fetch_fn, key in [
+            (fetch_all_ceipal, "ceipal"),
+            (fetch_all_avionte, "avionte"),
+            (fetch_all_prismhr, "prismhr"),
+            (fetch_all_jobadder, "jobadder"),
+            (fetch_all_broadbean, "broadbean"),
+            (fetch_all_firefish, "firefish"),
+            (fetch_all_vincere, "vincere"),
+        ]:
+            items = fetch_fn() or []
+            ins = sum(1 for item in items if _upsert_listing(cur, item))
+            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
+            stats["total_fetched"] += len(items)
+            stats["total_inserted"] += ins
+    except Exception as e:
+        stats["errors"].append(f"staffing_ats_group: {type(e).__name__}: {str(e)[:200]}")
+
     # BreezyHR (SMB tech, agencies, field services)
     try:
         from dilly_core.job_source_breezyhr import fetch_all_breezyhr
