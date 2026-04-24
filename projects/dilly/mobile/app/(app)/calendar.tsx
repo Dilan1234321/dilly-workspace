@@ -19,7 +19,6 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { openAddToCalendar, openSubscribeToDillyCalendar, isCalendarSubscribed } from '../../lib/calendar';
-import { remindDeadline, remindInterview, remindMeLater } from '../../lib/reminders';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { DillyFace } from '../../components/DillyFace';

@@ -1885,35 +1885,6 @@ function SeekerProfileScreen() {
           </ScrollView>
         </FadeInView>
 
-        {/* ── 5b. Milestones ──────────────────────────────────── */}
-        <FadeInView delay={350}>
-          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR MILESTONES</Text>
-          <View style={{ gap: 6 }}>
-            {totalFacts > 0 && (
-              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
-                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{totalFacts} fact{totalFacts !== 1 ? 's' : ''} in your Dilly Profile</Text>
-              </View>
-            )}
-            {resumes.length > 0 && (
-              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
-                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{resumes.length} tailored resume{resumes.length !== 1 ? 's' : ''} generated</Text>
-              </View>
-            )}
-            {totalFacts === 0 && resumes.length === 0 && (
-              <AnimatedPressable
-                style={[d.milestoneRow, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
-                onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'I just joined Dilly. Help me get started building my profile. Ask me about my experiences, skills, and goals.' })}
-                scaleDown={0.98}
-              >
-                <Ionicons name="chatbubble" size={16} color={theme.accent} />
-                <Text style={[d.milestoneText, { color: theme.accent }]}>Start telling Dilly about yourself to unlock milestones</Text>
-                <Ionicons name="chevron-forward" size={14} color={theme.accent} />
-              </AnimatedPressable>
-            )}
-          </View>
-        </FadeInView>
         {/* ── 6. Pulse timeline ─────────────────────────────────
             Surfaces the user's daily pulse reflections as a
             chronological body of work. Makes the daily habit
@@ -1970,6 +1941,36 @@ function SeekerProfileScreen() {
             })}
           </FadeInView>
         )}
+
+        {/* ── 8. Milestones ───────────────────────────────────── */}
+        <FadeInView delay={420}>
+          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR MILESTONES</Text>
+          <View style={{ gap: 6 }}>
+            {totalFacts > 0 && (
+              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
+                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{totalFacts} fact{totalFacts !== 1 ? 's' : ''} in your Dilly Profile</Text>
+              </View>
+            )}
+            {resumes.length > 0 && (
+              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
+                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{resumes.length} tailored resume{resumes.length !== 1 ? 's' : ''} generated</Text>
+              </View>
+            )}
+            {totalFacts === 0 && resumes.length === 0 && (
+              <AnimatedPressable
+                style={[d.milestoneRow, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+                onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'I just joined Dilly. Help me get started building my profile. Ask me about my experiences, skills, and goals.' })}
+                scaleDown={0.98}
+              >
+                <Ionicons name="chatbubble" size={16} color={theme.accent} />
+                <Text style={[d.milestoneText, { color: theme.accent }]}>Start telling Dilly about yourself to unlock milestones</Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.accent} />
+              </AnimatedPressable>
+            )}
+          </View>
+        </FadeInView>
 
         {/* Refresh reminder */}
         <View style={{ paddingHorizontal: 20, paddingVertical: 16, alignItems: 'center' }}>

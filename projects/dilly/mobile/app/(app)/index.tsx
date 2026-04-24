@@ -1084,10 +1084,10 @@ function SeekerHome() {
   } | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
-  // Journey tracking
-  const [visitedJobs, setVisitedJobs] = useState(false);
-  const [visitedArena, setVisitedArena] = useState(false);
-  const [doneInterview, setDoneInterview] = useState(false);
+  // Journey tracking — server-persisted dismissed set + live-state predicates
+  const [gsDismissed, setGsDismissed] = useState<Set<string>>(new Set());
+  const [gsInterviewDone, setGsInterviewDone] = useState(false);
+  const [gsHasReadyCheck, setGsHasReadyCheck] = useState(false);
 
   // Auth guard
   useFocusEffect(
@@ -1230,15 +1230,12 @@ function SeekerHome() {
           if (data?.headline) setWeeklyBrief(data);
         }).catch(() => {});
 
-        // Journey tracking from AsyncStorage
-        const [vj, va, di] = await Promise.all([
-          AsyncStorage.getItem('dilly_visited_jobs'),
-          AsyncStorage.getItem('dilly_visited_arena'),
-          AsyncStorage.getItem('dilly_done_interview'),
-        ]);
-        setVisitedJobs(vj === 'true');
-        setVisitedArena(va === 'true');
-        setDoneInterview(di === 'true');
+        // Journey tracking — server-persisted dismissed set + live predicates
+        const dismissed: string[] = Array.isArray(profileRes?.getting_started_dismissed)
+          ? profileRes.getting_started_dismissed : [];
+        setGsDismissed(new Set(dismissed));
+        setGsInterviewDone(Boolean(profileRes?.interview_done));
+        setGsHasReadyCheck(Boolean(profileRes?.has_ready_check));
       } catch {
         const still = await getToken();
         if (!still) { router.replace('/'); return; }
@@ -1285,31 +1282,58 @@ function SeekerHome() {
     recentDeadline: null,
   });
 
-  // Journey steps
+  // Fire-and-forget: persist a newly-completed step to the DB so it
+  // never resurfaces, even after reinstall or device switch.
+  function autoDissmissStep(id: string) {
+    if (gsDismissed.has(id)) return;
+    setGsDismissed(prev => new Set([...prev, id]));
+    dilly.fetch('/journey/dismiss', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step_id: id }),
+    }).catch(() => {});
+  }
+
+  // Journey steps — predicates against live server state, NOT tap booleans.
+  // Completed = predicate true OR server says already dismissed forever.
+  const gsPredicates: Record<string, boolean> = {
+    tell:      factCount > 3,
+    jobs:      appCount > 0 || savedJobCount > 0,
+    arena:     gsHasReadyCheck,
+    interview: gsInterviewDone,
+    save:      savedJobCount > 0 || appCount > 0,
+  };
+  // Auto-dismiss any step whose predicate just became true.
+  Object.entries(gsPredicates).forEach(([id, done]) => { if (done) autoDissmissStep(id); });
+
   const journeySteps: JourneyStep[] = [
     {
       id: 'tell', title: 'Tell Dilly about yourself', subtitle: 'The more Dilly knows, the better it helps.',
-      icon: 'chatbubble', color: colors.indigo, completed: factCount > 3,
+      icon: 'chatbubble', color: colors.indigo,
+      completed: gsPredicates.tell || gsDismissed.has('tell'),
       onPress: () => openDillyOverlay({ name: firstName, isPaid: false, initialMessage: 'Help me build my profile. Ask me about my experiences, skills, and goals.' }),
     },
     {
       id: 'jobs', title: 'Explore your job matches', subtitle: 'See what opportunities fit your profile.',
-      icon: 'briefcase', color: colors.blue, completed: visitedJobs,
-      onPress: async () => { await AsyncStorage.setItem('dilly_visited_jobs', 'true'); setVisitedJobs(true); router.push('/(app)/jobs'); },
+      icon: 'briefcase', color: colors.blue,
+      completed: gsPredicates.jobs || gsDismissed.has('jobs'),
+      onPress: () => router.push('/(app)/jobs'),
     },
     {
       id: 'arena', title: 'Check your AI readiness', subtitle: 'Find out how AI impacts your career.',
-      icon: 'shield-checkmark', color: '#00C853', completed: visitedArena,
-      onPress: async () => { await AsyncStorage.setItem('dilly_visited_arena', 'true'); setVisitedArena(true); router.push('/(app)/ai-arena'); },
+      icon: 'shield-checkmark', color: '#00C853',
+      completed: gsPredicates.arena || gsDismissed.has('arena'),
+      onPress: () => router.push('/(app)/ai-arena'),
     },
     {
       id: 'interview', title: 'Try a mock interview', subtitle: 'Practice makes confident.',
-      icon: 'mic', color: '#AF52DE', completed: doneInterview,
-      onPress: async () => { await AsyncStorage.setItem('dilly_done_interview', 'true'); setDoneInterview(true); router.push('/(app)/interview-practice'); },
+      icon: 'mic', color: '#AF52DE',
+      completed: gsPredicates.interview || gsDismissed.has('interview'),
+      onPress: () => router.push('/(app)/interview-practice'),
     },
     {
       id: 'save', title: 'Save your first job', subtitle: 'Start building your pipeline.',
-      icon: 'bookmark', color: colors.amber, completed: savedJobCount > 0 || appCount > 0,
+      icon: 'bookmark', color: colors.amber,
+      completed: gsPredicates.save || gsDismissed.has('save'),
       onPress: () => router.push('/(app)/jobs'),
     },
   ];

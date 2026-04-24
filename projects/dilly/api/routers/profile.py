@@ -35,7 +35,7 @@ async def get_profile(request: Request):
         profile = ensure_profile_exists(email)
         profile["profile_slug"] = get_profile_slug(email)
 
-        # Merge cohort scores from PostgreSQL
+        # Merge cohort scores + getting_started_dismissed from PostgreSQL
         try:
             import psycopg2, psycopg2.extras, json, os
             pw = os.environ.get("DILLY_DB_PASSWORD", "")
@@ -47,8 +47,14 @@ async def get_profile(request: Request):
                 database="dilly", user="dilly_admin", password=pw, sslmode="require"
             )
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            # Ensure getting_started_dismissed column exists (idempotent).
             cur.execute(
-                "SELECT cohort_scores, overall_smart, overall_grit, overall_build, overall_dilly_score "
+                "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
+                "getting_started_dismissed TEXT[] DEFAULT '{}'")
+            conn.commit()
+            cur.execute(
+                "SELECT cohort_scores, overall_smart, overall_grit, overall_build, "
+                "overall_dilly_score, getting_started_dismissed "
                 "FROM students WHERE LOWER(email) = LOWER(%s)", (email,)
             )
             row = cur.fetchone()
@@ -61,9 +67,28 @@ async def get_profile(request: Request):
                 profile["overall_grit"] = float(row["overall_grit"]) if row["overall_grit"] else None
                 profile["overall_build"] = float(row["overall_build"]) if row["overall_build"] else None
                 profile["overall_dilly_score"] = float(row["overall_dilly_score"]) if row["overall_dilly_score"] else None
+                dismissed = row["getting_started_dismissed"] or []
+                profile["getting_started_dismissed"] = list(dismissed)
+            # interview_done: any interview feedback used this month
+            try:
+                cur.execute(
+                    "SELECT COALESCE(interview_count_month, 0) AS cnt "
+                    "FROM users WHERE LOWER(email) = LOWER(%s)", (email,)
+                )
+                irow = cur.fetchone()
+                profile["interview_done"] = bool(irow and irow["cnt"] and int(irow["cnt"]) > 0)
+            except Exception:
+                profile["interview_done"] = False
             conn.close()
         except Exception:
             pass
+
+        # has_ready_check: at least one ready-check assessment on file.
+        try:
+            from projects.dilly.api.ready_check_store import list_ready_checks
+            profile["has_ready_check"] = len(list_ready_checks(email)) > 0
+        except Exception:
+            profile["has_ready_check"] = False
 
         # Fallback: if scores still missing, pull them from the latest audit in audit_history.json
         if not profile.get("overall_dilly_score"):
@@ -262,6 +287,47 @@ async def get_profile(request: Request):
         raise errors.validation_error(str(e))
     except Exception:
         raise errors.internal("Could not load profile.")
+
+
+@router.post("/journey/dismiss")
+async def dismiss_journey_step(request: Request, body: dict = Body(...)):
+    """Permanently mark a Getting Started step as dismissed for this user.
+    Idempotent. Once dismissed, the step is never surfaced again even if
+    the underlying predicate later becomes false."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    step_id = (body or {}).get("step_id", "")
+    if not step_id or not isinstance(step_id, str):
+        raise errors.validation_error("step_id is required")
+    try:
+        import psycopg2, psycopg2.extras, os
+        pw = os.environ.get("DILLY_DB_PASSWORD", "")
+        if not pw:
+            try: pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
+            except: pass
+        conn = psycopg2.connect(
+            host=os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+            database="dilly", user="dilly_admin", password=pw, sslmode="require"
+        )
+        cur = conn.cursor()
+        cur.execute(
+            "ALTER TABLE students ADD COLUMN IF NOT EXISTS "
+            "getting_started_dismissed TEXT[] DEFAULT '{}'")
+        # array_append only if not already present
+        cur.execute(
+            """UPDATE students
+               SET getting_started_dismissed = array_append(getting_started_dismissed, %s)
+               WHERE LOWER(email) = LOWER(%s)
+                 AND NOT (getting_started_dismissed @> ARRAY[%s]::TEXT[])""",
+            (step_id, email, step_id)
+        )
+        conn.commit()
+        conn.close()
+        return {"ok": True}
+    except Exception as exc:
+        raise errors.internal(f"Could not dismiss step: {exc}")
 
 
 @router.post("/profile/rescore-cohorts")

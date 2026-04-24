@@ -25,6 +25,7 @@ import { Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from './dilly';
 import { API_BASE } from './tokens';
+import { syncReminderForEvent } from './reminders';
 
 // AsyncStorage flag: "user has tapped Subscribe to Dilly Calendar at
 // least once on this device". When true, the Subscribe button on the
@@ -103,6 +104,8 @@ export async function openAddToCalendar(event: CalendarEventInput): Promise<void
       return;
     }
     await Linking.openURL(httpsUrl);
+    // Fire-and-forget: also create a native Reminder if the user opted in.
+    syncReminderForEvent(event.title, event.date).catch(() => {});
   } catch (e: any) {
     Alert.alert('Calendar', e?.message || 'Could not add to calendar.');
   }

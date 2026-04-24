@@ -18,6 +18,10 @@ import { getAppMode, modeLabel, modeDescription, ALL_MODES, type AppMode } from 
 import { primeAppMode, clearAppModeCache } from '../../hooks/useAppMode';
 import { clearThemeCache } from '../../hooks/useTheme';
 import { isCalendarSubscribed, unsubscribeFromDillyCalendar } from '../../lib/calendar';
+import {
+  isRemindersSyncEnabled, setRemindersSyncEnabled,
+  requestRemindersPermission, getRemindersPermission,
+} from '../../lib/reminders';
 import { triggerCelebration } from '../../hooks/useCelebration';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -249,8 +253,12 @@ export default function SettingsScreen() {
   // Whether the user has subscribed to the Dilly Calendar in iOS.
   // When true, we surface an "Unsubscribe" row so they can get out.
   const [calSubscribed, setCalSubscribed] = useState(false);
+  const [remindersSync, setRemindersSync] = useState(false);
   useEffect(() => {
-    (async () => setCalSubscribed(await isCalendarSubscribed()))();
+    (async () => {
+      setCalSubscribed(await isCalendarSubscribed());
+      setRemindersSync(await isRemindersSyncEnabled());
+    })();
   }, []);
   const [webProfileOn, setWebProfileOn] = useState(true);
   const [webSlug, setWebSlug] = useState('');
@@ -328,6 +336,9 @@ export default function SettingsScreen() {
       const id = requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ y: 0, animated: false });
       });
+      // Re-check calendar subscription on every focus so the toggle
+      // reflects current truth if the user unsubscribed from iOS Settings.
+      isCalendarSubscribed().then(setCalSubscribed);
       return () => cancelAnimationFrame(id);
     }, [])
   );
@@ -1171,25 +1182,52 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* Dilly Calendar — only shows once the user has subscribed
-            to the feed. Gives them a way to remove it without digging
-            through iOS Settings blind. The unsubscribe flow opens
-            iOS Settings with app-settings: and clears the local flag
-            so the Subscribe button comes back on the Calendar page. */}
-        {calSubscribed && (
-          <FadeInView delay={155}>
-            <SectionLabel text="DILLY CALENDAR" />
-            <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <Row
-                label="Remove Dilly Calendar from my phone"
-                onPress={async () => {
-                  await unsubscribeFromDillyCalendar();
-                  setCalSubscribed(await isCalendarSubscribed());
-                }}
-              />
-            </View>
-          </FadeInView>
-        )}
+        {/* Dilly Calendar — Reminders toggle is always surfaced so the
+            user can opt in before/after subscribing to the feed. The
+            unsubscribe row only appears once they've subscribed. */}
+        <FadeInView delay={155}>
+          <SectionLabel text="DILLY CALENDAR" />
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+            <ToggleRow
+              label="Sync to Reminders"
+              hint="Adds a native Reminder for each deadline you save to your calendar"
+              value={remindersSync}
+              onToggle={async (next) => {
+                if (next) {
+                  const granted = await requestRemindersPermission();
+                  if (!granted) {
+                    Alert.alert(
+                      'Reminders Access',
+                      'Dilly needs Reminders permission to sync your deadlines. Enable it in Settings > Privacy > Reminders.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Open Settings', onPress: () => Linking.openURL('app-settings:') },
+                      ],
+                    );
+                    return;
+                  }
+                  await setRemindersSyncEnabled(true);
+                  setRemindersSync(true);
+                } else {
+                  await setRemindersSyncEnabled(false);
+                  setRemindersSync(false);
+                }
+              }}
+            />
+            {calSubscribed && (
+              <>
+                <Divider />
+                <Row
+                  label="Remove Dilly Calendar from my phone"
+                  onPress={async () => {
+                    await unsubscribeFromDillyCalendar();
+                    setCalSubscribed(await isCalendarSubscribed());
+                  }}
+                />
+              </>
+            )}
+          </View>
+        </FadeInView>
 
         {/* About */}
         <FadeInView delay={160}>
