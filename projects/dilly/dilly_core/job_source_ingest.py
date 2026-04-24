@@ -324,6 +324,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"paylocity_paycom: {type(e).__name__}: {str(e)[:200]}")
 
+    # Hireology (automotive dealerships, home services franchises)
+    try:
+        from dilly_core.job_source_hireology import fetch_all_hireology
+        hireology = fetch_all_hireology() or []
+        inserted = sum(1 for item in hireology if _upsert_listing(cur, item))
+        stats["sources"]["hireology"] = {"fetched": len(hireology), "inserted": inserted}
+        stats["total_fetched"] += len(hireology)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"hireology: {type(e).__name__}: {str(e)[:200]}")
+
     # TalentLyft (Eastern Europe / Balkans ATS)
     try:
         from dilly_core.job_source_talentlyft import fetch_all_talentlyft

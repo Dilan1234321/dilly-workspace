@@ -2696,6 +2696,23 @@ def crawl_all():
     except Exception as e:
         print(f"[paylocity/paycom] load failed: {e}")
 
+    # ── Hireology (automotive dealerships + home services franchises) ────
+    try:
+        from dilly_core.job_source_hireology import HIREOLOGY_COMPANIES, fetch_hireology_jobs
+        print(f"\n[Hireology] Crawling {len(HIREOLOGY_COMPANIES)} organizations...")
+        for org_id, (name, industry) in HIREOLOGY_COMPANIES.items():
+            print(f"  {name} ({org_id})...", end=" ", flush=True)
+            try:
+                jobs = fetch_hireology_jobs(org_id, name)
+                new = write_listings(conn, jobs, name, "hireology", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[hireology] load failed: {e}")
+
     # ── TalentLyft (Eastern Europe / Balkans ATS) ───────────────────────
     try:
         from dilly_core.job_source_talentlyft import TALENTLYFT_COMPANIES, fetch_talentlyft_jobs
