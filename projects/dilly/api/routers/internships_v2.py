@@ -286,6 +286,9 @@ def _fallback_feed(
     cohort_filter: Optional[str],
     sort: str, limit: int, offset: int,
     s_cohort_scores: dict | None = None,
+    remote_only: Optional[bool] = None,
+    work_mode_filter: Optional[str] = None,
+    city_filter: Optional[str] = None,
 ):
     """Serve the feed using on-the-fly scoring (no match_scores rows needed)."""
     where = ["i.status = 'active'", "i.description IS NOT NULL", "length(i.description) > 100"]
@@ -303,7 +306,14 @@ def _fallback_feed(
         where.append(f"({_intl_clauses})")
         params.extend([f"%{c}%" for c in _intl_exclude])
 
-    if tab != "all":
+    # tab filtering: 'opportunities' and 'internship' both include entry_level + research_internship
+    if tab == "opportunities" or tab == "internship":
+        where.append("i.job_type IN ('internship', 'entry_level', 'research_internship', 'part_time')")
+    elif tab == "entry_level":
+        where.append("i.job_type IN ('entry_level', 'internship', 'research_internship')")
+    elif tab == "part_time":
+        where.append("i.job_type = 'part_time'")
+    elif tab != "all":
         where.append("i.job_type = %s")
         params.append(tab)
     if company_filter:
@@ -313,10 +323,17 @@ def _fallback_feed(
         where.append("(i.title ILIKE %s OR c.name ILIKE %s OR i.description ILIKE %s)")
         like = f"%{search}%"
         params.extend([like, like, like])
-    # Cohort filter: only jobs that list this cohort in cohort_requirements
     if cohort_filter:
         where.append("i.cohort_requirements::text ILIKE %s")
         params.append(f"%{cohort_filter}%")
+    if remote_only:
+        where.append("(i.remote = true OR i.work_mode = 'remote' OR LOWER(COALESCE(i.location_city,'')) LIKE '%remote%')")
+    if work_mode_filter:
+        where.append("i.work_mode = %s")
+        params.append(work_mode_filter)
+    if city_filter:
+        where.append("i.location_city ILIKE %s")
+        params.append(f"%{city_filter}%")
 
     where_sql = " AND ".join(where)
 
@@ -455,7 +472,7 @@ def _fallback_stats(cur, student_id: str, student_smart, student_grit, student_b
 @router.get("/v2/internships/feed")
 async def get_internship_feed(
     request: Request,
-    tab: str = Query("internship", description="internship, entry_level, part_time, or all"),
+    tab: str = Query("internship", description="internship, entry_level, part_time, all, or opportunities (internship+entry_level+research)"),
     readiness: Optional[str] = Query(None),
     cohort: Optional[str] = Query(None),
     company: Optional[str] = Query(None),
@@ -464,6 +481,9 @@ async def get_internship_feed(
     sort: str = Query("rank"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    remote: Optional[bool] = Query(None, description="Filter to remote-only listings"),
+    work_mode: Optional[str] = Query(None, description="Filter by work_mode: remote, onsite, hybrid"),
+    city: Optional[str] = Query(None, description="Filter by city (partial match)"),
 ):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
@@ -543,6 +563,7 @@ async def get_internship_feed(
             tab, readiness, company, search_term, cohort,
             sort, limit, offset,
             s_cohort_scores=s_cohort_scores,
+            remote_only=remote, work_mode_filter=work_mode, city_filter=city,
         )
         conn.close()
         return {**result, "tab": tab,
@@ -574,7 +595,14 @@ async def get_internship_feed(
         where.append(f"({_intl_clauses})")
         params.extend([f"%{c}%" for c in _intl_exclude])
 
-    if tab != "all":
+    # tab filtering: 'opportunities' and 'internship' both include entry_level + research_internship
+    if tab == "opportunities" or tab == "internship":
+        where.append("i.job_type IN ('internship', 'entry_level', 'research_internship', 'part_time')")
+    elif tab == "entry_level":
+        where.append("i.job_type IN ('entry_level', 'internship', 'research_internship')")
+    elif tab == "part_time":
+        where.append("i.job_type = 'part_time'")
+    elif tab != "all":
         where.append("i.job_type = %s")
         params.append(tab)
     if readiness:
@@ -590,6 +618,14 @@ async def get_internship_feed(
     if cohort:
         where.append("m.cohort_readiness::text ILIKE %s")
         params.append(f"%{cohort}%")
+    if remote:
+        where.append("(i.remote = true OR i.work_mode = 'remote' OR LOWER(COALESCE(i.location_city,'')) LIKE '%remote%')")
+    if work_mode:
+        where.append("i.work_mode = %s")
+        params.append(work_mode)
+    if city:
+        where.append("i.location_city ILIKE %s")
+        params.append(f"%{city}%")
 
     where_sql = " AND ".join(where)
     order = "m.rank_score DESC"
