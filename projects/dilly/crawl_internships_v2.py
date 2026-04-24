@@ -2664,6 +2664,36 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.4)
 
+    # ── UKG Pro + Dayforce (healthcare, hospitality, retail, trucking) ───
+    try:
+        from dilly_core.job_source_ukg import UKG_COMPANIES, DAYFORCE_COMPANIES
+        from dilly_core.job_source_ukg import fetch_ukg_jobs, fetch_dayforce_jobs
+        print(f"\n[UKG Pro] Crawling {len(UKG_COMPANIES)} tenants...")
+        for code, (name, industry) in UKG_COMPANIES.items():
+            print(f"  {name} ({code})...", end=" ", flush=True)
+            try:
+                jobs = fetch_ukg_jobs(code, name)
+                new = write_listings(conn, jobs, name, "ukg", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+
+        print(f"\n[Dayforce] Crawling {len(DAYFORCE_COMPANIES)} tenants...")
+        for cid, (name, industry) in DAYFORCE_COMPANIES.items():
+            print(f"  {name} ({cid})...", end=" ", flush=True)
+            try:
+                jobs = fetch_dayforce_jobs(cid, name)
+                new = write_listings(conn, jobs, name, "dayforce", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[ukg/dayforce] load failed: {e}")
+
     # ── Cornerstone OnDemand (retail, hospitality, healthcare, staffing) ─
     try:
         from dilly_core.job_source_cornerstone import CORNERSTONE_COMPANIES, fetch_cornerstone_jobs

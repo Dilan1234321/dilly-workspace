@@ -307,6 +307,23 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
 
+    # UKG Pro / Dayforce (healthcare, hospitality, retail, trucking)
+    try:
+        from dilly_core.job_source_ukg import fetch_all_ukg, fetch_all_dayforce
+        ukg = fetch_all_ukg() or []
+        inserted = sum(1 for item in ukg if _upsert_listing(cur, item))
+        stats["sources"]["ukg"] = {"fetched": len(ukg), "inserted": inserted}
+        stats["total_fetched"] += len(ukg)
+        stats["total_inserted"] += inserted
+
+        dayforce = fetch_all_dayforce() or []
+        inserted = sum(1 for item in dayforce if _upsert_listing(cur, item))
+        stats["sources"]["dayforce"] = {"fetched": len(dayforce), "inserted": inserted}
+        stats["total_fetched"] += len(dayforce)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"ukg_dayforce: {type(e).__name__}: {str(e)[:200]}")
+
     # Cornerstone OnDemand (retail chains, hospitals, staffing, manufacturing)
     try:
         from dilly_core.job_source_cornerstone import fetch_all_cornerstone
