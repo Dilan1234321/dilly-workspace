@@ -363,7 +363,7 @@ function AppLayoutInner() {
           comment here as a breadcrumb for readers who grep. */}
       <Tabs.Screen
         name="my-dilly-category"
-        options={{ href: null, animation: 'slide_from_right' }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="raise-brief"
