@@ -2713,6 +2713,112 @@ def crawl_all():
     except Exception as e:
         print(f"[hireology] load failed: {e}")
 
+    # ── BreezyHR (SMB tech, agencies, field services) ────────────────────
+    try:
+        from dilly_core.job_source_breezyhr import BREEZYHR_COMPANIES, fetch_breezyhr_jobs
+        print(f"\n[BreezyHR] Crawling {len(BREEZYHR_COMPANIES)} companies...")
+        for slug, (name, industry) in BREEZYHR_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_breezyhr_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "breezyhr", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[breezyhr] load failed: {e}")
+
+    # ── JazzHR (SMB US companies, restaurant chains, nonprofits) ─────────
+    try:
+        from dilly_core.job_source_jazzhr import JAZZHR_COMPANIES, fetch_jazzhr_jobs
+        print(f"\n[JazzHR] Crawling {len(JAZZHR_COMPANIES)} companies...")
+        for slug, (name, industry) in JAZZHR_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_jazzhr_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "jazzhr", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[jazzhr] load failed: {e}")
+
+    # ── Recruitee (European ATS — Poland, Netherlands, Germany) ──────────
+    try:
+        from dilly_core.job_source_recruitee import RECRUITEE_COMPANIES, fetch_recruitee_jobs
+        print(f"\n[Recruitee] Crawling {len(RECRUITEE_COMPANIES)} companies...")
+        for slug, (name, industry) in RECRUITEE_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_recruitee_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "recruitee", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[recruitee] load failed: {e}")
+
+    # ── Pinpoint / Trakstar / GoHire / Jobylon (UK + Scandi ATS) ─────────
+    try:
+        from dilly_core.job_source_pinpoint import (
+            PINPOINT_COMPANIES, fetch_pinpoint_jobs,
+            TRAKSTAR_COMPANIES, fetch_trakstar_jobs,
+            GOHIRE_COMPANIES, fetch_gohire_jobs,
+            JOBYLON_COMPANIES, fetch_jobylon_jobs,
+        )
+        print(f"\n[Pinpoint] Crawling {len(PINPOINT_COMPANIES)} companies...")
+        for slug, (name, industry) in PINPOINT_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_pinpoint_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "pinpoint", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+        print(f"\n[Trakstar] Crawling {len(TRAKSTAR_COMPANIES)} companies...")
+        for slug, (name, industry) in TRAKSTAR_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_trakstar_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "trakstar", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+        print(f"\n[GoHire] Crawling {len(GOHIRE_COMPANIES)} companies...")
+        for slug, (name, industry) in GOHIRE_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_gohire_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "gohire", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+        print(f"\n[Jobylon] Crawling {len(JOBYLON_COMPANIES)} companies...")
+        for slug, (name, industry) in JOBYLON_COMPANIES.items():
+            print(f"  {name} ({slug})...", end=" ", flush=True)
+            try:
+                jobs = fetch_jobylon_jobs(slug, name)
+                new = write_listings(conn, jobs, name, "jobylon", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[pinpoint/trakstar/gohire/jobylon] load failed: {e}")
+
     # ── TalentLyft (Eastern Europe / Balkans ATS) ───────────────────────
     try:
         from dilly_core.job_source_talentlyft import TALENTLYFT_COMPANIES, fetch_talentlyft_jobs

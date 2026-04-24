@@ -324,6 +324,58 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"paylocity_paycom: {type(e).__name__}: {str(e)[:200]}")
 
+    # BreezyHR (SMB tech, agencies, field services)
+    try:
+        from dilly_core.job_source_breezyhr import fetch_all_breezyhr
+        breezy = fetch_all_breezyhr() or []
+        inserted = sum(1 for item in breezy if _upsert_listing(cur, item))
+        stats["sources"]["breezyhr"] = {"fetched": len(breezy), "inserted": inserted}
+        stats["total_fetched"] += len(breezy)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"breezyhr: {type(e).__name__}: {str(e)[:200]}")
+
+    # JazzHR (US SMBs, restaurant chains, nonprofits)
+    try:
+        from dilly_core.job_source_jazzhr import fetch_all_jazzhr
+        jazz = fetch_all_jazzhr() or []
+        inserted = sum(1 for item in jazz if _upsert_listing(cur, item))
+        stats["sources"]["jazzhr"] = {"fetched": len(jazz), "inserted": inserted}
+        stats["total_fetched"] += len(jazz)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"jazzhr: {type(e).__name__}: {str(e)[:200]}")
+
+    # Recruitee (European ATS — Poland, Netherlands, Germany)
+    try:
+        from dilly_core.job_source_recruitee import fetch_all_recruitee
+        recruitee = fetch_all_recruitee() or []
+        inserted = sum(1 for item in recruitee if _upsert_listing(cur, item))
+        stats["sources"]["recruitee"] = {"fetched": len(recruitee), "inserted": inserted}
+        stats["total_fetched"] += len(recruitee)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"recruitee: {type(e).__name__}: {str(e)[:200]}")
+
+    # Pinpoint / Trakstar / GoHire / Jobylon (UK + Scandi ATS)
+    try:
+        from dilly_core.job_source_pinpoint import (
+            fetch_all_pinpoint, fetch_all_trakstar, fetch_all_gohire, fetch_all_jobylon
+        )
+        for fetch_fn, key in [
+            (fetch_all_pinpoint, "pinpoint"),
+            (fetch_all_trakstar, "trakstar"),
+            (fetch_all_gohire, "gohire"),
+            (fetch_all_jobylon, "jobylon"),
+        ]:
+            items = fetch_fn() or []
+            ins = sum(1 for item in items if _upsert_listing(cur, item))
+            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
+            stats["total_fetched"] += len(items)
+            stats["total_inserted"] += ins
+    except Exception as e:
+        stats["errors"].append(f"pinpoint_group: {type(e).__name__}: {str(e)[:200]}")
+
     # Hireology (automotive dealerships, home services franchises)
     try:
         from dilly_core.job_source_hireology import fetch_all_hireology
