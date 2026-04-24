@@ -370,6 +370,31 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"applicantstack_group: {type(e).__name__}: {str(e)[:200]}")
 
+    # Odoo / Paycor / iSmartRecruit / Jobsoid / JobScore / Crelate / Tracker RMS / Qureos
+    try:
+        from dilly_core.job_source_misc_ats import (
+            fetch_all_odoo, fetch_all_paycor, fetch_all_ismartrecruit,
+            fetch_all_jobsoid, fetch_all_jobscore, fetch_all_crelate,
+            fetch_all_tracker_rms, fetch_all_qureos,
+        )
+        for fetch_fn, key in [
+            (fetch_all_odoo, "odoo"),
+            (fetch_all_paycor, "paycor"),
+            (fetch_all_ismartrecruit, "ismartrecruit"),
+            (fetch_all_jobsoid, "jobsoid"),
+            (fetch_all_jobscore, "jobscore"),
+            (fetch_all_crelate, "crelate"),
+            (fetch_all_tracker_rms, "tracker_rms"),
+            (fetch_all_qureos, "qureos"),
+        ]:
+            items = fetch_fn() or []
+            ins = sum(1 for item in items if _upsert_listing(cur, item))
+            stats["sources"][key] = {"fetched": len(items), "inserted": ins}
+            stats["total_fetched"] += len(items)
+            stats["total_inserted"] += ins
+    except Exception as e:
+        stats["errors"].append(f"misc_ats_group: {type(e).__name__}: {str(e)[:200]}")
+
     # CEIPAL / Avionte / PrismHR / JobAdder / Broadbean / Firefish / Vincere (staffing ATSs)
     try:
         from dilly_core.job_source_staffing_ats import (

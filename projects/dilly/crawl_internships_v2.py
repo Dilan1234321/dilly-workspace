@@ -2921,6 +2921,42 @@ def crawl_all():
     except Exception as e:
         print(f"[staffing_ats_group] load failed: {e}")
 
+    # ── Odoo / Paycor / iSmartRecruit / Jobsoid / JobScore / Crelate / Tracker RMS / Qureos ──
+    try:
+        from dilly_core.job_source_misc_ats import (
+            ODOO_COMPANIES, fetch_odoo_jobs,
+            PAYCOR_COMPANIES, fetch_paycor_jobs,
+            ISMARTRECRUIT_COMPANIES, fetch_ismartrecruit_jobs,
+            JOBSOID_COMPANIES, fetch_jobsoid_jobs,
+            JOBSCORE_COMPANIES, fetch_jobscore_jobs,
+            CRELATE_COMPANIES, fetch_crelate_jobs,
+            TRACKER_RMS_COMPANIES, fetch_tracker_rms_jobs,
+            QUREOS_COMPANIES, fetch_qureos_jobs,
+        )
+        for (companies_dict, fetch_fn, ats_type) in [
+            (ODOO_COMPANIES, fetch_odoo_jobs, "odoo"),
+            (PAYCOR_COMPANIES, fetch_paycor_jobs, "paycor"),
+            (ISMARTRECRUIT_COMPANIES, fetch_ismartrecruit_jobs, "ismartrecruit"),
+            (JOBSOID_COMPANIES, fetch_jobsoid_jobs, "jobsoid"),
+            (JOBSCORE_COMPANIES, fetch_jobscore_jobs, "jobscore"),
+            (CRELATE_COMPANIES, fetch_crelate_jobs, "crelate"),
+            (TRACKER_RMS_COMPANIES, fetch_tracker_rms_jobs, "tracker_rms"),
+            (QUREOS_COMPANIES, fetch_qureos_jobs, "qureos"),
+        ]:
+            print(f"\n[{ats_type}] Crawling {len(companies_dict)} companies...")
+            for slug, (name, industry) in companies_dict.items():
+                print(f"  {name} ({slug})...", end=" ", flush=True)
+                try:
+                    jobs = fetch_fn(slug, name)
+                    new = write_listings(conn, jobs, name, ats_type, industry)
+                    print(f"{len(jobs)} jobs ({new} new)")
+                    total_found += len(jobs); total_new += new
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                time.sleep(0.4)
+    except Exception as e:
+        print(f"[misc_ats_group] load failed: {e}")
+
     # ── TalentLyft (Eastern Europe / Balkans ATS) ───────────────────────
     try:
         from dilly_core.job_source_talentlyft import TALENTLYFT_COMPANIES, fetch_talentlyft_jobs
