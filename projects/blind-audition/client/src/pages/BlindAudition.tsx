@@ -906,10 +906,10 @@ function BlindCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: rank * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className={`bg-white border rounded-2xl overflow-hidden transition-shadow relative ${
+      className={`bg-white border rounded-2xl overflow-hidden transition-[box-shadow,border-color,transform] duration-200 relative hover:-translate-y-[1px] ${
         rank === 0
-          ? "border-zinc-900 shadow-[0_1px_0_rgba(41,65,153,0.06),0_8px_24px_-12px_rgba(41,65,153,0.18)]"
-          : "border-zinc-200"
+          ? "border-zinc-900 shadow-[0_1px_0_rgba(41,65,153,0.06),0_8px_24px_-12px_rgba(41,65,153,0.18)] hover:shadow-[0_1px_0_rgba(41,65,153,0.08),0_12px_32px_-14px_rgba(41,65,153,0.24)]"
+          : "border-zinc-200 hover:border-zinc-300 hover:shadow-[0_2px_8px_-4px_rgba(0,0,0,0.08)]"
       }`}
     >
       {/* Indigo accent bar on #1 — brand color reads as a deliberate
@@ -936,13 +936,25 @@ function BlindCard({
               {rank + 1}
             </div>
             <div className="min-w-0 flex-1">
-              <p
-                className={`${
-                  revealed ? "font-serif-display text-xl" : "text-base"
-                } font-semibold text-zinc-900 truncate leading-tight transition-all`}
-              >
-                {revealed ? candidate.revealName : candidate.displayName}
-              </p>
+              {/* AnimatePresence on the name swap so reveal reads as a
+                  moment — old name fades out, new one fades up in. Pre-reveal
+                  "Candidate A" stays Inter (placeholder feel); post-reveal
+                  name promotes to Playfair Display serif. */}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.p
+                  key={revealed ? "revealed" : "hidden"}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  className={`${
+                    revealed ? "font-serif-display text-xl" : "text-base"
+                  } font-semibold text-zinc-900 truncate leading-tight`}
+                  data-testid={`candidate-name-${candidate.id}`}
+                >
+                  {revealed ? candidate.revealName : candidate.displayName}
+                </motion.p>
+              </AnimatePresence>
               <p className="text-xs text-zinc-500 truncate mt-0.5">
                 {candidate.track || candidate.major || "Student"}
               </p>
