@@ -304,6 +304,11 @@ function AccentPanel({ pending, patch, theme }: AxisProps) {
       >
         {ACCENT_PRESETS.map(p => {
           const selected = pending.accent === p.id;
+          // Show the resolved color so the swatch matches what the user
+          // actually sees in the app (e.g. Graphite → Slate gray in dark mode).
+          const isDark = theme.surface.dark;
+          const displayColor = (isDark && p.darkColor) ? p.darkColor : p.color;
+          const displayLabel = (isDark && p.darkLabel) ? p.darkLabel : p.label;
           return (
             <AnimatedPressable
               key={p.id}
@@ -313,12 +318,12 @@ function AccentPanel({ pending, patch, theme }: AxisProps) {
             >
               <View style={[{
                 width: 40, height: 40, borderRadius: 20,
-                backgroundColor: p.color,
+                backgroundColor: displayColor,
                 borderWidth: selected ? 3 : 1,
-                borderColor: selected ? p.color : 'rgba(0,0,0,0.08)',
+                borderColor: selected ? displayColor : 'rgba(0,0,0,0.08)',
                 alignItems: 'center', justifyContent: 'center',
               }, selected && {
-                shadowColor: p.color, shadowOpacity: 0.4, shadowRadius: 8,
+                shadowColor: displayColor, shadowOpacity: 0.4, shadowRadius: 8,
                 shadowOffset: { width: 0, height: 3 },
                 elevation: 3,
               }]}>
@@ -326,9 +331,9 @@ function AccentPanel({ pending, patch, theme }: AxisProps) {
               </View>
               <Text style={{
                 fontSize: 9, fontWeight: selected ? '800' : '600',
-                color: selected ? p.color : '#8A8AA0',
+                color: selected ? displayColor : '#8A8AA0',
               }}>
-                {p.label}
+                {displayLabel}
               </Text>
             </AnimatedPressable>
           );

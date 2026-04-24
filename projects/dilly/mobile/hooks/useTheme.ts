@@ -80,11 +80,15 @@ export interface AccentPreset {
    *  visible. Without this, resolveTheme falls back to '#FFFFFF' which makes
    *  accent-background buttons invisible (white bg + white text). */
   darkColor?: string;
+  /** Display name shown in Customize Dilly when the resolved dark-mode color
+   *  is significantly different from the stored color. Purely cosmetic — the
+   *  stored preference id never changes. */
+  darkLabel?: string;
 }
 
 export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'indigo',    label: 'Dilly',     color: '#2B3A8E' },
-  { id: 'navy',      label: 'Navy',      color: '#0F2A6B', darkColor: '#7EB5FF' },
+  { id: 'navy',      label: 'Navy',      color: '#0F2A6B', darkColor: '#7EB5FF', darkLabel: 'Cornflower' },
   { id: 'sky',       label: 'Sky',       color: '#0A84FF' },
   { id: 'teal',      label: 'Teal',      color: '#0D9488' },
   { id: 'emerald',   label: 'Emerald',   color: '#0E9F6E' },
@@ -94,7 +98,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'rose',      label: 'Rose',      color: '#E11D74' },
   { id: 'plum',      label: 'Plum',      color: '#9D174D' },
   { id: 'violet',    label: 'Violet',    color: '#7C3AED' },
-  { id: 'graphite',  label: 'Graphite',  color: '#1F2937', darkColor: '#9CA3AF' },
+  { id: 'graphite',  label: 'Graphite',  color: '#1F2937', darkColor: '#9CA3AF', darkLabel: 'Slate' },
 ];
 
 export interface SurfacePreset {
