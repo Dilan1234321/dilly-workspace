@@ -13,10 +13,10 @@
  * so the user can set their next session without leaving the recap flow.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
@@ -90,6 +90,18 @@ export default function ChapterRecapScreen() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // On first focus (session just ended, or first open): stay on recap.
+  // On every subsequent focus (user re-enters Chapter tab): redirect to
+  // prep so pressing Chapter always lands on the waiting/notes screen.
+  const hasInitialView = useRef(false);
+  useFocusEffect(useCallback(() => {
+    if (!hasInitialView.current) {
+      hasInitialView.current = true;
+      return;
+    }
+    router.replace('/(app)/chapter/prep' as any);
+  }, []));
 
   const onCardTap = useCallback((slot: string, body: string) => {
     openDillyOverlay({ initialMessage: seedFor(slot, body) });
