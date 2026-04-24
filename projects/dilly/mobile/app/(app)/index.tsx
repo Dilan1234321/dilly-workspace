@@ -100,7 +100,8 @@ function Skeleton({ width, height = 14, style }: { width: number | string; heigh
       Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
     ])).start();
   }, []);
-  return <Animated.View style={[{ width: width as any, height, borderRadius: 6, backgroundColor: '#E4E6F0', opacity }, style]} />;
+  const skTheme = useResolvedTheme();
+  return <Animated.View style={[{ width: width as any, height, borderRadius: 6, backgroundColor: skTheme.surface.s2 || '#E4E6F0', opacity }, style]} />;
 }
 
 // -- Journey Step Card --------------------------------------------------------
@@ -737,11 +738,11 @@ function SeniorResetHome() {
 
   if (loading) {
     return (
-      <View style={[sr.container, { paddingTop: insets.top }]}>
+      <View style={[sr.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
         <View style={{ padding: spacing.xl, gap: 16 }}>
-          <View style={[sr.skelBlock, { height: 48, width: '50%' }]} />
-          <View style={[sr.skelBlock, { height: 160 }]} />
-          <View style={[sr.skelBlock, { height: 120 }]} />
+          <View style={[sr.skelBlock, { height: 48, width: '50%', backgroundColor: theme.surface.s2 }]} />
+          <View style={[sr.skelBlock, { height: 160, backgroundColor: theme.surface.s2 }]} />
+          <View style={[sr.skelBlock, { height: 120, backgroundColor: theme.surface.s2 }]} />
         </View>
       </View>
     );
@@ -1328,7 +1329,7 @@ function SeekerHome() {
 
   if (loading) {
     return (
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
         <ScrollView contentContainerStyle={[s.scroll, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 40 }]}>
           <Skeleton width={160} height={20} style={{ marginBottom: 8 }} />
           <Skeleton width={220} height={14} style={{ marginBottom: 24 }} />

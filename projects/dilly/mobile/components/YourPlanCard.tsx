@@ -27,12 +27,15 @@
  *     they tap the CTA and Dilly can expand.
  *   - No "dismiss" button. The plan is always there.
  */
+import { useState, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import AnimatedPressable from './AnimatedPressable';
 import { useResolvedTheme } from '../hooks/useTheme';
 import { useTierFeel } from '../hooks/useTierFeel';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
+import { markPlanActionTaken } from '../hooks/useYourPlan';
 import type { YourPlan } from '../hooks/useYourPlan';
 
 interface Props {
@@ -44,18 +47,30 @@ interface Props {
 export function YourPlanCard({ plan, firstName }: Props) {
   const theme = useResolvedTheme();
   const feel = useTierFeel();
+  const [taken, setTaken] = useState(plan?.actionTaken ?? false);
+
+  useEffect(() => {
+    setTaken(plan?.actionTaken ?? false);
+  }, [plan?.actionTaken]);
 
   if (!plan) return null;
+
+  function handlePress() {
+    if (!plan) return;
+    setTaken(true);
+    markPlanActionTaken();
+    if (plan.destination === 'jobs') {
+      router.navigate('/(app)/jobs' as any);
+    } else {
+      openDillyOverlay({ name: firstName, isPaid: false, initialMessage: plan.initialMessage });
+    }
+  }
 
   return (
     <AnimatedPressable
       scaleDown={feel.pressScaleDown}
       haptic={feel.pressHaptic ? 'medium' : 'light'}
-      onPress={() => openDillyOverlay({
-        name: firstName,
-        isPaid: false,
-        initialMessage: plan.initialMessage,
-      })}
+      onPress={handlePress}
       style={{
         backgroundColor: theme.surface.s1,
         borderColor: theme.accent + '33',
@@ -98,6 +113,12 @@ export function YourPlanCard({ plan, firstName }: Props) {
         }}>
           YOUR PLAN · TODAY
         </Text>
+        {taken && (
+          <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <Ionicons name="checkmark-circle" size={13} color={theme.accent} />
+            <Text style={{ fontSize: 9, fontWeight: '900', color: theme.accent, letterSpacing: 0.8 }}>DONE</Text>
+          </View>
+        )}
       </View>
 
       {/* Headline — the action. */}
@@ -123,19 +144,23 @@ export function YourPlanCard({ plan, firstName }: Props) {
         {plan.followup}
       </Text>
 
-      {/* CTA row. One button. Always opens Dilly chat. */}
+      {/* CTA row. Routes by destination; shows done state. */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 6,
         marginTop: 4,
       }}>
-        <Ionicons name="chatbubble" size={13} color={theme.accent} />
+        <Ionicons
+          name={taken ? 'checkmark-circle' : plan.destination === 'jobs' ? 'briefcase' : 'chatbubble'}
+          size={13}
+          color={theme.accent}
+        />
         <Text style={{
           fontSize: 13, fontWeight: '800',
           color: theme.accent, letterSpacing: 0.2,
         }}>
-          {plan.cta}
+          {taken ? 'Done for today' : plan.cta}
         </Text>
-        <Ionicons name="arrow-forward" size={13} color={theme.accent} />
+        {!taken && <Ionicons name="arrow-forward" size={13} color={theme.accent} />}
       </View>
     </AnimatedPressable>
   );

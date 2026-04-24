@@ -46,16 +46,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Mode = 'student' | 'seeker' | 'holder';
 
+export type PlanDestination = 'chat' | 'jobs';
+
 export interface YourPlan {
   headline: string;
   followup: string;
   cta: string;
   initialMessage: string;
-  // Meta — the hook surfaces these so the card can render path-
-  // specific icons and colors without re-implementing the logic.
   mode: Mode;
   pathKey: string;
   generatedAt: string; // ISO date (YYYY-MM-DD)
+  destination: PlanDestination;
+  actionTaken?: boolean;
 }
 
 interface PlanInputs {
@@ -115,6 +117,7 @@ function generatePlan(i: PlanInputs): YourPlan {
       cta: 'Prep with Dilly',
       initialMessage: `Help me prep for "${recentDeadline.label}" which is ${recentDeadline.daysUntil <= 1 ? 'tomorrow' : `in ${recentDeadline.daysUntil} days`}.`,
       generatedAt: today(),
+      destination: 'chat',
     };
   }
 
@@ -129,6 +132,7 @@ function generatePlan(i: PlanInputs): YourPlan {
       cta: 'Start practice',
       initialMessage: "I'm interviewing this week. Help me pick the one I'm most worried about and run a mock.",
       generatedAt: today(),
+      destination: 'chat',
     };
   }
 
@@ -152,6 +156,7 @@ function generatePlan(i: PlanInputs): YourPlan {
         ? `I'm a ${currentRole}. Based on this week's field signal, what's ONE concrete move I should make to stay ahead?`
         : "Based on this week's field signal, what's ONE concrete move I should make to stay ahead?",
       generatedAt: today(),
+      destination: 'chat',
     };
   }
 
@@ -166,6 +171,7 @@ function generatePlan(i: PlanInputs): YourPlan {
         cta: 'Plan the ship',
         initialMessage: "I'm a dropout working on proof-over-paper. Help me pick the one thing to ship this week.",
         generatedAt: today(),
+        destination: 'chat',
       };
     }
     if (userPath === 'international_grad') {
@@ -177,6 +183,7 @@ function generatePlan(i: PlanInputs): YourPlan {
         cta: 'Start research',
         initialMessage: "I'm on an international-grad path. Help me pick one sponsor-friendly company to research deeply this week.",
         generatedAt: today(),
+        destination: 'jobs',
       };
     }
     // Default student anchor.
@@ -189,6 +196,7 @@ function generatePlan(i: PlanInputs): YourPlan {
         cta: 'Open jobs',
         initialMessage: 'Help me pick 3 roles to apply to this week. Start with the strongest matches.',
         generatedAt: today(),
+        destination: 'jobs',
       };
     }
     if (factCount < 12) {
@@ -200,6 +208,7 @@ function generatePlan(i: PlanInputs): YourPlan {
         cta: 'Talk to Dilly',
         initialMessage: 'Help me add 3 more things about my experience that a recruiter would want to know.',
         generatedAt: today(),
+        destination: 'chat',
       };
     }
     return {
@@ -210,6 +219,7 @@ function generatePlan(i: PlanInputs): YourPlan {
       cta: 'Start with Dilly',
       initialMessage: 'Help me draft one warm outreach message to someone in my target field this week.',
       generatedAt: today(),
+      destination: 'chat',
     };
   }
 
@@ -223,6 +233,7 @@ function generatePlan(i: PlanInputs): YourPlan {
       cta: 'Draft with Dilly',
       initialMessage: "I'm reopening my job search. Help me draft a check-in to one former colleague this week.",
       generatedAt: today(),
+      destination: 'chat',
     };
   }
   if (userPath === 'career_switch') {
@@ -234,6 +245,7 @@ function generatePlan(i: PlanInputs): YourPlan {
       cta: 'Plan it',
       initialMessage: "I'm switching careers. Help me pick ONE small project or case study I can publish this week.",
       generatedAt: today(),
+      destination: 'chat',
     };
   }
   if (userPath === 'parent_returning') {
@@ -245,6 +257,7 @@ function generatePlan(i: PlanInputs): YourPlan {
       cta: 'Find the person',
       initialMessage: "I'm returning to work after a career gap. Help me pick the one person to reach out to this week.",
       generatedAt: today(),
+      destination: 'chat',
     };
   }
   // Default seeker.
@@ -257,12 +270,23 @@ function generatePlan(i: PlanInputs): YourPlan {
     followup: appCount < 5
       ? 'Dilly will tailor a fit read on each one.'
       : 'A call beats three cold applications.',
-    cta: 'Start with Dilly',
+    cta: appCount < 5 ? 'Open jobs' : 'Start with Dilly',
     initialMessage: appCount < 5
       ? 'Help me pick 5 strong roles to apply to this week.'
       : "I've been applying consistently. Help me shift toward conversations this week.",
     generatedAt: today(),
+    destination: appCount < 5 ? 'jobs' : 'chat',
   };
+}
+
+/** Marks today's plan action as taken. Call when the user taps the CTA. */
+export async function markPlanActionTaken(): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const stored = JSON.parse(raw);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ...stored, actionTaken: true }));
+  } catch {}
 }
 
 /**
@@ -291,7 +315,7 @@ export function useYourPlan(inputs: PlanInputs | null): YourPlan | null {
           cached.plan.pathKey === inputs.userPath &&
           cached.plan.mode === inputs.mode
         ) {
-          if (!cancelled) setPlan(cached.plan);
+          if (!cancelled) setPlan({ ...cached.plan, actionTaken: cached.actionTaken ?? false });
           return;
         }
       } catch {
