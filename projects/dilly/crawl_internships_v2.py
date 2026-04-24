@@ -930,6 +930,13 @@ LEVER_COMPANIES = {
     "alation-io":("Alation","Tech"),
     "select-star":("Select Star","Tech"),
     "secoda-io":("Secoda","Tech"),
+
+    # ── Batch added 2026-04-24: verified working Lever slugs ──
+    "palantir":("Palantir","Tech"),       # 236 jobs verified
+    "plaid":("Plaid","Finance"),          # 92 jobs verified
+    "bazaarvoice":("Bazaarvoice","Tech"), # 30 jobs verified
+    "neon":("Neon","Tech"),               # 15 jobs verified
+    "prismic":("Prismic","Tech"),         # 7 jobs verified
 }
 
 ASHBY_COMPANIES = {
