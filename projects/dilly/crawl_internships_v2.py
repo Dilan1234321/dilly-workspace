@@ -2664,6 +2664,23 @@ def crawl_all():
             print(f"ERROR: {e}")
         time.sleep(0.4)
 
+    # ── Cornerstone OnDemand (retail, hospitality, healthcare, staffing) ─
+    try:
+        from dilly_core.job_source_cornerstone import CORNERSTONE_COMPANIES, fetch_cornerstone_jobs
+        print(f"\n[Cornerstone] Crawling {len(CORNERSTONE_COMPANIES)} tenants...")
+        for tenant, (name, industry, site_id) in CORNERSTONE_COMPANIES.items():
+            print(f"  {name} ({tenant})...", end=" ", flush=True)
+            try:
+                jobs = fetch_cornerstone_jobs(tenant, name, career_site_id=site_id)
+                new = write_listings(conn, jobs, name, "cornerstone", industry)
+                print(f"{len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"ERROR: {e}")
+            time.sleep(0.4)
+    except Exception as e:
+        print(f"[cornerstone] load failed: {e}")
+
     # ── Personio (European HR platform — DACH, France, Spain, Nordics) ──
     try:
         from dilly_core.job_source_personio import PERSONIO_COMPANIES, fetch_personio_jobs
