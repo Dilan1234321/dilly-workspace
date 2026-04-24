@@ -212,6 +212,17 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"simplify: {type(e).__name__}: {str(e)[:200]}")
 
+    # RemoteOK (~100 remote jobs, refreshed daily)
+    try:
+        from dilly_core.job_source_remoteok import fetch_remoteok_listings
+        remoteok = fetch_remoteok_listings() or []
+        inserted = sum(1 for item in remoteok if _upsert_listing(cur, item))
+        stats["sources"]["remoteok"] = {"fetched": len(remoteok), "inserted": inserted}
+        stats["total_fetched"] += len(remoteok)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"remoteok: {type(e).__name__}: {str(e)[:200]}")
+
     conn.commit()
     return stats
 
