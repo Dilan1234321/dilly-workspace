@@ -234,6 +234,57 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"weworkremotely: {type(e).__name__}: {str(e)[:200]}")
 
+    # iCIMS (enterprise: hospitals, pharma, defense, retail, insurance)
+    try:
+        from dilly_core.job_source_icims import fetch_all_icims
+        icims = fetch_all_icims() or []
+        inserted = sum(1 for item in icims if _upsert_listing(cur, item))
+        stats["sources"]["icims"] = {"fetched": len(icims), "inserted": inserted}
+        stats["total_fetched"] += len(icims)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"icims: {type(e).__name__}: {str(e)[:200]}")
+
+    # JazzHR (SMBs, staffing, agencies, healthcare SMBs)
+    try:
+        import sys as _sys, os as _os
+        _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", ".."))
+        from projects.dilly.crawl_internships_v2 import (
+            JAZZHR_COMPANIES, crawl_jazzhr,
+            RECRUITEE_COMPANIES, crawl_recruitee,
+            BREEZYHR_COMPANIES, crawl_breezyhr,
+            PINPOINT_COMPANIES, crawl_pinpoint,
+        )
+        for company_dict, crawl_fn, label in [
+            (JAZZHR_COMPANIES, crawl_jazzhr, "jazzhr"),
+            (RECRUITEE_COMPANIES, crawl_recruitee, "recruitee"),
+            (BREEZYHR_COMPANIES, crawl_breezyhr, "breezyhr"),
+            (PINPOINT_COMPANIES, crawl_pinpoint, "pinpoint"),
+        ]:
+            fetched = 0
+            inserted_count = 0
+            for slug, (name, industry) in company_dict.items():
+                try:
+                    jobs = crawl_fn(slug, name)
+                    fetched += len(jobs)
+                    for job in jobs:
+                        item = {
+                            **job,
+                            "external_id": job.get("external_id", f"{label}-{slug}-{job.get('title','')}"),
+                            "source_ats": label,
+                            "cohorts": [],
+                            "industry": industry.lower(),
+                        }
+                        if _upsert_listing(cur, item):
+                            inserted_count += 1
+                except Exception:
+                    pass
+            stats["sources"][label] = {"fetched": fetched, "inserted": inserted_count}
+            stats["total_fetched"] += fetched
+            stats["total_inserted"] += inserted_count
+    except Exception as e:
+        stats["errors"].append(f"new_ats_scrapers: {type(e).__name__}: {str(e)[:200]}")
+
     conn.commit()
     return stats
 
