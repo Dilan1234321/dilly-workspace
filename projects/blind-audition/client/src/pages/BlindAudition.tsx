@@ -1340,9 +1340,10 @@ function RankingScreen({
     setRevealedIds((prev) => new Set<string>([...Array.from(prev), id]));
   const allRevealed = revealedIds.size >= candidates.length;
 
-  // Stagger-reveals each remaining candidate with ~1.4s between each. Makes the
-  // "Reveal all at once" button a real moment instead of an instant flip — the
-  // pause between names is where the thesis lands.
+  // Stagger-reveals each remaining candidate. Interval tuned to 900ms now that
+  // cards sit side-by-side on desktop — fast enough to feel like a curtain
+  // moment, slow enough that three distinct reveals still register. The old
+  // 1400ms was right for stacked cards where the eye had to travel downward.
   const handleRevealAllStaggered = () => {
     if (revealing || allRevealed) return;
     setRevealing(true);
@@ -1353,7 +1354,7 @@ function RankingScreen({
         if (i === remaining.length - 1) {
           setTimeout(() => setRevealing(false), 400);
         }
-      }, 400 + i * 1400);
+      }, 300 + i * 900);
       revealTimeouts.current.push(t);
     });
   };
@@ -1365,116 +1366,263 @@ function RankingScreen({
     };
   }, []);
 
+  const shortlist = candidates.filter((c) => interestedIds.has(c.id));
+
   return (
     <motion.div
-      className="min-h-screen px-5 py-12"
+      className="min-h-screen px-5 sm:px-8 py-10 sm:py-12"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
     >
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-2">
-          <DillyLogo />
-        </div>
-        <h2 className="font-serif-display text-[1.75rem] sm:text-3xl font-semibold text-zinc-900 tracking-tight mt-5 mb-2 leading-[1.05]">
-          Dilly ranked these three
-        </h2>
-        <p className="text-sm text-zinc-500 mb-1">
-          Role: <span className="font-medium text-zinc-800">{roleLabel}</span>
-        </p>
-        <p className="text-xs text-zinc-400 mb-8 max-w-prose">
-          Names hidden. Profiles built from real conversations. Reveal when ready. Express interest to get contact info and a Dilly intro.
-        </p>
-
-        <div className="space-y-4 mb-8">
-          {candidates.map((candidate, i) => (
-            <BlindCard
-              key={candidate.id}
-              candidate={candidate}
-              rank={i}
-              onReveal={() => reveal(candidate.id)}
-              revealed={revealedIds.has(candidate.id)}
-              onInterest={() => setActiveModal(candidate)}
-              interestExpressed={interestedIds.has(candidate.id)}
-            />
-          ))}
-        </div>
-
-        {!allRevealed && (
-          <button
-            onClick={handleRevealAllStaggered}
-            disabled={revealing}
-            className="w-full py-3.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            data-testid="button-reveal-all"
-          >
-            {revealing ? "Revealing…" : "Reveal all at once"}
-          </button>
-        )}
-
-        {allRevealed && <ReflectionPanel candidates={candidates} />}
-
-        {allRevealed && interestedIds.size === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.65 }}
-            className="bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-5 mt-4"
-          >
-            <p className="text-sm font-semibold text-zinc-900 mb-1">What happens next.</p>
-            <p className="text-sm text-zinc-500 leading-relaxed">
-              If one of these candidates fits your role, hit "I'm interested."
-              Dilly drafts the intro, unlocks contact info, and notifies the candidate
-              that a recruiter found them through Dilly.
+      <div className="max-w-7xl mx-auto">
+        {/* ── Top header — spans full width ────────────────────────────────── */}
+        <div className="mb-8 flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <div className="mb-2">
+              <DillyLogo />
+            </div>
+            <h2 className="font-serif-display text-[1.75rem] sm:text-[2.25rem] lg:text-[2.5rem] font-semibold text-zinc-900 tracking-tight mt-5 mb-2 leading-[1.02]">
+              Dilly ranked these three
+            </h2>
+            <p className="text-sm text-zinc-500">
+              Role: <span className="font-medium text-zinc-800">{roleLabel}</span>
             </p>
-          </motion.div>
-        )}
+            <p className="text-xs text-zinc-400 mt-1 max-w-prose">
+              Names hidden. Profiles built from real conversations. Reveal when ready. Express interest to get contact info and a Dilly intro.
+            </p>
+          </div>
+          {recruiter.name && (
+            <div
+              className="hidden lg:flex flex-shrink-0 items-center gap-3 px-4 py-2.5 rounded-xl border border-zinc-200 bg-white"
+              data-testid="recruiter-identity-chip"
+            >
+              <div className="w-8 h-8 rounded-full bg-[#294199] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                {recruiter.name
+                  .split(/\s+/)
+                  .map((w) => w[0])
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-zinc-900 truncate max-w-[140px]">
+                  {recruiter.name}
+                </div>
+                <div className="text-[11px] text-zinc-500 truncate max-w-[140px]">
+                  {recruiter.company}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
-        {interestedIds.size > 0 && (
+        {/* ── Main canvas: 3-card grid + right-rail workspace on desktop ──── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          {/* Cards lane */}
+          <div className="lg:col-span-8 xl:col-span-9">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5 items-start">
+              {candidates.map((candidate, i) => (
+                <BlindCard
+                  key={candidate.id}
+                  candidate={candidate}
+                  rank={i}
+                  onReveal={() => reveal(candidate.id)}
+                  revealed={revealedIds.has(candidate.id)}
+                  onInterest={() => setActiveModal(candidate)}
+                  interestExpressed={interestedIds.has(candidate.id)}
+                />
+              ))}
+            </div>
+
+            {!allRevealed && (
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={handleRevealAllStaggered}
+                  disabled={revealing}
+                  className="px-6 py-3 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  data-testid="button-reveal-all"
+                >
+                  {revealing ? "Revealing…" : "Reveal all at once"}
+                </button>
+              </div>
+            )}
+
+            {allRevealed && (
+              <div className="mt-6">
+                <ReflectionPanel candidates={candidates} />
+              </div>
+            )}
+
+            {allRevealed && interestedIds.size === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.65 }}
+                className="bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-5 mt-4"
+              >
+                <p className="text-sm font-semibold text-zinc-900 mb-1">What happens next.</p>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  If one of these candidates fits your role, hit &quot;I&apos;m interested.&quot;
+                  Dilly drafts the intro, unlocks contact info, and notifies the candidate
+                  that a recruiter found them through Dilly.
+                </p>
+              </motion.div>
+            )}
+
+            {allRevealed && (
+              <motion.button
+                onClick={onTryDifferentRole}
+                className="mt-4 w-full py-3.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors flex items-center justify-center gap-2"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.8 }}
+                data-testid="button-try-different-role"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                See these same candidates for a different role
+              </motion.button>
+            )}
+          </div>
+
+          {/* ── Right rail — recruiter workspace ───────────────────────────── */}
+          <aside
+            className="lg:col-span-4 xl:col-span-3 flex flex-col gap-4 lg:sticky lg:top-8 lg:self-start"
+            data-testid="recruiter-workspace"
+          >
+            {/* Shortlist — candidates the recruiter has expressed interest in
+                this session. Shows up as soon as the first "I'm interested"
+                click lands, becomes the durable artifact of the session. */}
+            {shortlist.length > 0 && (
+              <div className="border border-zinc-200 rounded-2xl bg-white overflow-hidden">
+                <div className="px-4 pt-3 pb-2 border-b border-zinc-100 bg-zinc-50">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#294199]">
+                    Your shortlist
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {shortlist.length === 1
+                      ? "1 candidate flagged this session"
+                      : `${shortlist.length} candidates flagged this session`}
+                  </p>
+                </div>
+                <ul className="divide-y divide-zinc-100">
+                  {shortlist.map((c) => (
+                    <li key={c.id} className="px-4 py-3 flex items-center gap-2.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        aria-hidden
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-zinc-900 truncate">
+                          {revealedIds.has(c.id) ? c.revealName : c.displayName}
+                        </div>
+                        <div className="text-[11px] text-zinc-500 truncate">
+                          {c.track || c.major || "Student"}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Quick-facts rail card — role + ecosystem posture */}
+            <div className="border border-zinc-200 rounded-2xl bg-white overflow-hidden">
+              <div className="px-4 pt-3 pb-2 border-b border-zinc-100 bg-zinc-50">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#294199]">
+                  This audition
+                </p>
+              </div>
+              <div className="px-4 py-3 space-y-3 text-xs">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">
+                    Role
+                  </div>
+                  <div className="text-zinc-800 font-medium">{roleLabel}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">
+                    Candidates
+                  </div>
+                  <div className="text-zinc-800 font-medium">
+                    {candidates.length} live · {revealedIds.size}/{candidates.length} revealed
+                  </div>
+                </div>
+                {recruiter.email && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">
+                      Notifying as
+                    </div>
+                    <div className="text-zinc-800 font-medium truncate">{recruiter.email}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* How Dilly works — always-visible ambient context about the
+                underlying ecosystem. Reinforces that this isn't a resume
+                scanner; it's a live profile system. */}
+            <div className="border border-zinc-200 rounded-2xl bg-white overflow-hidden">
+              <div className="px-4 pt-3 pb-2 border-b border-zinc-100 bg-zinc-50">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#294199]">
+                  How this works
+                </p>
+              </div>
+              <ol className="px-4 py-3 space-y-2.5 text-xs text-zinc-600 leading-relaxed">
+                <li className="flex gap-2">
+                  <span className="font-serif-numeric font-semibold text-zinc-900 flex-shrink-0">1.</span>
+                  <span>Students talk to Dilly. Every conversation extracts structured facts with provenance.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-serif-numeric font-semibold text-zinc-900 flex-shrink-0">2.</span>
+                  <span>You paste a role. Dilly scores each live profile on fact richness and relevance.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-serif-numeric font-semibold text-zinc-900 flex-shrink-0">3.</span>
+                  <span>You reveal, decide, and Dilly drafts the intro to the candidate.</span>
+                </li>
+              </ol>
+            </div>
+          </aside>
+        </div>
+
+        {interestedIds.size > 0 && allRevealed && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-zinc-900 text-white rounded-2xl px-5 py-5"
+            className="bg-zinc-900 text-white rounded-2xl px-5 py-5 mt-6"
           >
             <p className="text-sm font-semibold mb-1">
               {interestedIds.size === 1
                 ? "You expressed interest in 1 candidate."
                 : `You expressed interest in ${interestedIds.size} candidates.`}
             </p>
-            <p className="text-sm text-zinc-400 leading-relaxed">
+            <p className="text-sm text-zinc-400 leading-relaxed max-w-prose">
               Dilly drafted the intro. They will know you found them through Dilly.
               This is what the end-to-end recruiter flow looks like when prestige is removed.
             </p>
           </motion.div>
-        )}
-
-        {/* Try a different role — the single action that viscerally proves
-            the profile-first thesis. Same candidates, different role, different
-            ranking. Recruiters who run this for two roles back-to-back
-            understand what Dilly is in a way five pitch decks can't convey. */}
-        {allRevealed && (
-          <motion.button
-            onClick={onTryDifferentRole}
-            className="mt-4 w-full py-3.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors flex items-center justify-center gap-2"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.8 }}
-            data-testid="button-try-different-role"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden
-            >
-              <polyline points="23 4 23 10 17 10" />
-              <polyline points="1 20 1 14 7 14" />
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-            </svg>
-            See these same candidates for a different role
-          </motion.button>
         )}
       </div>
 
