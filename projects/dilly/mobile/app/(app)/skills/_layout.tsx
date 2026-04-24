@@ -15,17 +15,14 @@
  */
 
 import { Stack } from 'expo-router';
-import { useResolvedTheme } from '../../../hooks/useTheme';
 
 export default function SkillsLayout() {
-  const theme = useResolvedTheme();
   return (
     <Stack
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
         animationDuration: 260,
-        contentStyle: { backgroundColor: theme.surface.bg },
       }}
     />
   );
