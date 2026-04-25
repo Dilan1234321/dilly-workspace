@@ -143,6 +143,48 @@ GREENHOUSE_COMPANIES = {
     'epicgames':('Epic Games','Media'),                  # 72
     'rockstargames':('Rockstar Games','Media'),          # 67
     'gatesventures':('Gates Ventures','Nonprofit'),      # 3
+    # ── Batch added 2026-04-25: verified with live job counts ──
+    'twitch':('Twitch','Media'),                         # 64
+    'beyondtrust':('BeyondTrust','Tech'),                # 54
+    'togetherai':('Together AI','Tech'),                 # 48
+    'stabilityai':('Stability AI','Tech'),               # 13
+    'sisense':('Sisense','Tech'),                        # 7
+    'anthropic':('Anthropic','Tech'),                    # 453
+    'fivetran':('Fivetran','Tech'),                      # 188
+    'hightouch':('Hightouch','Tech'),                    # 59
+    'lightricks':('Lightricks','Tech'),                  # 24
+    'payoneer':('Payoneer','Finance'),                   # 142
+    'newrelic':('New Relic','Tech'),                     # 62
+    'yotpo':('Yotpo','Tech'),                            # 48
+    'veracode':('Veracode','Tech'),                      # 24
+    'fieldwire':('Fieldwire','Tech'),                    # 22
+    'melio':('Melio','Finance'),                         # 19
+    'honeycomb':('Honeycomb','Tech'),                    # 8
+    'pandadoc':('PandaDoc','Tech'),                      # 78
+    'conga':('Conga','Tech'),                            # 42
+    'constantcontact':('Constant Contact','Tech'),       # 26
+    'nintex':('Nintex','Tech'),                          # 15
+    'motive':('Motive','Tech'),                          # 5
+    'scopely':('Scopely','Media'),                       # 179
+    '2k':('2K Games','Media'),                           # 116
+    'bird':('Bird','Consumer'),                          # 41
+    'naughtydog':('Naughty Dog','Media'),                # 15
+    'spin':('Spin','Consumer'),                          # 11
+    'trivago':('Trivago','Consumer'),                    # 10
+    'insomniac':('Insomniac Games','Media'),             # 6
+    'medium':('Medium','Media'),                         # 3
+    'bungie':('Bungie','Media'),                         # 2
+    'fanduel':('FanDuel','Consumer'),                    # 141
+    'spire':('Spire Global','Tech'),                     # 33
+    'zwift':('Zwift','Consumer'),                        # 8
+    'unity3d':('Unity Technologies','Tech'),             # 196
+    'appliedintuition':('Applied Intuition','Tech'),     # 196
+    'motional':('Motional','Tech'),                      # 116
+    'kodiak':('Kodiak Robotics','Tech'),                 # 63
+    'thetradedesk':('The Trade Desk','Tech'),            # 175
+    'stackadapt':('StackAdapt','Tech'),                  # 125
+    'triplelift':('TripleLift','Tech'),                  # 35
+    'a24':('A24','Media'),                               # 5
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -1226,6 +1268,25 @@ ASHBY_COMPANIES = {
     "stytch":("Stytch","Tech"),              # 5
     "mend-io":("Mend","Tech"),               # 6
     "rev":("Rev","Tech"),                    # 5
+    # ── Batch added 2026-04-25: more verified Ashby ──
+    "equip":("Equip Health","Healthcare"),   # 41
+    "pinecone":("Pinecone","Tech"),          # 8
+    "weaviate":("Weaviate","Tech"),          # 5
+    "abridge":("Abridge","Healthcare"),     # 64
+    "coder":("Coder","Tech"),               # 4
+    "anomalo":("Anomalo","Tech"),           # 1
+    "rasa":("Rasa","Tech"),                 # 8
+    "contrast-security":("Contrast Security","Tech"), # 5
+    "runway":("Runway","Tech"),             # 4
+    "ycombinator":("Y Combinator","Tech"),  # 8
+    "spotdraft":("SpotDraft","Tech"),       # 3
+    "workos":("WorkOS","Tech"),             # 31
+    "oso":("Oso","Tech"),                   # 7
+    "deepnote":("Deepnote","Tech"),         # 6
+    "authzed":("Authzed","Tech"),           # 5
+    "opslevel":("OpsLevel","Tech"),         # 2
+    "hinge-health":("Hinge Health","Healthcare"), # 84
+    "uniswap":("Uniswap","Finance"),        # 8
 }
 
 SMARTRECRUITERS_COMPANIES = {
