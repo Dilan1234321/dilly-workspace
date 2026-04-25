@@ -1,5 +1,5 @@
 /**
- * Dilly Skills — in-app home (build 353).
+ * Dilly Skills — in-app home (build 401).
  *
  * Skills is a full in-app surface that mirrors everything
  * skills.hellodilly.com does: browse cohorts, ask a question, watch
@@ -19,11 +19,18 @@
  *
  * Data: none on this screen. Cohort list is static. Heavy data lives
  * on the cohort detail page.
+ *
+ * Feature flag: SKILLS_RECOMMENDED_FIRST_ENABLED
+ *   OFF (default) → LibraryLanding  — the original 22-cohort grid
+ *   ON            → FeedLanding     — personalised hero + queue + cohort
+ *                                     strip, with full library behind a
+ *                                     "Browse full library" modal at bottom
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  Image, Modal, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +38,8 @@ import { router } from 'expo-router';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import { DillyFace } from '../../../components/DillyFace';
 import { FirstVisitCoach } from '../../../components/FirstVisitCoach';
+import { dilly } from '../../../lib/dilly';
+import { SKILLS_RECOMMENDED_FIRST_ENABLED } from '../../../lib/featureFlags';
 
 /** 22 backend cohort slugs — must stay in sync with
  *  projects/dilly/api/routers/skill_lab.py `_SLUG_TO_COHORT`.
@@ -62,7 +71,44 @@ const COHORTS: Cohort[] = [
   { slug: 'social-sciences-nonprofit',        label: 'Social Sciences & Nonprofit',   hint: 'People, institutions, mission-driven work.',        icon: 'heart-circle' },
 ];
 
+// ─── Feed types ───────────────────────────────────────────────────────────────
+
+interface FeedVideo {
+  id: string;
+  title: string;
+  duration_sec: number;
+  thumbnail_url: string;
+  cohort: string;
+  quality_score: number;
+  reason?: string;
+}
+
+interface FeedData {
+  hero: FeedVideo | null;
+  queue: FeedVideo[];
+  cohort_slug: string | null;
+  user_cohort: string | null;
+  cohort_preview: FeedVideo[];
+}
+
+// ─── Shared helper ────────────────────────────────────────────────────────────
+
+function fmtDuration(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// ─── Root export — thin flag gate, no hooks ───────────────────────────────────
+
 export default function SkillsHomeScreen() {
+  if (SKILLS_RECOMMENDED_FIRST_ENABLED) return <FeedLanding />;
+  return <LibraryLanding />;
+}
+
+// ─── LibraryLanding — original 22-cohort grid (unchanged logic) ───────────────
+
+function LibraryLanding() {
   const theme = useResolvedTheme();
   const insets = useSafeAreaInsets();
 
@@ -162,6 +208,235 @@ export default function SkillsHomeScreen() {
   );
 }
 
+// ─── FeedLanding — recommendation-first surface ───────────────────────────────
+
+const SCREEN_W = Dimensions.get('window').width;
+const COHORT_CARD_W = SCREEN_W * 0.44;
+
+function FeedLanding() {
+  const theme = useResolvedTheme();
+  const insets = useSafeAreaInsets();
+  const [feed, setFeed] = useState<FeedData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [browseOpen, setBrowseOpen] = useState(false);
+
+  useEffect(() => {
+    (dilly as any).get('/skill-lab/feed')
+      .then((data: FeedData) => setFeed(data))
+      .catch(() => setFeed({ hero: null, queue: [], cohort_slug: null, user_cohort: null, cohort_preview: [] }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.surface.bg }}
+        contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 120 }}
+      >
+        {/* Header — same co-brand as LibraryLanding */}
+        <View style={styles.header}>
+          <DillyFace size={44} mood="happy" accessory="none" />
+          <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
+        </View>
+
+        <Text style={[feedStyles.subhead, { color: theme.surface.t2 }]}>Today's picks for you</Text>
+
+        {loading ? (
+          <View style={feedStyles.loadingWrap}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        ) : !feed?.hero ? (
+          <View style={feedStyles.emptyWrap}>
+            <Text style={[feedStyles.emptyText, { color: theme.surface.t2 }]}>
+              No recommendations yet. Finish setting up your profile and check back.
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => setBrowseOpen(true)}
+              style={[feedStyles.browseBtn, { borderColor: theme.accentBorder }]}
+            >
+              <Ionicons name="grid-outline" size={16} color={theme.accent} />
+              <Text style={[feedStyles.browseBtnText, { color: theme.surface.t1 }]}>Browse full library</Text>
+              <Ionicons name="chevron-forward" size={13} color={theme.surface.t3} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* ── Hero card ── */}
+            <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 6 }]}>YOUR SKILL LAB TODAY</Text>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              style={[feedStyles.heroCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+              onPress={() => router.push(`/skills/video/${feed.hero!.id}`)}
+            >
+              <Image
+                source={{ uri: feed.hero.thumbnail_url }}
+                style={feedStyles.heroBanner}
+                resizeMode="cover"
+              />
+              <View style={feedStyles.heroBody}>
+                <Text style={[feedStyles.heroTitle, { color: theme.surface.t1 }]} numberOfLines={2}>
+                  {feed.hero.title}
+                </Text>
+                <View style={feedStyles.heroMeta}>
+                  <View style={[feedStyles.durationChip, { backgroundColor: theme.accentSoft }]}>
+                    <Text style={[feedStyles.durationText, { color: theme.accent }]}>
+                      {fmtDuration(feed.hero.duration_sec)}
+                    </Text>
+                  </View>
+                  {feed.hero.reason ? (
+                    <Text
+                      style={[feedStyles.reasonText, { color: theme.surface.t2 }]}
+                      numberOfLines={1}
+                    >
+                      {feed.hero.reason}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {/* ── Up next queue ── */}
+            {feed.queue.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 28 }]}>UP NEXT</Text>
+                {feed.queue.map(v => (
+                  <TouchableOpacity
+                    key={v.id}
+                    activeOpacity={0.88}
+                    style={[feedStyles.queueCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+                    onPress={() => router.push(`/skills/video/${v.id}`)}
+                  >
+                    <Image
+                      source={{ uri: v.thumbnail_url }}
+                      style={feedStyles.queueThumb}
+                      resizeMode="cover"
+                    />
+                    <View style={feedStyles.queueBody}>
+                      <Text
+                        style={[feedStyles.queueTitle, { color: theme.surface.t1 }]}
+                        numberOfLines={2}
+                      >
+                        {v.title}
+                      </Text>
+                      {v.reason ? (
+                        <Text
+                          style={[feedStyles.queueReason, { color: theme.surface.t2 }]}
+                          numberOfLines={1}
+                        >
+                          {v.reason}
+                        </Text>
+                      ) : null}
+                      <Text style={[feedStyles.queueDuration, { color: theme.surface.t3 }]}>
+                        {fmtDuration(v.duration_sec)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* ── Explore your cohort ── */}
+            {feed.cohort_slug && feed.cohort_preview.length > 0 && (
+              <>
+                <View style={feedStyles.sectionRow}>
+                  <Text style={[styles.sectionTitle, { color: theme.surface.t3 }]}>
+                    EXPLORE YOUR COHORT
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => router.push(`/skills/cohort/${feed.cohort_slug}`)}
+                    hitSlop={8}
+                  >
+                    <Text style={[feedStyles.seeAll, { color: theme.accent }]}>See all</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={feedStyles.cohortRow}
+                >
+                  {feed.cohort_preview.slice(0, 8).map(v => (
+                    <TouchableOpacity
+                      key={v.id}
+                      activeOpacity={0.88}
+                      style={[feedStyles.cohortCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+                      onPress={() => router.push(`/skills/video/${v.id}`)}
+                    >
+                      <Image
+                        source={{ uri: v.thumbnail_url }}
+                        style={feedStyles.cohortThumb}
+                        resizeMode="cover"
+                      />
+                      <Text
+                        style={[feedStyles.cohortTitle, { color: theme.surface.t1 }]}
+                        numberOfLines={2}
+                      >
+                        {v.title}
+                      </Text>
+                      <Text style={[feedStyles.cohortDuration, { color: theme.surface.t3 }]}>
+                        {fmtDuration(v.duration_sec)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {/* ── Browse full library ── */}
+            <TouchableOpacity
+              activeOpacity={0.88}
+              style={[feedStyles.browseBtn, { borderColor: theme.accentBorder, marginTop: 32 }]}
+              onPress={() => setBrowseOpen(true)}
+            >
+              <Ionicons name="grid-outline" size={16} color={theme.accent} />
+              <Text style={[feedStyles.browseBtnText, { color: theme.surface.t1 }]}>Browse full library</Text>
+              <Ionicons name="chevron-forward" size={13} color={theme.surface.t3} />
+            </TouchableOpacity>
+          </>
+        )}
+      </ScrollView>
+
+      {/* ── Full library modal — all 22 cohorts ── */}
+      <Modal
+        visible={browseOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setBrowseOpen(false)}
+      >
+        <View style={[feedStyles.modalRoot, { backgroundColor: theme.surface.bg }]}>
+          <View style={[feedStyles.modalHeader, { borderBottomColor: theme.surface.border }]}>
+            <Text style={[feedStyles.modalTitle, { color: theme.surface.t1 }]}>Full Library</Text>
+            <TouchableOpacity onPress={() => setBrowseOpen(false)} hitSlop={10}>
+              <Ionicons name="close" size={24} color={theme.surface.t2} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={feedStyles.modalContent}>
+            <View style={styles.grid}>
+              {COHORTS.map(c => (
+                <TouchableOpacity
+                  key={c.slug}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setBrowseOpen(false);
+                    router.push(`/skills/cohort/${c.slug}`);
+                  }}
+                  style={[styles.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+                >
+                  <Ionicons name={c.icon} size={22} color={theme.accent} />
+                  <Text style={[styles.cardTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{c.label}</Text>
+                  <Text style={[styles.cardHint, { color: theme.surface.t3 }]} numberOfLines={2}>{c.hint}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -242,5 +517,185 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     marginTop: 32,
     lineHeight: 16,
+  },
+});
+
+const feedStyles = StyleSheet.create({
+  subhead: {
+    fontSize: 14,
+    fontWeight: '600',
+    paddingHorizontal: 20,
+    marginTop: 2,
+    marginBottom: 16,
+  },
+  loadingWrap: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+
+  // Hero card
+  heroCard: {
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  heroBanner: {
+    width: '100%',
+    height: 190,
+    backgroundColor: '#111',
+  },
+  heroBody: {
+    padding: 14,
+  },
+  heroTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 21,
+    marginBottom: 10,
+  },
+  heroMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  durationChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  durationText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  reasonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+
+  // Queue cards
+  queueCard: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 13,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  queueThumb: {
+    width: 100,
+    height: 68,
+    backgroundColor: '#111',
+  },
+  queueBody: {
+    flex: 1,
+    padding: 10,
+    justifyContent: 'center',
+  },
+  queueTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 17,
+    marginBottom: 3,
+  },
+  queueReason: {
+    fontSize: 11,
+    fontWeight: '500',
+    lineHeight: 15,
+    marginBottom: 3,
+  },
+  queueDuration: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Cohort section
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 20,
+    marginTop: 28,
+  },
+  seeAll: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  cohortRow: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  cohortCard: {
+    width: COHORT_CARD_W,
+    borderRadius: 13,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  cohortThumb: {
+    width: '100%',
+    height: 88,
+    backgroundColor: '#111',
+  },
+  cohortTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+    padding: 8,
+    paddingBottom: 2,
+  },
+  cohortDuration: {
+    fontSize: 11,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+
+  // Browse button
+  browseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 13,
+    borderWidth: 1,
+  },
+  browseBtnText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // Library modal
+  modalRoot: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  modalContent: {
+    paddingTop: 16,
+    paddingBottom: 60,
   },
 });
