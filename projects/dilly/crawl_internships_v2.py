@@ -230,6 +230,25 @@ GREENHOUSE_COMPANIES = {
     'fastly':('Fastly','Tech'),                          # 63
     'descript':('Descript','Tech'),                      # 24
     'airship':('Airship','Tech'),                        # 16
+    'ogilvy':('Ogilvy','Consulting'),                    # 152
+    'wpp':('WPP','Consulting'),                          # 148
+    'classpass':('ClassPass','Consumer'),                # 77
+    'cision':('Cision','Tech'),                          # 67
+    'voxmedia':('Vox Media','Media'),                    # 24
+    'greenhouse':('Greenhouse.io','Tech'),               # 28
+    'ideo':('IDEO','Consulting'),                        # 11
+    'method':('Method','Consulting'),                    # 6
+    'angi':('Angi','Consumer'),                          # 101
+    'faire':('Faire','Consumer'),                        # 72
+    'golin':('Golin','Consulting'),                      # 42
+    'thumbtack':('Thumbtack','Consumer'),                # 39
+    'mitratech':('Mitratech','Tech'),                    # 34
+    'fleetio':('Fleetio','Tech'),                        # 20
+    'taskrabbit':('TaskRabbit','Consumer'),              # 17
+    'onespan':('OneSpan','Tech'),                        # 14
+    'mintel':('Mintel','Consulting'),                    # 13
+    'litify':('Litify','Tech'),                          # 5
+    'degreed':('Degreed','Tech'),                        # 4
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -1073,6 +1092,14 @@ LEVER_COMPANIES = {
     "corti":("Corti","Healthcare"),       # 15
     "infinitus":("Infinitus","Healthcare"), # 11
     "accord":("Accord","Tech"),             # 3
+    "benevity":("Benevity","Tech"),         # 25
+    "bestow":("Bestow","Finance"),          # 14
+    "belvo":("Belvo","Finance"),            # 8
+    "cardless":("Cardless","Finance"),      # 20
+    "capchase":("Capchase","Finance"),      # 3
+    "curri":("Curri","Consumer"),           # 25
+    "cosuno":("Cosuno","Tech"),             # 13
+    "datum":("Datum","Tech"),               # 7
 }
 
 ASHBY_COMPANIES = {
