@@ -52,6 +52,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import DillyLoadingState from '../../components/DillyLoadingState';
 import SkillsVideoCard from '../../components/SkillsVideoCard';
 import { resolvePlaybook } from '../../lib/arena/cohort-playbook';
+import { CONNECT_FEATURE_ENABLED } from '../../lib/connectConfig';
 
 // -- Types --------------------------------------------------------------------
 
@@ -76,6 +77,9 @@ interface Listing {
   company_website?: string | null;
   source?: string;
   job_type?: string;  // "internship" | "entry_level" | "full_time" | "part_time" | "other"
+  // TODO Phase 3: populated by /jobs endpoint when CONNECT_FEATURE_ENABLED
+  // and a recruiter at this company has signaled interest in the student.
+  recruiter_signal?: 'interested' | 'saved' | null;
 }
 
 /** City + type filter options (user-facing). City list is computed
@@ -1173,6 +1177,28 @@ function JobCard(props: CardCommonProps) {
       onPress={() => props.onExpand(job)}
       style={[styles.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
     >
+      {/* TODO Phase 3 (Connect): recruiter_signal comes from /jobs endpoint
+          when CONNECT_FEATURE_ENABLED and a recruiter at this company has
+          signalled interest. Currently always null — badge never renders. */}
+      {CONNECT_FEATURE_ENABLED && job.recruiter_signal && (
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 5,
+          marginBottom: 8, alignSelf: 'flex-start',
+          backgroundColor: theme.accentSoft,
+          borderWidth: 1, borderColor: theme.accentBorder,
+          borderRadius: theme.shape.chip,
+          paddingHorizontal: 10, paddingVertical: 4,
+        }}>
+          <Ionicons
+            name={job.recruiter_signal === 'interested' ? 'star' : 'bookmark'}
+            size={11}
+            color={theme.accent}
+          />
+          <Text style={{ fontSize: 11, fontWeight: '700', color: theme.accent }}>
+            {job.recruiter_signal === 'interested' ? 'Interested in you' : 'Saved you'}
+          </Text>
+        </View>
+      )}
       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
         <CompanyLogo job={job} size={32} theme={theme} />
         <View style={{ flex: 1 }}>

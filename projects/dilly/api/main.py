@@ -169,8 +169,10 @@ from projects.dilly.api.routers import wins as wins_router
 from projects.dilly.api.routers import field_pulse as field_pulse_router
 from projects.dilly.api.routers import cron_jobs_cleanup
 from projects.dilly.api.routers import skill_lab as skill_lab_router
+from projects.dilly.api.routers import field_intel as field_intel_router
 app.include_router(cron_jobs_cleanup.router)
 app.include_router(skill_lab_router.router)
+app.include_router(field_intel_router.router)
 app.include_router(aha_signals_router.router)
 app.include_router(chapters_router.router)
 app.include_router(pulse_router.router)
@@ -328,6 +330,20 @@ def _run_recompute_matches() -> None:
         traceback.print_exc()
 
 
+def _run_arena_weekly_agg() -> None:
+    """Compute AI Arena field intelligence aggregations. Runs Monday 06:00 UTC."""
+    try:
+        print("[CRON] arena-weekly-agg starting", flush=True)
+        from projects.dilly.scripts.arena_weekly_agg import run as agg_run
+        result = agg_run(force=True)
+        cohort_count = len((result or {}).get("cohorts", {}))
+        print(f"[CRON] arena-weekly-agg done — {cohort_count} cohorts", flush=True)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
+
 def _run_startup_migrations() -> None:
     """Run idempotent ALTER TABLE migrations on every startup.
 
@@ -344,6 +360,11 @@ def _run_startup_migrations() -> None:
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_verified_at TIMESTAMPTZ",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_logo_url TEXT",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_jobs_count INTEGER",
+            # AI Arena field intelligence attributes (classify_arena_attrs.py populates these)
+            "ALTER TABLE internships ADD COLUMN IF NOT EXISTS ai_fluency TEXT",
+            "ALTER TABLE internships ADD COLUMN IF NOT EXISTS role_cluster TEXT",
+            "CREATE INDEX IF NOT EXISTS idx_internships_ai_fluency ON internships (ai_fluency) WHERE status = 'active'",
+            "CREATE INDEX IF NOT EXISTS idx_internships_role_cluster ON internships (role_cluster) WHERE status = 'active'",
         ]
         with get_db() as conn:
             cur = conn.cursor()
@@ -371,8 +392,9 @@ def _on_startup() -> None:
         _scheduler = BackgroundScheduler(timezone="UTC")
         _scheduler.add_job(_run_crawl_internships, CronTrigger(hour=2, minute=0), id="crawl_internships", replace_existing=True)
         _scheduler.add_job(_run_recompute_matches, CronTrigger(hour=3, minute=0), id="recompute_matches", replace_existing=True)
+        _scheduler.add_job(_run_arena_weekly_agg, CronTrigger(day_of_week="mon", hour=6, minute=0), id="arena_weekly_agg", replace_existing=True)
         _scheduler.start()
-        print("[CRON] Scheduler started — crawl@02:00 UTC, matches@03:00 UTC", flush=True)
+        print("[CRON] Scheduler started — crawl@02:00 UTC, matches@03:00 UTC, arena_agg@Mon 06:00 UTC", flush=True)
     except Exception:
         import traceback
         print("[CRON] WARNING: scheduler failed to start", flush=True)

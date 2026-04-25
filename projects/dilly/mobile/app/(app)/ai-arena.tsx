@@ -28,6 +28,8 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+
+const ARENA_V2 = process.env.EXPO_PUBLIC_ARENA_V2 === 'true'
 import { dilly } from '../../lib/dilly'
 import { useAppMode } from '../../hooks/useAppMode'
 import { useResolvedTheme } from '../../hooks/useTheme'
@@ -76,6 +78,10 @@ export default function AIArenaScreen() {
   const mode = useAppMode()
 
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (ARENA_V2) router.replace('/(app)/arena/field-intel' as any)
+  }, [])
   const [refreshing, setRefreshing] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [facts, setFacts] = useState<any[]>([])

@@ -38,6 +38,9 @@ import {
 } from '../../components/SituationHomes';
 import { hasTieredSpec } from '../../lib/homeSpecs';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
+import { CONNECT_FEATURE_ENABLED } from '../../lib/connectConfig';
+import { openConnectOverlay } from '../../hooks/useConnectOverlay';
+import { ConnectHomeCard } from '../../components/connect/ConnectHomeCard';
 
 const W = Dimensions.get('window').width;
 const INDIGO = '#1B3FA0';
@@ -1425,6 +1428,28 @@ function SeekerHome() {
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              {/* Connect icon — recruiter activity hub.
+                  Gated behind CONNECT_FEATURE_ENABLED so it's invisible
+                  until the recruiter backend is ready to ship. The red
+                  dot signals unread recruiter activity (placeholder for
+                  now; Phase 3 will wire real unread count from API). */}
+              {CONNECT_FEATURE_ENABLED && (
+                <AnimatedPressable
+                  onPress={() => openConnectOverlay()}
+                  scaleDown={0.9}
+                  hitSlop={10}
+                  style={{ position: 'relative' }}
+                >
+                  <Ionicons name="people-outline" size={22} color={accent} />
+                  {/* TODO Phase 3: show only when recruiter unread count > 0 */}
+                  <View style={{
+                    position: 'absolute', top: -2, right: -2,
+                    width: 8, height: 8, borderRadius: 4,
+                    backgroundColor: '#EF4444',
+                    borderWidth: 1.5, borderColor: theme.surface.bg,
+                  }} />
+                </AnimatedPressable>
+              )}
               <AnimatedPressable
                 onPress={() => router.push({ pathname: '/(app)/my-dilly-profile', params: { openQr: '1' } })}
                 scaleDown={0.9}
