@@ -883,6 +883,9 @@ GREENHOUSE_COMPANIES = {
     'seesaw':('Seesaw','Education'),         # 11
     'propublica':('ProPublica','Media'),     # 7
     'housemarque':('Housemarque','Media'),   # 9
+    # Batch 15 verified
+    'crexi':('Crexi','Tech'),                # 20
+    'costar':('CoStar','Tech'),              # 4
 }
 
 LEVER_COMPANIES = {
@@ -1480,6 +1483,12 @@ ASHBY_COMPANIES = {
     "dust":("Dust","Tech"),                 # 23
     "magiceden":("Magic Eden","Finance"),   # 4
     "rewind":("Rewind","Tech"),             # 3
+    # Batch 15 verified
+    "redis":("Redis","Tech"),               # 102
+    "n8n":("n8n","Tech"),                   # 43
+    "flux":("Flux","Tech"),                 # 16
+    "httpie":("HTTPie","Tech"),             # 5
+    "readme":("ReadMe","Tech"),             # 3
 }
 
 SMARTRECRUITERS_COMPANIES = {
