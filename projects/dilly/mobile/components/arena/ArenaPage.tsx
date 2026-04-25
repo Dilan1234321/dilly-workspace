@@ -27,7 +27,7 @@ export default function ArenaPage({ eyebrow, title, subtitle, children }: Props)
     >
       <View style={s.header}>
         <TouchableOpacity
-          onPress={() => router.navigate('/(app)/ai-arena' as any)}
+          onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(app)/ai-arena' as any); }}
           hitSlop={12}
         >
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
