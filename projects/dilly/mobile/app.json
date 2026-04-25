@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.dilly.app",
-      "buildNumber": "397",
+      "buildNumber": "401",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
