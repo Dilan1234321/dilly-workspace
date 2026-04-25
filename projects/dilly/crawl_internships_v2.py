@@ -893,6 +893,8 @@ GREENHOUSE_COMPANIES = {
     # Batch 17 verified
     'mentimeter':('Mentimeter','Tech'),      # 30
     'stashinvest':('Stash','Finance'),       # 6
+    # Batch 18 verified
+    'skyscanner':('Skyscanner','Tech'),      # 23
 }
 
 LEVER_COMPANIES = {
@@ -1134,43 +1136,9 @@ LEVER_COMPANIES = {
     "omnisend":("Omnisend","Tech"),       # 19
     "outreach":("Outreach","Tech"),       # 29
     "clari":("Clari","Tech"),             # 4
-    "factory":("Factory","Tech"),         # 24
-    "commonroom":("Common Room","Tech"),  # 12
-    "artisan":("Artisan","Tech"),         # 12
-    "anyscale":("Anyscale","Tech"),       # 12
-    "gumloop":("Gumloop","Tech"),         # 11
-    "beam":("Beam","Tech"),               # 1
-    "swarmia":("Swarmia","Tech"),         # 5
-    "commure":("Commure","Healthcare"),   # 88
-    "corti":("Corti","Healthcare"),       # 15
-    "infinitus":("Infinitus","Healthcare"), # 11
-    "accord":("Accord","Tech"),             # 3
-    "benevity":("Benevity","Tech"),         # 25
-    "bestow":("Bestow","Finance"),          # 14
-    "belvo":("Belvo","Finance"),            # 8
-    "cardless":("Cardless","Finance"),      # 20
-    "capchase":("Capchase","Finance"),      # 3
-    "curri":("Curri","Consumer"),           # 25
-    "cosuno":("Cosuno","Tech"),             # 13
-    "datum":("Datum","Tech"),               # 7
-    "expressable":("Expressable","Healthcare"), # 74
-    "ditto":("Ditto","Tech"),               # 30
-    "delve":("Delve","Tech"),               # 15
-    "gelato":("Gelato","Tech"),             # 13
-    "duet":("Duet AI","Tech"),              # 7
-    "farmraise":("FarmRaise","Tech"),       # 2
-    # Batch 7 verified (H-M alphabetical sweep)
-    "hiive":("Hiive","Finance"),            # 25
-    "lemlist":("lemlist","Tech"),           # 18
-    "leandata":("LeanData","Tech"),         # 12
-    "litmus":("Litmus","Tech"),             # 12
-    "maple":("Maple","Tech"),               # 12
-    "honeybook":("HoneyBook","Tech"),       # 11
-    "interplay":("Interplay","Tech"),       # 11
-    "ignition":("Ignition","Tech"),         # 7
-    "klue":("Klue","Tech"),                 # 7
-    "kodex":("Kodex","Tech"),               # 2
-    "latitude":("Latitude","Tech"),         # 1
+    # Batch 18 verified
+    "jumpcloud":("JumpCloud","Tech"),     # 30
+    "sonatype":("Sonatype","Tech"),       # 18
 }
 
 ASHBY_COMPANIES = {
@@ -1501,6 +1469,41 @@ ASHBY_COMPANIES = {
     "ledge":("Ledge","Finance"),            # 2
     # Batch 17 verified
     "alephalpha":("Aleph Alpha","Tech"),    # 10
+    # Recovered from LEVER (these are Ashby-only companies)
+    "factory":("Factory","Tech"),           # 24
+    "commonroom":("Common Room","Tech"),    # 12
+    "artisan":("Artisan","Tech"),           # 12
+    "beam":("Beam","Tech"),                 # 1
+    "swarmia":("Swarmia","Tech"),           # 5
+    "commure":("Commure","Healthcare"),     # 88
+    "corti":("Corti","Healthcare"),         # 15
+    "infinitus":("Infinitus","Healthcare"), # 11
+    "accord":("Accord","Tech"),             # 3
+    "benevity":("Benevity","Tech"),         # 25
+    "bestow":("Bestow","Finance"),          # 14
+    "belvo":("Belvo","Finance"),            # 8
+    "cardless":("Cardless","Finance"),      # 20
+    "capchase":("Capchase","Finance"),      # 3
+    "curri":("Curri","Consumer"),           # 25
+    "cosuno":("Cosuno","Tech"),             # 13
+    "datum":("Datum","Tech"),               # 7
+    "expressable":("Expressable","Healthcare"), # 74
+    "ditto":("Ditto","Tech"),               # 30
+    "delve":("Delve","Tech"),               # 15
+    "gelato":("Gelato","Tech"),             # 13
+    "duet":("Duet AI","Tech"),              # 7
+    "farmraise":("FarmRaise","Tech"),       # 2
+    "hiive":("Hiive","Finance"),            # 25
+    "lemlist":("lemlist","Tech"),           # 18
+    "leandata":("LeanData","Tech"),         # 12
+    "litmus":("Litmus","Tech"),             # 12
+    "maple":("Maple","Tech"),               # 12
+    "honeybook":("HoneyBook","Tech"),       # 11
+    "interplay":("Interplay","Tech"),       # 11
+    "ignition":("Ignition","Tech"),         # 7
+    "klue":("Klue","Tech"),                 # 7
+    "kodex":("Kodex","Tech"),               # 2
+    "latitude":("Latitude","Tech"),         # 1
 }
 
 SMARTRECRUITERS_COMPANIES = {
