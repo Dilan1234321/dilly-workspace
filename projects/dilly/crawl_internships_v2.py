@@ -877,6 +877,12 @@ GREENHOUSE_COMPANIES = {
     'mill':('Mill','Tech'),                  # 12
     'maven':('Maven','Tech'),                # 5
     'gradle':('Gradle','Tech'),              # 4
+    # Batch 14 verified
+    'datacamp':('DataCamp','Education'),     # 43
+    'axios':('Axios','Media'),               # 26
+    'seesaw':('Seesaw','Education'),         # 11
+    'propublica':('ProPublica','Media'),     # 7
+    'housemarque':('Housemarque','Media'),   # 9
 }
 
 LEVER_COMPANIES = {
@@ -1470,6 +1476,10 @@ ASHBY_COMPANIES = {
     "mem":("Mem","Tech"),                   # 4
     "roam":("Roam Research","Tech"),        # 3
     "convex-dev":("Convex","Tech"),         # 3
+    # Batch 14 verified
+    "dust":("Dust","Tech"),                 # 23
+    "magiceden":("Magic Eden","Finance"),   # 4
+    "rewind":("Rewind","Tech"),             # 3
 }
 
 SMARTRECRUITERS_COMPANIES = {
