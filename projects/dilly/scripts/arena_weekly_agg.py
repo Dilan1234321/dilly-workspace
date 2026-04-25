@@ -151,7 +151,7 @@ def run(force: bool = False) -> dict:
               AND i.cohort_requirements != 'null'::jsonb
               AND i.cohort_requirements != '[]'::jsonb
             GROUP BY cohort
-            HAVING COUNT(*) >= 30        -- filter noise
+            HAVING COUNT(*) >= 100       -- filter noise (min 100 listings for credible signal)
             ORDER BY ai_pct DESC NULLS LAST
         """)
         cohort_rows = cur.fetchall()
