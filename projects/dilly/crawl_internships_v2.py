@@ -223,6 +223,13 @@ GREENHOUSE_COMPANIES = {
     'ghost':('Ghost','Media'),                           # 4
     'recharge':('Recharge','Tech'),                      # 5
     'rocketlawyer':('Rocket Lawyer','Tech'),             # 20
+    'dialpad':('Dialpad','Tech'),                        # 93
+    'nextiva':('Nextiva','Tech'),                        # 17
+    'quip':('Quip/Salesforce','Tech'),                   # 4
+    'swoogo':('Swoogo','Tech'),                          # 5
+    'fastly':('Fastly','Tech'),                          # 63
+    'descript':('Descript','Tech'),                      # 24
+    'airship':('Airship','Tech'),                        # 16
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -1061,6 +1068,11 @@ LEVER_COMPANIES = {
     "anyscale":("Anyscale","Tech"),       # 12
     "gumloop":("Gumloop","Tech"),         # 11
     "beam":("Beam","Tech"),               # 1
+    "swarmia":("Swarmia","Tech"),         # 5
+    "commure":("Commure","Healthcare"),   # 88
+    "corti":("Corti","Healthcare"),       # 15
+    "infinitus":("Infinitus","Healthcare"), # 11
+    "accord":("Accord","Tech"),             # 3
 }
 
 ASHBY_COMPANIES = {
