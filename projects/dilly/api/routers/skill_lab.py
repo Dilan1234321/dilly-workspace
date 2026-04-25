@@ -8,6 +8,8 @@ Mounted in main.py as:
 from __future__ import annotations
 
 import re
+import time
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
@@ -654,3 +656,173 @@ def my_receipts(user: dict = Depends(require_auth)):
         "by_cohort": by_cohort,
         "daily": daily,
     }
+
+
+# ── Personalised feed ─────────────────────────────────────────────────────────
+# Recommendation-first surface. Ranked by: cohort match > unwatched bonus >
+# quality score > freshness. No LLM — all SQL + Python scoring.
+# Cached per user for 6 hours so repeated tab taps don't re-query.
+
+_feed_cache: dict[str, dict] = {}
+_FEED_TTL = 6 * 3600  # seconds
+
+
+@router.get("/feed")
+def skills_feed(user: dict = Depends(require_auth)):
+    """
+    Personalised skill feed for the requesting user.
+
+    Returns:
+      hero          – single top-ranked video (with a reason string)
+      queue         – 3–5 follow-up videos (each with a reason string)
+      cohort_slug   – slug of the user's assigned cohort (for navigation)
+      user_cohort   – display name of the cohort
+      cohort_preview – top 8 videos from the user's cohort (for the
+                       "Explore your cohort" section)
+
+    Ranking weights (descending priority):
+      1. Cohort match   +10 base  (vs. +5 for trending cross-cohort)
+      2. Unwatched      +3
+      3. Quality score  +0–5 (quality_score / 20)
+      4. Freshness      +1 if published < 90 days ago
+    """
+    email = (user.get("email") or "").strip().lower()
+
+    cached = _feed_cache.get(email)
+    if cached and (time.time() - cached["ts"]) < _FEED_TTL:
+        return cached["data"]
+
+    # ── Pull profile for cohort context ───────────────────────────────────
+    user_cohort: str | None = None
+    application_target: str = ""
+    career_goal: str = ""
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT profile_json FROM users WHERE email = %s",
+                (email,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                pj = row[0] if isinstance(row[0], dict) else {}
+                user_cohort = pj.get("cohort")
+                career_goal = (pj.get("career_goal") or "").strip()
+                application_target = (
+                    pj.get("application_target_label")
+                    or pj.get("application_target")
+                    or ""
+                ).strip()
+
+    # ── Watched video IDs (skip/de-emphasise) ─────────────────────────────
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT video_id FROM skill_lab_learning_receipts WHERE user_email = %s",
+                (email,),
+            )
+            watched: set[str] = {r[0] for r in cur.fetchall()}
+
+    # ── Candidate pool ────────────────────────────────────────────────────
+    cohort_rows: list = []
+    trending_rows: list = []
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            if user_cohort:
+                cur.execute(
+                    f"""
+                    SELECT {SELECT_COLS}
+                      FROM skill_lab_videos
+                     WHERE cohort = %s
+                     ORDER BY quality_score DESC, view_count DESC
+                     LIMIT 60
+                    """,
+                    (user_cohort,),
+                )
+                cohort_rows = cur.fetchall()
+
+            cur.execute(
+                f"""
+                SELECT {SELECT_COLS}
+                  FROM skill_lab_videos
+                 WHERE published_at > NOW() - INTERVAL '180 days'
+                 ORDER BY quality_score DESC, view_count DESC
+                 LIMIT 30
+                """,
+            )
+            trending_rows = cur.fetchall()
+
+    # ── Scoring ───────────────────────────────────────────────────────────
+    now = datetime.now(timezone.utc)
+
+    def _score(row: tuple, base: float) -> tuple[str, float, dict]:
+        v = _serialize(row)
+        s = base + float(v["quality_score"]) / 20.0
+        if v["id"] not in watched:
+            s += 3.0
+        pub = row[8]  # published_at column index in SELECT_COLS
+        if pub:
+            try:
+                p = pub if pub.tzinfo else pub.replace(tzinfo=timezone.utc)
+                if (now - p).days < 90:
+                    s += 1.0
+            except Exception:
+                pass
+        return v["id"], s, v
+
+    scored: dict[str, tuple[float, dict]] = {}
+
+    for row in cohort_rows:
+        vid, s, v = _score(row, 10.0)
+        scored[vid] = (s, v)
+
+    for row in trending_rows:
+        vid, s, v = _score(row, 5.0)
+        if vid not in scored:
+            scored[vid] = (s, v)
+
+    ranked = [v for (_, v) in sorted(scored.values(), key=lambda x: -x[0])]
+
+    # ── Reason strings ────────────────────────────────────────────────────
+    def _reason(v: dict) -> str:
+        if application_target:
+            snippet = application_target[:48]
+            return f"For your {snippet} track"
+        if career_goal:
+            snippet = career_goal[:48]
+            return f"Aligned with: {snippet}"
+        if user_cohort:
+            return f"Top pick for {user_cohort}"
+        return "Top-rated pick for you"
+
+    # ── Cohort slug ───────────────────────────────────────────────────────
+    name_to_slug = {v: k for k, v in _SLUG_TO_COHORT.items()}
+    cohort_slug = name_to_slug.get(user_cohort) if user_cohort else None
+
+    # Cohort preview — top 8 for the "Explore your cohort" strip.
+    cohort_preview = [_serialize(r) for r in cohort_rows[:8]]
+
+    if not ranked:
+        data: dict = {
+            "hero": None,
+            "queue": [],
+            "cohort_slug": cohort_slug,
+            "user_cohort": user_cohort,
+            "cohort_preview": cohort_preview,
+        }
+        _feed_cache[email] = {"data": data, "ts": time.time()}
+        return data
+
+    hero = {**ranked[0], "reason": _reason(ranked[0])}
+    queue = [{**v, "reason": _reason(v)} for v in ranked[1:6]]
+
+    data = {
+        "hero": hero,
+        "queue": queue,
+        "cohort_slug": cohort_slug,
+        "user_cohort": user_cohort,
+        "cohort_preview": cohort_preview,
+    }
+    _feed_cache[email] = {"data": data, "ts": time.time()}
+    return data
