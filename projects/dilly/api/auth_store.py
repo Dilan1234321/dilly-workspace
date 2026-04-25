@@ -148,24 +148,43 @@ def create_session(email: str) -> str:
 # ── 8. validate_session (get_session) ─────────────────────────────────────────
 
 def get_session(token: str) -> dict | None:
-    """Validate session token. Returns {email, subscribed} or None."""
+    """Validate session token. Returns user dict or None."""
     if not token or not token.strip():
         return None
-    with get_db() as conn:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            """
-            SELECT u.email, u.subscribed, u.id
-            FROM sessions s
-            JOIN users u ON u.id = s.user_id
-            WHERE s.token = %s AND s.expires_at > now()
-            """,
-            (token.strip(),),
-        )
-        row = cur.fetchone()
-        if not row:
-            return None
-        return {"email": row["email"], "subscribed": bool(row["subscribed"])}
+    try:
+        with get_db() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                """
+                SELECT u.email, u.subscribed, u.id,
+                       u.account_type,
+                       u.company_name, u.company_domain,
+                       u.company_verified_at, u.company_logo_url,
+                       u.company_jobs_count
+                FROM sessions s
+                JOIN users u ON u.id = s.user_id
+                WHERE s.token = %s AND s.expires_at > now()
+                """,
+                (token.strip(),),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            account_type = row.get("account_type") or "student"
+            result: dict = {
+                "email": row["email"],
+                "subscribed": bool(row["subscribed"]),
+                "account_type": account_type,
+            }
+            if account_type == "recruiter":
+                result["company_name"] = row.get("company_name")
+                result["company_domain"] = row.get("company_domain")
+                result["company_verified_at"] = str(row["company_verified_at"]) if row.get("company_verified_at") else None
+                result["company_logo_url"] = row.get("company_logo_url")
+                result["company_jobs_count"] = row.get("company_jobs_count")
+            return result
+    except Exception:
+        return None
 
 
 # ── delete_session (logout) ───────────────────────────────────────────────────
