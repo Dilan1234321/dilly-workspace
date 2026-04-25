@@ -1508,6 +1508,10 @@ ASHBY_COMPANIES = {
     "latitude":("Latitude","Tech"),         # 1
     # Batch 19 verified
     "demandbase":("Demandbase","Tech"),     # 32
+    # Batch 20 verified
+    "plain":("Plain","Tech"),               # 15
+    "propel":("Propel","Tech"),             # 10
+    "parabola-io":("Parabola","Tech"),      # 8
 }
 
 SMARTRECRUITERS_COMPANIES = {
