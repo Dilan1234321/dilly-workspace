@@ -869,6 +869,9 @@ GREENHOUSE_COMPANIES = {
     'neo4j':('Neo4j','Tech'),               # 40
     'assemblyai':('AssemblyAI','Tech'),      # 5
     'netlify':('Netlify','Tech'),            # 2
+    # Batch 12 verified
+    'tcs':('Tata Consultancy Services','Tech'), # 73
+    'netcracker':('NetCracker','Tech'),      # 59
 }
 
 LEVER_COMPANIES = {
