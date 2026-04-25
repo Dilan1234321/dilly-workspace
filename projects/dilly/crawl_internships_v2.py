@@ -886,6 +886,10 @@ GREENHOUSE_COMPANIES = {
     # Batch 15 verified
     'crexi':('Crexi','Tech'),                # 20
     'costar':('CoStar','Tech'),              # 4
+    # Batch 16 verified
+    'taboola':('Taboola','Tech'),            # 70
+    'pubmatic':('PubMatic','Tech'),          # 63
+    'ivalua':('Ivalua','Tech'),              # 56
 }
 
 LEVER_COMPANIES = {
@@ -1489,6 +1493,9 @@ ASHBY_COMPANIES = {
     "flux":("Flux","Tech"),                 # 16
     "httpie":("HTTPie","Tech"),             # 5
     "readme":("ReadMe","Tech"),             # 3
+    # Batch 16 verified
+    "parafin":("Parafin","Finance"),        # 26
+    "ledge":("Ledge","Finance"),            # 2
 }
 
 SMARTRECRUITERS_COMPANIES = {
