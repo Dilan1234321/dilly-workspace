@@ -863,6 +863,12 @@ GREENHOUSE_COMPANIES = {
     'customerio':('Customer.io','Tech'),     # 19
     'bombora':('Bombora','Tech'),            # 3
     'alchemer':('Alchemer','Tech'),          # 2
+    # Batch 11 verified
+    'clickhouse':('ClickHouse','Tech'),      # 167
+    'otter':('Otter.ai','Tech'),             # 42
+    'neo4j':('Neo4j','Tech'),               # 40
+    'assemblyai':('AssemblyAI','Tech'),      # 5
+    'netlify':('Netlify','Tech'),            # 2
 }
 
 LEVER_COMPANIES = {
@@ -1440,6 +1446,15 @@ ASHBY_COMPANIES = {
     "mintlify":("Mintlify","Tech"),         # 18
     "sfcompute":("SFCompute","Tech"),       # 17
     "axiom":("Axiom","Tech"),               # 3
+    # Batch 11 verified
+    "lemonade":("Lemonade","Finance"),      # 44
+    "kin":("Kin Insurance","Finance"),      # 28
+    "kira":("Kira","Tech"),                 # 21
+    "savvy":("Savvy","Finance"),            # 21
+    "classdojo":("ClassDojo","Tech"),       # 18
+    "orchard":("Orchard","Finance"),        # 15
+    "twelve":("Twelve","Tech"),             # 9
+    "babbel":("Babbel","Tech"),             # 7
 }
 
 SMARTRECRUITERS_COMPANIES = {
