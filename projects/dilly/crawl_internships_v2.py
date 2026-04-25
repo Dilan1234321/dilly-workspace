@@ -100,18 +100,156 @@ GREENHOUSE_COMPANIES = {
     # ── Batch added 2026-04-17: broad expansion for feed diversity ──
     # YC + Series A-C startups that publish to Greenhouse. Many of
     # these slugs may 404 — the scraper logs and skips cleanly.
-    # ── Batch added 2026-04-24: verified Greenhouse slugs ──
-    'andurilindustries':('Anduril Industries','Tech'),
-    'waymo':('Waymo','Tech'),
-    'point72':('Point72','Finance'),
-    'virtu':('Virtu Financial','Finance'),
-    'akunacapital':('Akuna Capital','Finance'),
-    'janestreet':('Jane Street','Finance'),
-    'imc':('IMC Trading','Finance'),
-    'worldquant':('WorldQuant','Finance'),
-    'squarepointcapital':('Squarepoint Capital','Finance'),
-    'deepmind':('DeepMind','Tech'),
-    'epicgames':('Epic Games','Media'),
+    # ── Batch added 2026-04-24/25: all verified with live job counts ──
+    'andurilindustries':('Anduril Industries','Tech'),   # 1853
+    'waymo':('Waymo','Tech'),                            # 372
+    'spacex':('SpaceX','Tech'),                          # 1596
+    'relativity':('Relativity Space','Tech'),            # 290
+    'rocketlab':('Rocket Lab','Tech'),                   # 265
+    'canonical':('Canonical','Tech'),                    # 285
+    'samsara':('Samsara','Tech'),                        # 360
+    'betterhelp':('BetterHelp','Healthcare'),            # 130
+    'flexport':('Flexport','Consumer'),                  # 123
+    'ripple':('Ripple','Finance'),                       # 127
+    'coinbase':('Coinbase','Finance'),                   # 114
+    'point72':('Point72','Finance'),                     # 274
+    'janestreet':('Jane Street','Finance'),              # 218
+    'optiverus':('Optiver','Finance'),                   # 163
+    'jumptrading':('Jump Trading','Finance'),            # 62
+    'imc':('IMC Trading','Finance'),                     # 145
+    'worldquant':('WorldQuant','Finance'),               # 95
+    'squarepointcapital':('Squarepoint Capital','Finance'), # 83
+    'virtu':('Virtu Financial','Finance'),               # 34
+    'akunacapital':('Akuna Capital','Finance'),          # 25
+    'flowtraders':('Flow Traders','Finance'),            # 21
+    'geotab':('Geotab','Tech'),                          # 77
+    'mozilla':('Mozilla','Tech'),                        # 47
+    'project44':('project44','Tech'),                    # 41
+    'wikimedia':('Wikimedia Foundation','Nonprofit'),    # 34
+    'talkspace':('Talkspace','Healthcare'),              # 20
+    'gemini':('Gemini','Finance'),                       # 19
+    'navapbc':('Nava PBC','Government'),                 # 18
+    'recursionpharmaceuticals':('Recursion Pharma','Biotech'), # 27
+    'saildroneinc':('Saildrone','Tech'),                 # 27
+    'fourkites':('FourKites','Tech'),                    # 11
+    'modernhealth':('Modern Health','Healthcare'),       # 11
+    'givewell':('GiveWell','Nonprofit'),                 # 9
+    'codeforamerica':('Code for America','Nonprofit'),   # 6
+    'commercetools':('Commercetools','Tech'),            # 23
+    'recharge':('Recharge','Tech'),                      # 5
+    'twilio':('Twilio','Tech'),                          # 147
+    'pagerduty':('PagerDuty','Tech'),                    # 52
+    'deepmind':('DeepMind','Tech'),                      # 83
+    'epicgames':('Epic Games','Media'),                  # 72
+    'rockstargames':('Rockstar Games','Media'),          # 67
+    'gatesventures':('Gates Ventures','Nonprofit'),      # 3
+    # ── Batch added 2026-04-25: verified with live job counts ──
+    'twitch':('Twitch','Media'),                         # 64
+    'beyondtrust':('BeyondTrust','Tech'),                # 54
+    'togetherai':('Together AI','Tech'),                 # 48
+    'stabilityai':('Stability AI','Tech'),               # 13
+    'sisense':('Sisense','Tech'),                        # 7
+    'anthropic':('Anthropic','Tech'),                    # 453
+    'fivetran':('Fivetran','Tech'),                      # 188
+    'hightouch':('Hightouch','Tech'),                    # 59
+    'lightricks':('Lightricks','Tech'),                  # 24
+    'payoneer':('Payoneer','Finance'),                   # 142
+    'newrelic':('New Relic','Tech'),                     # 62
+    'yotpo':('Yotpo','Tech'),                            # 48
+    'veracode':('Veracode','Tech'),                      # 24
+    'fieldwire':('Fieldwire','Tech'),                    # 22
+    'melio':('Melio','Finance'),                         # 19
+    'honeycomb':('Honeycomb','Tech'),                    # 8
+    'pandadoc':('PandaDoc','Tech'),                      # 78
+    'conga':('Conga','Tech'),                            # 42
+    'constantcontact':('Constant Contact','Tech'),       # 26
+    'nintex':('Nintex','Tech'),                          # 15
+    'motive':('Motive','Tech'),                          # 5
+    'scopely':('Scopely','Media'),                       # 179
+    '2k':('2K Games','Media'),                           # 116
+    'bird':('Bird','Consumer'),                          # 41
+    'naughtydog':('Naughty Dog','Media'),                # 15
+    'spin':('Spin','Consumer'),                          # 11
+    'trivago':('Trivago','Consumer'),                    # 10
+    'insomniac':('Insomniac Games','Media'),             # 6
+    'medium':('Medium','Media'),                         # 3
+    'bungie':('Bungie','Media'),                         # 2
+    'fanduel':('FanDuel','Consumer'),                    # 141
+    'spire':('Spire Global','Tech'),                     # 33
+    'zwift':('Zwift','Consumer'),                        # 8
+    'unity3d':('Unity Technologies','Tech'),             # 196
+    'appliedintuition':('Applied Intuition','Tech'),     # 196
+    'motional':('Motional','Tech'),                      # 116
+    'kodiak':('Kodiak Robotics','Tech'),                 # 63
+    'thetradedesk':('The Trade Desk','Tech'),            # 175
+    'stackadapt':('StackAdapt','Tech'),                  # 125
+    'triplelift':('TripleLift','Tech'),                  # 35
+    'a24':('A24','Media'),                               # 5
+    'businessolver':('Businessolver','Tech'),            # 32
+    'bswift':('bswift','Tech'),                          # 8
+    'nayya':('Nayya','Tech'),                            # 6
+    'brainpop':('BrainPOP','Education'),                 # 4
+    'mattermost':('Mattermost','Tech'),                  # 22
+    'workato':('Workato','Tech'),                        # 171
+    'backblaze':('Backblaze','Tech'),                    # 26
+    'wasabi':('Wasabi Technologies','Tech'),             # 18
+    'touchbistro':('TouchBistro','Tech'),                # 8
+    'openly':('Openly','Finance'),                       # 9
+    'planetscale':('PlanetScale','Tech'),                # 7
+    'opentable':('OpenTable','Consumer'),                # 78
+    'upwork':('Upwork','Tech'),                          # 33
+    'sendbird':('Sendbird','Tech'),                      # 21
+    'okta':('Okta','Tech'),                              # 371
+    'vonage':('Vonage','Tech'),                          # 83
+    'bandwidth':('Bandwidth','Tech'),                    # 49
+    'jumio':('Jumio','Tech'),                            # 25
+    'easyship':('Easyship','Tech'),                      # 12
+    'akoya':('Akoya','Finance'),                         # 3
+    'klaviyo':('Klaviyo','Tech'),                        # 255
+    'braze':('Braze','Tech'),                            # 194
+    'intercom':('Intercom','Tech'),                      # 175
+    'smartsheet':('Smartsheet','Tech'),                  # 143
+    'asana':('Asana','Tech'),                            # 130
+    'iterable':('Iterable','Tech'),                      # 42
+    'wrike':('Wrike','Tech'),                            # 42
+    'salesloft':('Salesloft','Tech'),                    # 29
+    'showpad':('Showpad','Tech'),                        # 33
+    'housecall':('Housecall Pro','Tech'),                # 52
+    'graphcore':('Graphcore','Tech'),                    # 132
+    'tenstorrent':('Tenstorrent','Tech'),                # 116
+    'attentive':('Attentive','Tech'),                    # 58
+    'hyperproof':('Hyperproof','Tech'),                  # 8
+    'laika':('Laika','Tech'),                            # 7
+    'ghost':('Ghost','Media'),                           # 4
+    'recharge':('Recharge','Tech'),                      # 5
+    'rocketlawyer':('Rocket Lawyer','Tech'),             # 20
+    'dialpad':('Dialpad','Tech'),                        # 93
+    'nextiva':('Nextiva','Tech'),                        # 17
+    'quip':('Quip/Salesforce','Tech'),                   # 4
+    'swoogo':('Swoogo','Tech'),                          # 5
+    'fastly':('Fastly','Tech'),                          # 63
+    'descript':('Descript','Tech'),                      # 24
+    'airship':('Airship','Tech'),                        # 16
+    'ogilvy':('Ogilvy','Consulting'),                    # 152
+    'wpp':('WPP','Consulting'),                          # 148
+    'classpass':('ClassPass','Consumer'),                # 77
+    'cision':('Cision','Tech'),                          # 67
+    'voxmedia':('Vox Media','Media'),                    # 24
+    'greenhouse':('Greenhouse.io','Tech'),               # 28
+    'ideo':('IDEO','Consulting'),                        # 11
+    'method':('Method','Consulting'),                    # 6
+    'angi':('Angi','Consumer'),                          # 101
+    'faire':('Faire','Consumer'),                        # 72
+    'golin':('Golin','Consulting'),                      # 42
+    'thumbtack':('Thumbtack','Consumer'),                # 39
+    'mitratech':('Mitratech','Tech'),                    # 34
+    'fleetio':('Fleetio','Tech'),                        # 20
+    'taskrabbit':('TaskRabbit','Consumer'),              # 17
+    'onespan':('OneSpan','Tech'),                        # 14
+    'mintel':('Mintel','Consulting'),                    # 13
+    'litify':('Litify','Tech'),                          # 5
+    'degreed':('Degreed','Tech'),                        # 4
+    'elsevier':('Elsevier','Media'),                     # 9
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -703,6 +841,69 @@ GREENHOUSE_COMPANIES = {
     'zilliz-io':('Zilliz','Tech'),
     'vespa-engine':('Vespa','Tech'),
     'marqo-ai':('Marqo','Tech'),
+    # Batch 7 verified
+    'sezzle':('Sezzle','Finance'),           # 176
+    'tamara':('Tamara','Finance'),           # 60
+    # Batch 8 verified
+    'onetrust':('OneTrust','Tech'),          # 91
+    'trustpilot':('Trustpilot','Tech'),      # 67
+    'roofstock':('Roofstock','Finance'),     # 41
+    'nextdoor':('Nextdoor','Tech'),          # 29
+    'typeform':('Typeform','Tech'),          # 22
+    'northbeam':('Northbeam','Tech'),        # 13
+    'taxbit':('TaxBit','Finance'),           # 10
+    'paystand':('Paystand','Finance'),       # 9
+    'truelayer':('TrueLayer','Finance'),     # 8
+    'nucleus':('Nucleus','Tech'),            # 8
+    'medeanalytics':('MedeAnalytics','Healthcare'), # 1
+    # Batch 9 verified
+    'qualtrics':('Qualtrics','Tech'),        # 56
+    'surveymonkey':('SurveyMonkey','Tech'),  # 36
+    '6sense':('6sense','Tech'),              # 35
+    'customerio':('Customer.io','Tech'),     # 19
+    'bombora':('Bombora','Tech'),            # 3
+    'alchemer':('Alchemer','Tech'),          # 2
+    # Batch 11 verified
+    'clickhouse':('ClickHouse','Tech'),      # 167
+    'otter':('Otter.ai','Tech'),             # 42
+    'neo4j':('Neo4j','Tech'),               # 40
+    'assemblyai':('AssemblyAI','Tech'),      # 5
+    'netlify':('Netlify','Tech'),            # 2
+    # Batch 12 verified
+    'tcs':('Tata Consultancy Services','Tech'), # 73
+    'netcracker':('NetCracker','Tech'),      # 59
+    # Batch 13 verified
+    'a16z':('Andreessen Horowitz','Finance'), # 21
+    'mill':('Mill','Tech'),                  # 12
+    'maven':('Maven','Tech'),                # 5
+    'gradle':('Gradle','Tech'),              # 4
+    # Batch 14 verified
+    'datacamp':('DataCamp','Education'),     # 43
+    'axios':('Axios','Media'),               # 26
+    'seesaw':('Seesaw','Education'),         # 11
+    'propublica':('ProPublica','Media'),     # 7
+    'housemarque':('Housemarque','Media'),   # 9
+    # Batch 15 verified
+    'crexi':('Crexi','Tech'),                # 20
+    'costar':('CoStar','Tech'),              # 4
+    # Batch 16 verified
+    'taboola':('Taboola','Tech'),            # 70
+    'pubmatic':('PubMatic','Tech'),          # 63
+    'ivalua':('Ivalua','Tech'),              # 56
+    # Batch 17 verified
+    'mentimeter':('Mentimeter','Tech'),      # 30
+    'stashinvest':('Stash','Finance'),       # 6
+    # Batch 18 verified
+    'skyscanner':('Skyscanner','Tech'),      # 23
+    # Batch 21 verified
+    'ionos':('IONOS','Tech'),                # 60
+    'typeface':('Typeface','Tech'),          # 30
+    'pantheon':('Pantheon','Tech'),          # 25
+    'acquia':('Acquia','Tech'),              # 10
+    # Batch 23 verified (payments)
+    'xendit':('Xendit','Finance'),           # 22
+    'boku':('Boku','Finance'),               # 15
+    'mangopay':('Mangopay','Finance'),       # 11
 }
 
 LEVER_COMPANIES = {
@@ -937,6 +1138,18 @@ LEVER_COMPANIES = {
     "bazaarvoice":("Bazaarvoice","Tech"), # 30 jobs verified
     "neon":("Neon","Tech"),               # 15 jobs verified
     "prismic":("Prismic","Tech"),         # 7 jobs verified
+    # ── Batch added 2026-04-25: verified ──
+    "spotify":("Spotify","Media"),        # 179
+    "matillion":("Matillion","Tech"),     # 18
+    "pipedrive":("Pipedrive","Tech"),     # 48
+    "omnisend":("Omnisend","Tech"),       # 19
+    "outreach":("Outreach","Tech"),       # 29
+    "clari":("Clari","Tech"),             # 4
+    # Batch 18 verified
+    "jumpcloud":("JumpCloud","Tech"),     # 30
+    "sonatype":("Sonatype","Tech"),       # 18
+    # Batch 19 verified
+    "logz":("Logz.io","Tech"),            # 4
 }
 
 ASHBY_COMPANIES = {
@@ -1159,20 +1372,170 @@ ASHBY_COMPANIES = {
     "cyfe":("Cyfe","Tech"),
     "oktopost":("Oktopost","Tech"),
 
-    # ── Batch added 2026-04-24: verified working Ashby slugs ──
-    "plaid":("Plaid","Finance"),
-    "semgrep":("Semgrep","Tech"),
-    "render":("Render","Tech"),
-    "granola":("Granola","Tech"),
-    "fullstory":("FullStory","Tech"),
-    "leapsome":("Leapsome","Tech"),
-    "atlan":("Atlan","Tech"),
-    "railway":("Railway","Tech"),
-    "neon":("Neon","Tech"),
-    "airbyte":("Airbyte","Tech"),
-    "astronomer":("Astronomer","Tech"),
-    "motherduck":("MotherDuck","Tech"),
-    "prefect":("Prefect","Tech"),
+    # ── Batch added 2026-04-24/25: verified working Ashby slugs ──
+    "plaid":("Plaid","Finance"),             # 96
+    "semgrep":("Semgrep","Tech"),            # 39
+    "render":("Render","Tech"),              # 20
+    "granola":("Granola","Tech"),            # 18
+    "fullstory":("FullStory","Tech"),        # 15
+    "leapsome":("Leapsome","Tech"),          # 15
+    "atlan":("Atlan","Tech"),                # 12
+    "railway":("Railway","Tech"),            # 7
+    "neon":("Neon","Tech"),                  # 6
+    "airbyte":("Airbyte","Tech"),            # 6
+    "astronomer":("Astronomer","Tech"),      # 21
+    "motherduck":("MotherDuck","Tech"),      # 7
+    "prefect":("Prefect","Tech"),            # 4
+    # Batch added 2026-04-25
+    "vanta":("Vanta","Tech"),                # 159
+    "airwallex":("Airwallex","Finance"),     # 627
+    "deel":("Deel","Tech"),                  # 255
+    "encord":("Encord","Tech"),              # 67
+    "deepgram":("Deepgram","Tech"),          # 62
+    "talkiatry":("Talkiatry","Healthcare"),  # 178
+    "watershed":("Watershed","Tech"),        # 39
+    "benchling":("Benchling","Biotech"),     # 54
+    "drata":("Drata","Tech"),                # 25
+    "roboflow":("Roboflow","Tech"),          # 20
+    "livekit":("LiveKit","Tech"),            # 14
+    "bland":("Bland AI","Tech"),             # 13
+    "oyster":("Oyster","Tech"),              # 17
+    "nabla":("Nabla","Healthcare"),          # 15
+    "regard":("Regard","Healthcare"),        # 6
+    "lightdash":("Lightdash","Tech"),        # 4
+    "d-matrix":("dMatrix","Tech"),           # 42
+    "pleo":("Pleo","Finance"),               # 35
+    "stytch":("Stytch","Tech"),              # 5
+    "mend-io":("Mend","Tech"),               # 6
+    "rev":("Rev","Tech"),                    # 5
+    # ── Batch added 2026-04-25: more verified Ashby ──
+    "equip":("Equip Health","Healthcare"),   # 41
+    "pinecone":("Pinecone","Tech"),          # 8
+    "weaviate":("Weaviate","Tech"),          # 5
+    "abridge":("Abridge","Healthcare"),     # 64
+    "coder":("Coder","Tech"),               # 4
+    "anomalo":("Anomalo","Tech"),           # 1
+    "rasa":("Rasa","Tech"),                 # 8
+    "contrast-security":("Contrast Security","Tech"), # 5
+    "runway":("Runway","Tech"),             # 4
+    "ycombinator":("Y Combinator","Tech"),  # 8
+    "spotdraft":("SpotDraft","Tech"),       # 3
+    "workos":("WorkOS","Tech"),             # 31
+    "oso":("Oso","Tech"),                   # 7
+    "deepnote":("Deepnote","Tech"),         # 6
+    "authzed":("Authzed","Tech"),           # 5
+    "opslevel":("OpsLevel","Tech"),         # 2
+    "hinge-health":("Hinge Health","Healthcare"), # 84
+    "uniswap":("Uniswap","Finance"),        # 8
+    "perplexity":("Perplexity AI","Tech"),  # 72
+    "physicalintelligence":("Physical Intelligence","Tech"), # 21
+    "sanctuary":("Sanctuary AI","Tech"),    # 7
+    "procurify":("Procurify","Tech"),       # 17
+    "thinkific":("Thinkific","Tech"),       # 7
+    "reducto":("Reducto","Tech"),           # 21
+    "infracost":("Infracost","Tech"),       # 1
+    "vitally":("Vitally","Tech"),           # 1
+    "lm-studio":("LM Studio","Tech"),       # 4
+    "litellm":("LiteLLM","Tech"),           # 9
+    "influxdata":("InfluxData","Tech"),     # 2
+    "modal":("Modal","Tech"),               # 28
+    "lancedb":("LanceDB","Tech"),           # 5
+    "pika":("Pika","Tech"),                 # 2
+    "cognition":("Cognition AI","Tech"),    # 62
+    "genesis-ai":("Genesis","Tech"),        # 34
+    "poolside":("Poolside","Tech"),         # 13
+    "payrails":("Payrails","Finance"),      # 5
+    # Batch 10 verified
+    "mintlify":("Mintlify","Tech"),         # 18
+    "sfcompute":("SFCompute","Tech"),       # 17
+    "axiom":("Axiom","Tech"),               # 3
+    # Batch 11 verified
+    "lemonade":("Lemonade","Finance"),      # 44
+    "kin":("Kin Insurance","Finance"),      # 28
+    "kira":("Kira","Tech"),                 # 21
+    "savvy":("Savvy","Finance"),            # 21
+    "classdojo":("ClassDojo","Tech"),       # 18
+    "orchard":("Orchard","Finance"),        # 15
+    "twelve":("Twelve","Tech"),             # 9
+    "babbel":("Babbel","Tech"),             # 7
+    # Batch 13 verified
+    "real":("Real","Finance"),              # 19
+    "e2b":("E2B","Tech"),                   # 12
+    "raindrop":("Raindrop.io","Tech"),      # 4
+    "mem":("Mem","Tech"),                   # 4
+    "roam":("Roam Research","Tech"),        # 3
+    "convex-dev":("Convex","Tech"),         # 3
+    # Batch 14 verified
+    "dust":("Dust","Tech"),                 # 23
+    "magiceden":("Magic Eden","Finance"),   # 4
+    "rewind":("Rewind","Tech"),             # 3
+    # Batch 15 verified
+    "redis":("Redis","Tech"),               # 102
+    "n8n":("n8n","Tech"),                   # 43
+    "flux":("Flux","Tech"),                 # 16
+    "httpie":("HTTPie","Tech"),             # 5
+    "readme":("ReadMe","Tech"),             # 3
+    # Batch 16 verified
+    "parafin":("Parafin","Finance"),        # 26
+    "ledge":("Ledge","Finance"),            # 2
+    # Batch 17 verified
+    "alephalpha":("Aleph Alpha","Tech"),    # 10
+    # Recovered from LEVER (these are Ashby-only companies)
+    "factory":("Factory","Tech"),           # 24
+    "commonroom":("Common Room","Tech"),    # 12
+    "artisan":("Artisan","Tech"),           # 12
+    "beam":("Beam","Tech"),                 # 1
+    "swarmia":("Swarmia","Tech"),           # 5
+    "commure":("Commure","Healthcare"),     # 88
+    "corti":("Corti","Healthcare"),         # 15
+    "infinitus":("Infinitus","Healthcare"), # 11
+    "accord":("Accord","Tech"),             # 3
+    "benevity":("Benevity","Tech"),         # 25
+    "bestow":("Bestow","Finance"),          # 14
+    "belvo":("Belvo","Finance"),            # 8
+    "cardless":("Cardless","Finance"),      # 20
+    "capchase":("Capchase","Finance"),      # 3
+    "curri":("Curri","Consumer"),           # 25
+    "cosuno":("Cosuno","Tech"),             # 13
+    "datum":("Datum","Tech"),               # 7
+    "expressable":("Expressable","Healthcare"), # 74
+    "ditto":("Ditto","Tech"),               # 30
+    "delve":("Delve","Tech"),               # 15
+    "gelato":("Gelato","Tech"),             # 13
+    "duet":("Duet AI","Tech"),              # 7
+    "farmraise":("FarmRaise","Tech"),       # 2
+    "hiive":("Hiive","Finance"),            # 25
+    "lemlist":("lemlist","Tech"),           # 18
+    "leandata":("LeanData","Tech"),         # 12
+    "litmus":("Litmus","Tech"),             # 12
+    "maple":("Maple","Tech"),               # 12
+    "honeybook":("HoneyBook","Tech"),       # 11
+    "interplay":("Interplay","Tech"),       # 11
+    "ignition":("Ignition","Tech"),         # 7
+    "klue":("Klue","Tech"),                 # 7
+    "kodex":("Kodex","Tech"),               # 2
+    "latitude":("Latitude","Tech"),         # 1
+    # Batch 19 verified
+    "demandbase":("Demandbase","Tech"),     # 32
+    # Batch 20 verified
+    "plain":("Plain","Tech"),               # 15
+    "propel":("Propel","Tech"),             # 10
+    "parabola-io":("Parabola","Tech"),      # 8
+    # Batch 21 verified
+    "sondermind":("SonderMind","Healthcare"), # 145
+    "upguard":("UpGuard","Tech"),           # 26
+    "rula":("Rula","Healthcare"),           # 23
+    # Batch 22 verified
+    "sprig":("Sprig","Tech"),               # 6
+    "wundergraph":("WunderGraph","Tech"),   # 4
+    # Batch 23 verified (crypto/web3)
+    "trm-labs":("TRM Labs","Finance"),      # 81
+    "elliptic":("Elliptic","Finance"),      # 41
+    "alchemy":("Alchemy","Tech"),           # 30
+    "opensea":("OpenSea","Finance"),        # 5
+    "dune":("Dune Analytics","Tech"),       # 4
+    "quicknode":("QuickNode","Tech"),       # 1
+    "goldsky":("Goldsky","Tech"),           # 1
 }
 
 SMARTRECRUITERS_COMPANIES = {
@@ -1364,6 +1727,9 @@ SMARTRECRUITERS_COMPANIES = {
     "McDermott":("McDermott","Consulting"),
     "Foster-Wheeler":("Foster Wheeler","Consulting"),
     "CB-I":("CBI","Consulting"),
+    # ── Verified 2026-04-25: correct SR company registration IDs ──
+    "McDonaldsCorporation":("McDonald's","Consumer"),   # 32 verified
+    "RobertBosch":("Robert Bosch","Tech"),              # 5 verified
 }
 
 JAZZHR_COMPANIES = {
@@ -1990,21 +2356,25 @@ def crawl_lever(slug, company_name):
     return results
 
 def crawl_ashby(slug, company_name):
-    payload = json.dumps({"operationName":"ApiJobBoardWithTeams","variables":{"organizationHostedJobsPageName":slug},"query":"query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) { jobBoard: jobBoardWithTeams(organizationHostedJobsPageName: $organizationHostedJobsPageName) { teams { name jobs { id title locationName employmentType descriptionHtml } } } }"}).encode("utf-8")
-    data = fetch_json("https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams", method="POST", data=payload, headers={"Content-Type":"application/json"})
+    # Ashby deprecated the GraphQL jobs field on Team; use the REST posting-api instead
+    data = fetch_json(f"https://api.ashbyhq.com/posting-api/job-board/{slug}")
     if not data: return []
-    teams = ((data.get("data") or {}).get("jobBoard") or {}).get("teams") or []
+    jobs_raw = data.get("jobs") or []
     results = []
-    for team_obj in teams:
-        team_name = team_obj.get("name","")
-        for job in (team_obj.get("jobs") or []):
-            title = (job.get("title") or "").strip()
-            desc = strip_html(job.get("descriptionHtml") or "")
-            job_type = classify_listing(title, desc)
-            location = job.get("locationName") or ""
-            apply_url = f"https://jobs.ashbyhq.com/{slug}/{job.get('id','')}"
-            city, state = parse_location(location)
-            results.append({"external_id":f"ashby-{slug}-{job.get('id','')}","title":title,"company":company_name,"description":desc,"apply_url":apply_url,"location_city":city,"location_state":state,"work_mode":"remote" if is_remote(location) else "unknown","posted_date":None,"source_ats":"ashby","team":team_name,"remote":is_remote(location),"tags":extract_tags(title,desc),"job_type":job_type})
+    for job in jobs_raw:
+        title = (job.get("title") or "").strip()
+        if not title: continue
+        desc = strip_html(job.get("descriptionHtml") or job.get("descriptionPlain") or "")
+        job_type = classify_listing(title, desc)
+        loc = job.get("address") or {}
+        location = loc.get("postalAddress", {}).get("addressLocality") or job.get("location") or ""
+        if isinstance(location, dict): location = location.get("name") or ""
+        team_name = (job.get("team") or job.get("department") or "")
+        if isinstance(team_name, dict): team_name = team_name.get("name") or ""
+        apply_url = job.get("applyUrl") or job.get("jobUrl") or f"https://jobs.ashbyhq.com/{slug}/{job.get('id','')}"
+        posted = (job.get("publishedAt") or "")[:10]
+        city, state = parse_location(location)
+        results.append({"external_id":f"ashby-{slug}-{job.get('id','')}","title":title,"company":company_name,"description":desc,"apply_url":apply_url,"location_city":city,"location_state":state,"work_mode":"remote" if (job.get("isRemote") or is_remote(location)) else "unknown","posted_date":posted or None,"source_ats":"ashby","team":team_name,"remote":bool(job.get("isRemote") or is_remote(location)),"tags":extract_tags(title,desc),"job_type":job_type})
     return results
 
 def crawl_smartrecruiters(company_id, company_name):
