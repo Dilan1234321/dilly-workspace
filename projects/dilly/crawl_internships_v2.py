@@ -100,18 +100,49 @@ GREENHOUSE_COMPANIES = {
     # ── Batch added 2026-04-17: broad expansion for feed diversity ──
     # YC + Series A-C startups that publish to Greenhouse. Many of
     # these slugs may 404 — the scraper logs and skips cleanly.
-    # ── Batch added 2026-04-24: verified Greenhouse slugs ──
-    'andurilindustries':('Anduril Industries','Tech'),
-    'waymo':('Waymo','Tech'),
-    'point72':('Point72','Finance'),
-    'virtu':('Virtu Financial','Finance'),
-    'akunacapital':('Akuna Capital','Finance'),
-    'janestreet':('Jane Street','Finance'),
-    'imc':('IMC Trading','Finance'),
-    'worldquant':('WorldQuant','Finance'),
-    'squarepointcapital':('Squarepoint Capital','Finance'),
-    'deepmind':('DeepMind','Tech'),
-    'epicgames':('Epic Games','Media'),
+    # ── Batch added 2026-04-24/25: all verified with live job counts ──
+    'andurilindustries':('Anduril Industries','Tech'),   # 1853
+    'waymo':('Waymo','Tech'),                            # 372
+    'spacex':('SpaceX','Tech'),                          # 1596
+    'relativity':('Relativity Space','Tech'),            # 290
+    'rocketlab':('Rocket Lab','Tech'),                   # 265
+    'canonical':('Canonical','Tech'),                    # 285
+    'samsara':('Samsara','Tech'),                        # 360
+    'betterhelp':('BetterHelp','Healthcare'),            # 130
+    'flexport':('Flexport','Consumer'),                  # 123
+    'ripple':('Ripple','Finance'),                       # 127
+    'coinbase':('Coinbase','Finance'),                   # 114
+    'point72':('Point72','Finance'),                     # 274
+    'janestreet':('Jane Street','Finance'),              # 218
+    'optiverus':('Optiver','Finance'),                   # 163
+    'jumptrading':('Jump Trading','Finance'),            # 62
+    'imc':('IMC Trading','Finance'),                     # 145
+    'worldquant':('WorldQuant','Finance'),               # 95
+    'squarepointcapital':('Squarepoint Capital','Finance'), # 83
+    'virtu':('Virtu Financial','Finance'),               # 34
+    'akunacapital':('Akuna Capital','Finance'),          # 25
+    'flowtraders':('Flow Traders','Finance'),            # 21
+    'geotab':('Geotab','Tech'),                          # 77
+    'mozilla':('Mozilla','Tech'),                        # 47
+    'project44':('project44','Tech'),                    # 41
+    'wikimedia':('Wikimedia Foundation','Nonprofit'),    # 34
+    'talkspace':('Talkspace','Healthcare'),              # 20
+    'gemini':('Gemini','Finance'),                       # 19
+    'navapbc':('Nava PBC','Government'),                 # 18
+    'recursionpharmaceuticals':('Recursion Pharma','Biotech'), # 27
+    'saildroneinc':('Saildrone','Tech'),                 # 27
+    'fourkites':('FourKites','Tech'),                    # 11
+    'modernhealth':('Modern Health','Healthcare'),       # 11
+    'givewell':('GiveWell','Nonprofit'),                 # 9
+    'codeforamerica':('Code for America','Nonprofit'),   # 6
+    'commercetools':('Commercetools','Tech'),            # 23
+    'recharge':('Recharge','Tech'),                      # 5
+    'twilio':('Twilio','Tech'),                          # 147
+    'pagerduty':('PagerDuty','Tech'),                    # 52
+    'deepmind':('DeepMind','Tech'),                      # 83
+    'epicgames':('Epic Games','Media'),                  # 72
+    'rockstargames':('Rockstar Games','Media'),          # 67
+    'gatesventures':('Gates Ventures','Nonprofit'),      # 3
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -1159,20 +1190,42 @@ ASHBY_COMPANIES = {
     "cyfe":("Cyfe","Tech"),
     "oktopost":("Oktopost","Tech"),
 
-    # ── Batch added 2026-04-24: verified working Ashby slugs ──
-    "plaid":("Plaid","Finance"),
-    "semgrep":("Semgrep","Tech"),
-    "render":("Render","Tech"),
-    "granola":("Granola","Tech"),
-    "fullstory":("FullStory","Tech"),
-    "leapsome":("Leapsome","Tech"),
-    "atlan":("Atlan","Tech"),
-    "railway":("Railway","Tech"),
-    "neon":("Neon","Tech"),
-    "airbyte":("Airbyte","Tech"),
-    "astronomer":("Astronomer","Tech"),
-    "motherduck":("MotherDuck","Tech"),
-    "prefect":("Prefect","Tech"),
+    # ── Batch added 2026-04-24/25: verified working Ashby slugs ──
+    "plaid":("Plaid","Finance"),             # 96
+    "semgrep":("Semgrep","Tech"),            # 39
+    "render":("Render","Tech"),              # 20
+    "granola":("Granola","Tech"),            # 18
+    "fullstory":("FullStory","Tech"),        # 15
+    "leapsome":("Leapsome","Tech"),          # 15
+    "atlan":("Atlan","Tech"),                # 12
+    "railway":("Railway","Tech"),            # 7
+    "neon":("Neon","Tech"),                  # 6
+    "airbyte":("Airbyte","Tech"),            # 6
+    "astronomer":("Astronomer","Tech"),      # 21
+    "motherduck":("MotherDuck","Tech"),      # 7
+    "prefect":("Prefect","Tech"),            # 4
+    # Batch added 2026-04-25
+    "vanta":("Vanta","Tech"),                # 159
+    "airwallex":("Airwallex","Finance"),     # 627
+    "deel":("Deel","Tech"),                  # 255
+    "encord":("Encord","Tech"),              # 67
+    "deepgram":("Deepgram","Tech"),          # 62
+    "talkiatry":("Talkiatry","Healthcare"),  # 178
+    "watershed":("Watershed","Tech"),        # 39
+    "benchling":("Benchling","Biotech"),     # 54
+    "drata":("Drata","Tech"),                # 25
+    "roboflow":("Roboflow","Tech"),          # 20
+    "livekit":("LiveKit","Tech"),            # 14
+    "bland":("Bland AI","Tech"),             # 13
+    "oyster":("Oyster","Tech"),              # 17
+    "nabla":("Nabla","Healthcare"),          # 15
+    "regard":("Regard","Healthcare"),        # 6
+    "lightdash":("Lightdash","Tech"),        # 4
+    "d-matrix":("dMatrix","Tech"),           # 42
+    "pleo":("Pleo","Finance"),               # 35
+    "stytch":("Stytch","Tech"),              # 5
+    "mend-io":("Mend","Tech"),               # 6
+    "rev":("Rev","Tech"),                    # 5
 }
 
 SMARTRECRUITERS_COMPANIES = {
