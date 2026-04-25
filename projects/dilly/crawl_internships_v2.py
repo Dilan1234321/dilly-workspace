@@ -856,6 +856,13 @@ GREENHOUSE_COMPANIES = {
     'truelayer':('TrueLayer','Finance'),     # 8
     'nucleus':('Nucleus','Tech'),            # 8
     'medeanalytics':('MedeAnalytics','Healthcare'), # 1
+    # Batch 9 verified
+    'qualtrics':('Qualtrics','Tech'),        # 56
+    'surveymonkey':('SurveyMonkey','Tech'),  # 36
+    '6sense':('6sense','Tech'),              # 35
+    'customerio':('Customer.io','Tech'),     # 19
+    'bombora':('Bombora','Tech'),            # 3
+    'alchemer':('Alchemer','Tech'),          # 2
 }
 
 LEVER_COMPANIES = {
