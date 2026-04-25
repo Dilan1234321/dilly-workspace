@@ -2256,21 +2256,25 @@ def crawl_lever(slug, company_name):
     return results
 
 def crawl_ashby(slug, company_name):
-    payload = json.dumps({"operationName":"ApiJobBoardWithTeams","variables":{"organizationHostedJobsPageName":slug},"query":"query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) { jobBoard: jobBoardWithTeams(organizationHostedJobsPageName: $organizationHostedJobsPageName) { teams { name jobs { id title locationName employmentType descriptionHtml } } } }"}).encode("utf-8")
-    data = fetch_json("https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams", method="POST", data=payload, headers={"Content-Type":"application/json"})
+    # Ashby deprecated the GraphQL jobs field on Team; use the REST posting-api instead
+    data = fetch_json(f"https://api.ashbyhq.com/posting-api/job-board/{slug}")
     if not data: return []
-    teams = ((data.get("data") or {}).get("jobBoard") or {}).get("teams") or []
+    jobs_raw = data.get("jobs") or []
     results = []
-    for team_obj in teams:
-        team_name = team_obj.get("name","")
-        for job in (team_obj.get("jobs") or []):
-            title = (job.get("title") or "").strip()
-            desc = strip_html(job.get("descriptionHtml") or "")
-            job_type = classify_listing(title, desc)
-            location = job.get("locationName") or ""
-            apply_url = f"https://jobs.ashbyhq.com/{slug}/{job.get('id','')}"
-            city, state = parse_location(location)
-            results.append({"external_id":f"ashby-{slug}-{job.get('id','')}","title":title,"company":company_name,"description":desc,"apply_url":apply_url,"location_city":city,"location_state":state,"work_mode":"remote" if is_remote(location) else "unknown","posted_date":None,"source_ats":"ashby","team":team_name,"remote":is_remote(location),"tags":extract_tags(title,desc),"job_type":job_type})
+    for job in jobs_raw:
+        title = (job.get("title") or "").strip()
+        if not title: continue
+        desc = strip_html(job.get("descriptionHtml") or job.get("descriptionPlain") or "")
+        job_type = classify_listing(title, desc)
+        loc = job.get("address") or {}
+        location = loc.get("postalAddress", {}).get("addressLocality") or job.get("location") or ""
+        if isinstance(location, dict): location = location.get("name") or ""
+        team_name = (job.get("team") or job.get("department") or "")
+        if isinstance(team_name, dict): team_name = team_name.get("name") or ""
+        apply_url = job.get("applyUrl") or job.get("jobUrl") or f"https://jobs.ashbyhq.com/{slug}/{job.get('id','')}"
+        posted = (job.get("publishedAt") or "")[:10]
+        city, state = parse_location(location)
+        results.append({"external_id":f"ashby-{slug}-{job.get('id','')}","title":title,"company":company_name,"description":desc,"apply_url":apply_url,"location_city":city,"location_state":state,"work_mode":"remote" if (job.get("isRemote") or is_remote(location)) else "unknown","posted_date":posted or None,"source_ats":"ashby","team":team_name,"remote":bool(job.get("isRemote") or is_remote(location)),"tags":extract_tags(title,desc),"job_type":job_type})
     return results
 
 def crawl_smartrecruiters(company_id, company_name):
