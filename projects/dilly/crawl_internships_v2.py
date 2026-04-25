@@ -890,6 +890,9 @@ GREENHOUSE_COMPANIES = {
     'taboola':('Taboola','Tech'),            # 70
     'pubmatic':('PubMatic','Tech'),          # 63
     'ivalua':('Ivalua','Tech'),              # 56
+    # Batch 17 verified
+    'mentimeter':('Mentimeter','Tech'),      # 30
+    'stashinvest':('Stash','Finance'),       # 6
 }
 
 LEVER_COMPANIES = {
@@ -1496,6 +1499,8 @@ ASHBY_COMPANIES = {
     # Batch 16 verified
     "parafin":("Parafin","Finance"),        # 26
     "ledge":("Ledge","Finance"),            # 2
+    # Batch 17 verified
+    "alephalpha":("Aleph Alpha","Tech"),    # 10
 }
 
 SMARTRECRUITERS_COMPANIES = {
