@@ -215,6 +215,14 @@ GREENHOUSE_COMPANIES = {
     'salesloft':('Salesloft','Tech'),                    # 29
     'showpad':('Showpad','Tech'),                        # 33
     'housecall':('Housecall Pro','Tech'),                # 52
+    'graphcore':('Graphcore','Tech'),                    # 132
+    'tenstorrent':('Tenstorrent','Tech'),                # 116
+    'attentive':('Attentive','Tech'),                    # 58
+    'hyperproof':('Hyperproof','Tech'),                  # 8
+    'laika':('Laika','Tech'),                            # 7
+    'ghost':('Ghost','Media'),                           # 4
+    'recharge':('Recharge','Tech'),                      # 5
+    'rocketlawyer':('Rocket Lawyer','Tech'),             # 20
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -1047,6 +1055,12 @@ LEVER_COMPANIES = {
     "omnisend":("Omnisend","Tech"),       # 19
     "outreach":("Outreach","Tech"),       # 29
     "clari":("Clari","Tech"),             # 4
+    "factory":("Factory","Tech"),         # 24
+    "commonroom":("Common Room","Tech"),  # 12
+    "artisan":("Artisan","Tech"),         # 12
+    "anyscale":("Anyscale","Tech"),       # 12
+    "gumloop":("Gumloop","Tech"),         # 11
+    "beam":("Beam","Tech"),               # 1
 }
 
 ASHBY_COMPANIES = {
