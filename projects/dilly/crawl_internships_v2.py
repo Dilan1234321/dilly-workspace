@@ -895,6 +895,11 @@ GREENHOUSE_COMPANIES = {
     'stashinvest':('Stash','Finance'),       # 6
     # Batch 18 verified
     'skyscanner':('Skyscanner','Tech'),      # 23
+    # Batch 21 verified
+    'ionos':('IONOS','Tech'),                # 60
+    'typeface':('Typeface','Tech'),          # 30
+    'pantheon':('Pantheon','Tech'),          # 25
+    'acquia':('Acquia','Tech'),              # 10
 }
 
 LEVER_COMPANIES = {
@@ -1512,6 +1517,10 @@ ASHBY_COMPANIES = {
     "plain":("Plain","Tech"),               # 15
     "propel":("Propel","Tech"),             # 10
     "parabola-io":("Parabola","Tech"),      # 8
+    # Batch 21 verified
+    "sondermind":("SonderMind","Healthcare"), # 145
+    "upguard":("UpGuard","Tech"),           # 26
+    "rula":("Rula","Healthcare"),           # 23
 }
 
 SMARTRECRUITERS_COMPANIES = {
