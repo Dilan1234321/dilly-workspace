@@ -900,6 +900,10 @@ GREENHOUSE_COMPANIES = {
     'typeface':('Typeface','Tech'),          # 30
     'pantheon':('Pantheon','Tech'),          # 25
     'acquia':('Acquia','Tech'),              # 10
+    # Batch 23 verified (payments)
+    'xendit':('Xendit','Finance'),           # 22
+    'boku':('Boku','Finance'),               # 15
+    'mangopay':('Mangopay','Finance'),       # 11
 }
 
 LEVER_COMPANIES = {
@@ -1524,6 +1528,14 @@ ASHBY_COMPANIES = {
     # Batch 22 verified
     "sprig":("Sprig","Tech"),               # 6
     "wundergraph":("WunderGraph","Tech"),   # 4
+    # Batch 23 verified (crypto/web3)
+    "trm-labs":("TRM Labs","Finance"),      # 81
+    "elliptic":("Elliptic","Finance"),      # 41
+    "alchemy":("Alchemy","Tech"),           # 30
+    "opensea":("OpenSea","Finance"),        # 5
+    "dune":("Dune Analytics","Tech"),       # 4
+    "quicknode":("QuickNode","Tech"),       # 1
+    "goldsky":("Goldsky","Tech"),           # 1
 }
 
 SMARTRECRUITERS_COMPANIES = {
