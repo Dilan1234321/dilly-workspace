@@ -1521,6 +1521,9 @@ ASHBY_COMPANIES = {
     "sondermind":("SonderMind","Healthcare"), # 145
     "upguard":("UpGuard","Tech"),           # 26
     "rula":("Rula","Healthcare"),           # 23
+    # Batch 22 verified
+    "sprig":("Sprig","Tech"),               # 6
+    "wundergraph":("WunderGraph","Tech"),   # 4
 }
 
 SMARTRECRUITERS_COMPANIES = {
