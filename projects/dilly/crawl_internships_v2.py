@@ -1436,6 +1436,10 @@ ASHBY_COMPANIES = {
     "genesis-ai":("Genesis","Tech"),        # 34
     "poolside":("Poolside","Tech"),         # 13
     "payrails":("Payrails","Finance"),      # 5
+    # Batch 10 verified
+    "mintlify":("Mintlify","Tech"),         # 18
+    "sfcompute":("SFCompute","Tech"),       # 17
+    "axiom":("Axiom","Tech"),               # 3
 }
 
 SMARTRECRUITERS_COMPANIES = {
