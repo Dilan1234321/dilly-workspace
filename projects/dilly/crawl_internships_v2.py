@@ -199,6 +199,22 @@ GREENHOUSE_COMPANIES = {
     'opentable':('OpenTable','Consumer'),                # 78
     'upwork':('Upwork','Tech'),                          # 33
     'sendbird':('Sendbird','Tech'),                      # 21
+    'okta':('Okta','Tech'),                              # 371
+    'vonage':('Vonage','Tech'),                          # 83
+    'bandwidth':('Bandwidth','Tech'),                    # 49
+    'jumio':('Jumio','Tech'),                            # 25
+    'easyship':('Easyship','Tech'),                      # 12
+    'akoya':('Akoya','Finance'),                         # 3
+    'klaviyo':('Klaviyo','Tech'),                        # 255
+    'braze':('Braze','Tech'),                            # 194
+    'intercom':('Intercom','Tech'),                      # 175
+    'smartsheet':('Smartsheet','Tech'),                  # 143
+    'asana':('Asana','Tech'),                            # 130
+    'iterable':('Iterable','Tech'),                      # 42
+    'wrike':('Wrike','Tech'),                            # 42
+    'salesloft':('Salesloft','Tech'),                    # 29
+    'showpad':('Showpad','Tech'),                        # 33
+    'housecall':('Housecall Pro','Tech'),                # 52
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -1024,6 +1040,13 @@ LEVER_COMPANIES = {
     "bazaarvoice":("Bazaarvoice","Tech"), # 30 jobs verified
     "neon":("Neon","Tech"),               # 15 jobs verified
     "prismic":("Prismic","Tech"),         # 7 jobs verified
+    # ── Batch added 2026-04-25: verified ──
+    "spotify":("Spotify","Media"),        # 179
+    "matillion":("Matillion","Tech"),     # 18
+    "pipedrive":("Pipedrive","Tech"),     # 48
+    "omnisend":("Omnisend","Tech"),       # 19
+    "outreach":("Outreach","Tech"),       # 29
+    "clari":("Clari","Tech"),             # 4
 }
 
 ASHBY_COMPANIES = {
@@ -1314,6 +1337,11 @@ ASHBY_COMPANIES = {
     "influxdata":("InfluxData","Tech"),     # 2
     "modal":("Modal","Tech"),               # 28
     "lancedb":("LanceDB","Tech"),           # 5
+    "pika":("Pika","Tech"),                 # 2
+    "cognition":("Cognition AI","Tech"),    # 62
+    "genesis-ai":("Genesis","Tech"),        # 34
+    "poolside":("Poolside","Tech"),         # 13
+    "payrails":("Payrails","Finance"),      # 5
 }
 
 SMARTRECRUITERS_COMPANIES = {
@@ -1505,6 +1533,9 @@ SMARTRECRUITERS_COMPANIES = {
     "McDermott":("McDermott","Consulting"),
     "Foster-Wheeler":("Foster Wheeler","Consulting"),
     "CB-I":("CBI","Consulting"),
+    # ── Verified 2026-04-25: correct SR company registration IDs ──
+    "McDonaldsCorporation":("McDonald's","Consumer"),   # 32 verified
+    "RobertBosch":("Robert Bosch","Tech"),              # 5 verified
 }
 
 JAZZHR_COMPANIES = {
