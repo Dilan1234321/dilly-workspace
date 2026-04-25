@@ -872,6 +872,11 @@ GREENHOUSE_COMPANIES = {
     # Batch 12 verified
     'tcs':('Tata Consultancy Services','Tech'), # 73
     'netcracker':('NetCracker','Tech'),      # 59
+    # Batch 13 verified
+    'a16z':('Andreessen Horowitz','Finance'), # 21
+    'mill':('Mill','Tech'),                  # 12
+    'maven':('Maven','Tech'),                # 5
+    'gradle':('Gradle','Tech'),              # 4
 }
 
 LEVER_COMPANIES = {
@@ -1458,6 +1463,13 @@ ASHBY_COMPANIES = {
     "orchard":("Orchard","Finance"),        # 15
     "twelve":("Twelve","Tech"),             # 9
     "babbel":("Babbel","Tech"),             # 7
+    # Batch 13 verified
+    "real":("Real","Finance"),              # 19
+    "e2b":("E2B","Tech"),                   # 12
+    "raindrop":("Raindrop.io","Tech"),      # 4
+    "mem":("Mem","Tech"),                   # 4
+    "roam":("Roam Research","Tech"),        # 3
+    "convex-dev":("Convex","Tech"),         # 3
 }
 
 SMARTRECRUITERS_COMPANIES = {
