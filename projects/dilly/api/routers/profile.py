@@ -90,6 +90,18 @@ async def get_profile(request: Request):
         except Exception:
             profile["has_ready_check"] = False
 
+        # Getting-Started predicates (build 387). Evaluated server-side so the
+        # client never has to re-derive them from raw profile state.
+        profile["gs_profile_done"] = bool(profile.get("name") and profile.get("has_run_first_audit"))
+        profile["gs_transcript"]   = bool(profile.get("transcript_uploaded_at"))
+        profile["gs_win"]          = bool(len(profile.get("wins") or []) > 0)
+        profile["gs_calendar"]     = bool(profile.get("calendar_feed_token"))
+        try:
+            from projects.dilly.api import chapters_store
+            profile["gs_chapter"] = chapters_store.count_chapters(email) > 0
+        except Exception:
+            profile["gs_chapter"] = False
+
         # Fallback: if scores still missing, pull them from the latest audit in audit_history.json
         if not profile.get("overall_dilly_score"):
             try:

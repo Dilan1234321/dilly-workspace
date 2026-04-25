@@ -1086,8 +1086,11 @@ function SeekerHome() {
 
   // Journey tracking — server-persisted dismissed set + live-state predicates
   const [gsDismissed, setGsDismissed] = useState<Set<string>>(new Set());
-  const [gsInterviewDone, setGsInterviewDone] = useState(false);
-  const [gsHasReadyCheck, setGsHasReadyCheck] = useState(false);
+  const [gsProfileDone, setGsProfileDone] = useState(false);
+  const [gsTranscript,  setGsTranscript]  = useState(false);
+  const [gsWin,         setGsWin]         = useState(false);
+  const [gsChapter,     setGsChapter]     = useState(false);
+  const [gsCalendar,    setGsCalendar]    = useState(false);
 
   // Auth guard
   useFocusEffect(
@@ -1107,6 +1110,25 @@ function SeekerHome() {
     useCallback(() => {
       dilly.get('/chapters/current').then((data: ChapterCardState | null) => {
         if (data) setChapterState(data);
+      }).catch(() => {});
+      return () => {};
+    }, [])
+  );
+
+  // Re-check Getting Started predicates on every focus so dismissal
+  // feels instant after completing actions (transcript upload, win log, etc.).
+  useFocusEffect(
+    useCallback(() => {
+      dilly.get('/profile').then((p: any) => {
+        if (!p) return;
+        setGsProfileDone(Boolean(p.gs_profile_done));
+        setGsTranscript(Boolean(p.gs_transcript));
+        setGsWin(Boolean(p.gs_win));
+        setGsChapter(Boolean(p.gs_chapter));
+        setGsCalendar(Boolean(p.gs_calendar));
+        const dismissed: string[] = Array.isArray(p.getting_started_dismissed)
+          ? p.getting_started_dismissed : [];
+        setGsDismissed(new Set(dismissed));
       }).catch(() => {});
       return () => {};
     }, [])
@@ -1234,8 +1256,11 @@ function SeekerHome() {
         const dismissed: string[] = Array.isArray(profileRes?.getting_started_dismissed)
           ? profileRes.getting_started_dismissed : [];
         setGsDismissed(new Set(dismissed));
-        setGsInterviewDone(Boolean(profileRes?.interview_done));
-        setGsHasReadyCheck(Boolean(profileRes?.has_ready_check));
+        setGsProfileDone(Boolean(profileRes?.gs_profile_done));
+        setGsTranscript(Boolean(profileRes?.gs_transcript));
+        setGsWin(Boolean(profileRes?.gs_win));
+        setGsChapter(Boolean(profileRes?.gs_chapter));
+        setGsCalendar(Boolean(profileRes?.gs_calendar));
       } catch {
         const still = await getToken();
         if (!still) { router.replace('/'); return; }
@@ -1293,48 +1318,48 @@ function SeekerHome() {
     }).catch(() => {});
   }
 
-  // Journey steps — predicates against live server state, NOT tap booleans.
-  // Completed = predicate true OR server says already dismissed forever.
+  // Journey steps — predicates evaluated server-side, returned in /profile.
+  // Completed = server predicate true OR permanently dismissed in DB.
   const gsPredicates: Record<string, boolean> = {
-    tell:      factCount > 3,
-    jobs:      appCount > 0 || savedJobCount > 0,
-    arena:     gsHasReadyCheck,
-    interview: gsInterviewDone,
-    save:      savedJobCount > 0 || appCount > 0,
+    profile:    gsProfileDone,
+    transcript: gsTranscript,
+    win:        gsWin,
+    chapter:    gsChapter,
+    calendar:   gsCalendar,
   };
   // Auto-dismiss any step whose predicate just became true.
   Object.entries(gsPredicates).forEach(([id, done]) => { if (done) autoDissmissStep(id); });
 
   const journeySteps: JourneyStep[] = [
     {
-      id: 'tell', title: 'Tell Dilly about yourself', subtitle: 'The more Dilly knows, the better it helps.',
-      icon: 'chatbubble', color: colors.indigo,
-      completed: gsPredicates.tell || gsDismissed.has('tell'),
-      onPress: () => openDillyOverlay({ name: firstName, isPaid: false, initialMessage: 'Help me build my profile. Ask me about my experiences, skills, and goals.' }),
+      id: 'profile', title: 'Finish your profile', subtitle: 'Upload your resume so Dilly knows your story.',
+      icon: 'person', color: colors.indigo,
+      completed: gsPredicates.profile || gsDismissed.has('profile'),
+      onPress: () => router.push('/(app)/my-dilly-profile'),
     },
     {
-      id: 'jobs', title: 'Explore your job matches', subtitle: 'See what opportunities fit your profile.',
-      icon: 'briefcase', color: colors.blue,
-      completed: gsPredicates.jobs || gsDismissed.has('jobs'),
-      onPress: () => router.push('/(app)/jobs'),
+      id: 'transcript', title: 'Upload a transcript', subtitle: 'Dilly reads your GPA, courses, and honors.',
+      icon: 'school', color: colors.blue,
+      completed: gsPredicates.transcript || gsDismissed.has('transcript'),
+      onPress: () => router.push('/(app)/my-dilly-profile'),
     },
     {
-      id: 'arena', title: 'Check your AI readiness', subtitle: 'Find out how AI impacts your career.',
-      icon: 'shield-checkmark', color: '#00C853',
-      completed: gsPredicates.arena || gsDismissed.has('arena'),
-      onPress: () => router.push('/(app)/ai-arena'),
+      id: 'win', title: 'Log your first win', subtitle: 'Applications, interviews, offers — they all count.',
+      icon: 'trophy', color: colors.amber,
+      completed: gsPredicates.win || gsDismissed.has('win'),
+      onPress: () => router.push('/(app)/my-dilly-profile'),
     },
     {
-      id: 'interview', title: 'Try a mock interview', subtitle: 'Practice makes confident.',
-      icon: 'mic', color: '#AF52DE',
-      completed: gsPredicates.interview || gsDismissed.has('interview'),
-      onPress: () => router.push('/(app)/interview-practice'),
+      id: 'chapter', title: 'Complete a Chapter', subtitle: 'Your weekly career session with Dilly.',
+      icon: 'book', color: '#AF52DE',
+      completed: gsPredicates.chapter || gsDismissed.has('chapter'),
+      onPress: () => router.push('/(app)/chapter' as any),
     },
     {
-      id: 'save', title: 'Save your first job', subtitle: 'Start building your pipeline.',
-      icon: 'bookmark', color: colors.amber,
-      completed: gsPredicates.save || gsDismissed.has('save'),
-      onPress: () => router.push('/(app)/jobs'),
+      id: 'calendar', title: 'Connect your calendar', subtitle: 'Get your Dilly deadlines in your calendar app.',
+      icon: 'calendar', color: '#00C853',
+      completed: gsPredicates.calendar || gsDismissed.has('calendar'),
+      onPress: () => router.push('/(app)/calendar' as any),
     },
   ];
   const completedCount = journeySteps.filter(s => s.completed).length;
