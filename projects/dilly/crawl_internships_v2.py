@@ -844,6 +844,18 @@ GREENHOUSE_COMPANIES = {
     # Batch 7 verified
     'sezzle':('Sezzle','Finance'),           # 176
     'tamara':('Tamara','Finance'),           # 60
+    # Batch 8 verified
+    'onetrust':('OneTrust','Tech'),          # 91
+    'trustpilot':('Trustpilot','Tech'),      # 67
+    'roofstock':('Roofstock','Finance'),     # 41
+    'nextdoor':('Nextdoor','Tech'),          # 29
+    'typeform':('Typeform','Tech'),          # 22
+    'northbeam':('Northbeam','Tech'),        # 13
+    'taxbit':('TaxBit','Finance'),           # 10
+    'paystand':('Paystand','Finance'),       # 9
+    'truelayer':('TrueLayer','Finance'),     # 8
+    'nucleus':('Nucleus','Tech'),            # 8
+    'medeanalytics':('MedeAnalytics','Healthcare'), # 1
 }
 
 LEVER_COMPANIES = {
