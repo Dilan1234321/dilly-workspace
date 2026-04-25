@@ -1139,6 +1139,8 @@ LEVER_COMPANIES = {
     # Batch 18 verified
     "jumpcloud":("JumpCloud","Tech"),     # 30
     "sonatype":("Sonatype","Tech"),       # 18
+    # Batch 19 verified
+    "logz":("Logz.io","Tech"),            # 4
 }
 
 ASHBY_COMPANIES = {
@@ -1504,6 +1506,8 @@ ASHBY_COMPANIES = {
     "klue":("Klue","Tech"),                 # 7
     "kodex":("Kodex","Tech"),               # 2
     "latitude":("Latitude","Tech"),         # 1
+    # Batch 19 verified
+    "demandbase":("Demandbase","Tech"),     # 32
 }
 
 SMARTRECRUITERS_COMPANIES = {
