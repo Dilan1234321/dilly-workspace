@@ -641,6 +641,13 @@ export interface AuthUser {
   name?: string;
   school?: string;
   is_subscribed?: boolean;
+  /** Server-side account classification. Defaults to "student" if absent. */
+  account_type?: string;
+  subscribed?: boolean;
+  company_name?: string | null;
+  company_domain?: string | null;
+  company_logo_url?: string | null;
+  company_jobs_count?: number | null;
 }
 
 /** Slim alias used in some dashboard code. */
