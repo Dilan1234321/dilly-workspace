@@ -249,6 +249,7 @@ GREENHOUSE_COMPANIES = {
     'mintel':('Mintel','Consulting'),                    # 13
     'litify':('Litify','Tech'),                          # 5
     'degreed':('Degreed','Tech'),                        # 4
+    'elsevier':('Elsevier','Media'),                     # 9
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -840,6 +841,9 @@ GREENHOUSE_COMPANIES = {
     'zilliz-io':('Zilliz','Tech'),
     'vespa-engine':('Vespa','Tech'),
     'marqo-ai':('Marqo','Tech'),
+    # Batch 7 verified
+    'sezzle':('Sezzle','Finance'),           # 176
+    'tamara':('Tamara','Finance'),           # 60
 }
 
 LEVER_COMPANIES = {
@@ -1100,6 +1104,24 @@ LEVER_COMPANIES = {
     "curri":("Curri","Consumer"),           # 25
     "cosuno":("Cosuno","Tech"),             # 13
     "datum":("Datum","Tech"),               # 7
+    "expressable":("Expressable","Healthcare"), # 74
+    "ditto":("Ditto","Tech"),               # 30
+    "delve":("Delve","Tech"),               # 15
+    "gelato":("Gelato","Tech"),             # 13
+    "duet":("Duet AI","Tech"),              # 7
+    "farmraise":("FarmRaise","Tech"),       # 2
+    # Batch 7 verified (H-M alphabetical sweep)
+    "hiive":("Hiive","Finance"),            # 25
+    "lemlist":("lemlist","Tech"),           # 18
+    "leandata":("LeanData","Tech"),         # 12
+    "litmus":("Litmus","Tech"),             # 12
+    "maple":("Maple","Tech"),               # 12
+    "honeybook":("HoneyBook","Tech"),       # 11
+    "interplay":("Interplay","Tech"),       # 11
+    "ignition":("Ignition","Tech"),         # 7
+    "klue":("Klue","Tech"),                 # 7
+    "kodex":("Kodex","Tech"),               # 2
+    "latitude":("Latitude","Tech"),         # 1
 }
 
 ASHBY_COMPANIES = {
