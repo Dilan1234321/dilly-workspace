@@ -872,6 +872,331 @@ def daily_pipeline(token: str = ""):
     return {"ok": True, "pipeline": results}
 
 
+# ── AI Arena Phase 2 ─────────────────────────────────────────────────────────
+# Cohort → role_cluster search terms (used by regenerate-cohort-skills to find
+# relevant active postings for each cohort's skill-list generation).
+_AI_ARENA_COHORT_ROLE_TERMS: dict[str, list[str]] = {
+    "Software Engineering & CS": ["software engineer", "software developer", "backend engineer", "frontend engineer", "full stack engineer"],
+    "Data Science & Analytics": ["data analyst", "data scientist", "analytics engineer", "business analyst", "bi analyst"],
+    "Cybersecurity & IT": ["security engineer", "cybersecurity analyst", "it analyst", "information security analyst"],
+    "Finance & Accounting": ["financial analyst", "investment banking analyst", "accountant", "finance analyst", "auditor"],
+    "Consulting & Strategy": ["consultant", "strategy analyst", "management consultant", "business analyst"],
+    "Marketing & Advertising": ["marketing manager", "marketing analyst", "digital marketing specialist", "brand manager", "growth marketer"],
+    "Management & Operations": ["operations analyst", "operations manager", "project manager", "supply chain analyst", "program manager"],
+    "Healthcare & Clinical": ["nurse", "clinical researcher", "medical assistant", "healthcare analyst", "clinical coordinator"],
+    "Biotech & Pharmaceutical": ["biomedical researcher", "research scientist", "lab scientist", "pharmaceutical analyst"],
+    "Life Sciences & Research": ["research scientist", "lab researcher", "environmental scientist", "research assistant"],
+    "Electrical & Computer Engineering": ["electrical engineer", "hardware engineer", "embedded systems engineer"],
+    "Mechanical & Aerospace Engineering": ["mechanical engineer", "aerospace engineer", "design engineer"],
+    "Civil & Environmental Engineering": ["civil engineer", "environmental engineer", "structural engineer"],
+    "Chemical & Biomedical Engineering": ["chemical engineer", "biomedical engineer", "process engineer"],
+    "Economics & Public Policy": ["public policy analyst", "economist", "policy analyst", "economic analyst"],
+    "Law & Government": ["lawyer", "legal analyst", "policy analyst", "paralegal"],
+    "Media & Communications": ["journalist", "communications manager", "content strategist", "media analyst", "copywriter"],
+    "Design & Creative Arts": ["designer", "ux designer", "graphic designer", "product designer", "ui designer"],
+    "Education & Human Development": ["teacher", "education consultant", "instructional designer"],
+    "Social Sciences & Nonprofit": ["program coordinator", "nonprofit analyst", "social worker", "community manager"],
+    "Entrepreneurship & Innovation": ["entrepreneur", "product manager", "startup founder", "venture analyst"],
+    "Physical Sciences & Math": ["quantitative analyst", "math researcher", "physicist", "computational scientist"],
+    "Sports & Athletic Performance": ["sports analyst", "athletic trainer", "sports medicine", "performance coach"],
+}
+
+
+@router.get("/setup-ai-arena-tables", summary="One-time: add AI Arena Phase 2 schema (idempotent)")
+def setup_ai_arena_tables(token: str = ""):
+    """Add ai_fluency + role_cluster to internships, create cohort_skill_lists
+    table, and create aggregation indexes. All DDL uses IF NOT EXISTS so safe
+    to re-run. Call once after deploying this build, then forget."""
+    _require_cron_secret(token)
+    import traceback
+    from projects.dilly.api.database import get_db
+
+    stmts = [
+        # New nullable columns on internships (safe — existing rows get NULL)
+        "ALTER TABLE internships ADD COLUMN IF NOT EXISTS ai_fluency TEXT",
+        "ALTER TABLE internships ADD COLUMN IF NOT EXISTS role_cluster TEXT",
+        # Partial indexes for aggregation queries (only active rows)
+        "CREATE INDEX IF NOT EXISTS idx_internships_ai_fluency ON internships (ai_fluency) WHERE status = 'active'",
+        "CREATE INDEX IF NOT EXISTS idx_internships_role_cluster ON internships (role_cluster) WHERE status = 'active'",
+        "CREATE INDEX IF NOT EXISTS idx_internships_cohort_ai ON internships (role_cluster, ai_fluency) WHERE status = 'active'",
+        # Versioned per-cohort skill lists
+        """CREATE TABLE IF NOT EXISTS cohort_skill_lists (
+    month   TEXT  NOT NULL,
+    cohort  TEXT  NOT NULL,
+    skill   TEXT  NOT NULL,
+    weight  FLOAT NOT NULL DEFAULT 1.0,
+    PRIMARY KEY (month, cohort, skill)
+)""",
+        "CREATE INDEX IF NOT EXISTS idx_cohort_skill_lists_cohort ON cohort_skill_lists (cohort, month DESC)",
+    ]
+
+    results = []
+    with get_db() as conn:
+        cur = conn.cursor()
+        for stmt in stmts:
+            try:
+                cur.execute(stmt)
+                results.append({"stmt": stmt.strip()[:80], "ok": True})
+            except Exception as e:
+                traceback.print_exc()
+                results.append({"stmt": stmt.strip()[:80], "ok": False, "error": str(e)[:200]})
+    return {"ok": True, "migrations": results}
+
+
+@router.get("/classify-roles", summary="Classify role_cluster + ai_fluency for un-classified active internships")
+def classify_roles(token: str = "", max: int = 200):
+    """Batch-classify internships WHERE role_cluster IS NULL using Haiku.
+    Resumable — processes at most ?max=N rows per call then commits.
+    ~$0.0003/row. Safe to call repeatedly; only touches unclassified rows.
+
+    After completion, invalidates the field-intel in-process cache so
+    the next /ai-arena/field-intel request reflects the new data."""
+    _require_cron_secret(token)
+    import json as _json
+    import traceback
+    import anthropic as _anthropic
+    from projects.dilly.api.database import get_db
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return {"ok": False, "error": "ANTHROPIC_API_KEY not set"}
+
+    classified = 0
+    errors = 0
+    skipped = 0
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, title, description
+            FROM internships
+            WHERE role_cluster IS NULL
+              AND status = 'active'
+              AND title IS NOT NULL
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (int(max),),
+        )
+        rows = cur.fetchall()
+
+        if not rows:
+            return {
+                "ok": True, "classified": 0, "errors": 0, "skipped": 0,
+                "total_fetched": 0, "message": "No unclassified rows found.",
+            }
+
+        client = _anthropic.Anthropic(api_key=api_key)
+        update_cur = conn.cursor()
+
+        for row in rows:
+            rid, title, description = row[0], row[1], row[2]
+            if not title:
+                skipped += 1
+                continue
+            jd_snippet = f"Title: {title}\n{(description or '')[:600]}"
+            try:
+                resp = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=120,
+                    system=(
+                        "Classify this job into ONE coarse role cluster and rate its AI fluency. "
+                        "Return ONLY valid JSON, no markdown fences: "
+                        "{\"role_cluster\": \"...\", \"ai_fluency\": \"low|medium|high\"}\n"
+                        "role_cluster: short lowercase label, e.g. 'software engineer', 'data analyst', "
+                        "'ml engineer', 'product manager', 'investment banking analyst', "
+                        "'marketing manager', 'financial analyst', 'consultant', 'ux designer', "
+                        "'operations analyst', 'research scientist', 'nurse', 'lawyer', 'accountant', "
+                        "'civil engineer', 'mechanical engineer', 'biomedical researcher', "
+                        "'public policy analyst', 'journalist', 'entrepreneur'\n"
+                        "ai_fluency: how central is AI/ML tooling in the JD? "
+                        "low=not mentioned, medium=useful but optional, high=core to the role"
+                    ),
+                    messages=[{"role": "user", "content": jd_snippet}],
+                )
+                raw = resp.content[0].text.strip()
+                if "```" in raw:
+                    parts = raw.split("```")
+                    raw = parts[1] if len(parts) > 1 else parts[0]
+                    if raw.startswith("json"):
+                        raw = raw[4:]
+                    raw = raw.strip()
+                data = _json.loads(raw)
+                rc = str(data.get("role_cluster") or "").strip().lower()[:100]
+                af = str(data.get("ai_fluency") or "low").strip().lower()
+                if af not in ("low", "medium", "high"):
+                    af = "low"
+                if rc:
+                    update_cur.execute(
+                        "UPDATE internships SET role_cluster = %s, ai_fluency = %s WHERE id = %s",
+                        (rc, af, rid),
+                    )
+                    classified += 1
+                else:
+                    skipped += 1
+            except _json.JSONDecodeError:
+                skipped += 1
+            except Exception:
+                traceback.print_exc()
+                errors += 1
+
+        conn.commit()
+
+    try:
+        from projects.dilly.api.routers.ai_arena import _invalidate_field_intel_cache
+        _invalidate_field_intel_cache()
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "classified": classified,
+        "errors": errors,
+        "skipped": skipped,
+        "total_fetched": len(rows),
+    }
+
+
+@router.get("/regenerate-cohort-skills", summary="Generate per-cohort AI-resilient skill lists for this month")
+def regenerate_cohort_skills(token: str = "", max_postings_per_cohort: int = 25):
+    """For each of the 23 cohorts, find active postings with medium/high
+    AI-tooling demand, extract top 10-15 AI-resilient skills via Haiku,
+    and write to cohort_skill_lists (month, cohort, skill, weight).
+
+    Month-keyed so we can track skill drift over time. Upserts on conflict
+    so re-running a month is safe. After completion, invalidates the
+    field-intel cache.
+
+    Call monthly (or after a large crawl) with ?token=CRON_SECRET."""
+    _require_cron_secret(token)
+    import json as _json
+    import traceback
+    import datetime as _dt
+    import anthropic as _anthropic
+    import psycopg2.extras
+    from projects.dilly.api.database import get_db
+    from projects.dilly.api.cohort_scorer import COHORT_CRITERIA
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return {"ok": False, "error": "ANTHROPIC_API_KEY not set"}
+
+    month = _dt.datetime.utcnow().strftime("%Y-%m")
+    client = _anthropic.Anthropic(api_key=api_key)
+    results: dict = {}
+
+    with get_db() as conn:
+        read_cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        write_cur = conn.cursor()
+
+        for cohort in COHORT_CRITERIA.keys():
+            role_terms = _AI_ARENA_COHORT_ROLE_TERMS.get(cohort, [])
+            try:
+                if role_terms:
+                    read_cur.execute(
+                        """
+                        SELECT title, description
+                        FROM internships
+                        WHERE status = 'active'
+                          AND ai_fluency IN ('medium', 'high')
+                          AND role_cluster = ANY(%s)
+                        ORDER BY created_at DESC
+                        LIMIT %s
+                        """,
+                        (role_terms, int(max_postings_per_cohort)),
+                    )
+                else:
+                    read_cur.execute(
+                        """
+                        SELECT title, description
+                        FROM internships
+                        WHERE status = 'active'
+                          AND ai_fluency IN ('medium', 'high')
+                        ORDER BY created_at DESC
+                        LIMIT %s
+                        """,
+                        (int(max_postings_per_cohort),),
+                    )
+                rows = read_cur.fetchall()
+
+                if not rows:
+                    results[cohort] = {"skipped": "no ai-fluent postings found", "skills_written": 0}
+                    continue
+
+                jd_text = "\n---\n".join(
+                    f"Title: {r['title']}\n{(r['description'] or '')[:400]}"
+                    for r in rows[:15]
+                )
+
+                resp = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=500,
+                    system=(
+                        f"You are a career advisor analyzing job postings for the '{cohort}' field. "
+                        "Extract the top 10-15 skills that are AI-resilient — things humans must bring "
+                        "because AI cannot fully replace them (e.g. stakeholder management, domain "
+                        "judgment, client relationships, creative direction, ethical oversight, "
+                        "field-specific expertise, physical presence). Avoid generic buzzwords. "
+                        "Return ONLY valid JSON array, no markdown: "
+                        "[{\"skill\": \"...\", \"weight\": 0.0-1.0}] sorted by weight descending. "
+                        "weight=1.0 for the most critical, 0.5 for moderate importance."
+                    ),
+                    messages=[{"role": "user", "content": f"Job postings:\n{jd_text}"}],
+                )
+                raw = resp.content[0].text.strip()
+                if "```" in raw:
+                    parts = raw.split("```")
+                    raw = parts[1] if len(parts) > 1 else parts[0]
+                    if raw.startswith("json"):
+                        raw = raw[4:]
+                    raw = raw.strip()
+
+                skill_list = _json.loads(raw)
+                if not isinstance(skill_list, list):
+                    results[cohort] = {"error": "non-list response from Haiku", "skills_written": 0}
+                    continue
+
+                written = 0
+                for item in skill_list[:15]:
+                    skill = str(item.get("skill") or "").strip()[:200]
+                    try:
+                        weight = max(0.0, min(1.0, float(item.get("weight") or 0.5)))
+                    except (TypeError, ValueError):
+                        weight = 0.5
+                    if not skill:
+                        continue
+                    write_cur.execute(
+                        """
+                        INSERT INTO cohort_skill_lists (month, cohort, skill, weight)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (month, cohort, skill) DO UPDATE SET weight = EXCLUDED.weight
+                        """,
+                        (month, cohort, skill, weight),
+                    )
+                    written += 1
+                results[cohort] = {"skills_written": written}
+
+            except _json.JSONDecodeError:
+                results[cohort] = {"error": "bad JSON from Haiku", "skills_written": 0}
+            except Exception as e:
+                traceback.print_exc()
+                results[cohort] = {"error": str(e)[:200], "skills_written": 0}
+
+        conn.commit()
+
+    try:
+        from projects.dilly.api.routers.ai_arena import _invalidate_field_intel_cache
+        _invalidate_field_intel_cache()
+    except Exception:
+        pass
+
+    total_written = sum(
+        v.get("skills_written", 0) for v in results.values() if isinstance(v, dict)
+    )
+    return {"ok": True, "month": month, "total_skills_written": total_written, "cohorts": results}
+
+
 @router.get(
     "/purge-llm-usage-log",
     summary="Daily: purge llm_usage_log rows older than 90 days",

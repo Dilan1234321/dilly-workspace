@@ -782,3 +782,269 @@ async def get_disruption(request: Request):
             for k, v in ranked[:10]
         ],
     }
+
+
+# ── Field Intel Cache (in-process, 6h TTL per cohort) ────────────────────────
+import threading as _threading_arena
+
+_FIELD_INTEL_CACHE: dict = {}
+_FIELD_INTEL_LOCK = _threading_arena.Lock()
+_FIELD_INTEL_TTL_SEC = 6 * 3600  # 6 hours
+
+
+def _get_field_intel_cached(cohort: str) -> dict | None:
+    with _FIELD_INTEL_LOCK:
+        entry = _FIELD_INTEL_CACHE.get(cohort)
+        if entry and (_time.time() - entry.get("ts", 0)) < _FIELD_INTEL_TTL_SEC:
+            return entry.get("data")
+    return None
+
+
+def _set_field_intel_cached(cohort: str, data: dict) -> None:
+    with _FIELD_INTEL_LOCK:
+        _FIELD_INTEL_CACHE[cohort] = {"ts": _time.time(), "data": data}
+
+
+def _invalidate_field_intel_cache() -> None:
+    """Bust the per-cohort 6h cache. Called by cron jobs after classification
+    or skill-list regeneration so the next request sees fresh data."""
+    with _FIELD_INTEL_LOCK:
+        _FIELD_INTEL_CACHE.clear()
+
+
+# ── /ai-arena/field-intel ─────────────────────────────────────────────────────
+
+@router.get("/ai-arena/field-intel")
+async def get_field_intel(request: Request):
+    """8-section AI readiness report for the authenticated user's cohort.
+
+    Auth required (401 if not signed in). Cached in-process per cohort for
+    6 hours; invalidated when /cron/classify-roles or
+    /cron/regenerate-cohort-skills complete.
+
+    Returns data_ready: false when cohort_skill_lists has no data yet for this
+    month (prime it by hitting /cron/regenerate-cohort-skills).
+
+    Each section is independently guarded — a missing DB table or empty
+    column returns a sensible default rather than a 500.
+
+    Response shape:
+        {
+          "data_ready": bool,
+          "cohort": str,
+          "cached": bool,
+          "sections": {
+            "cohort_pulse":       {...},
+            "threat_opportunity": {...},
+            "role_radar":         {...},
+            "impact_score":       {...},
+            "playbook":           {...},
+            "day_in_2027":        {...},
+            "chapter_prompt":     {...}
+          }
+        }
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    # ── Resolve cohort ────────────────────────────────────────────────────────
+    cohort = "General"
+    try:
+        from projects.dilly.api.profile_store import get_profile
+        profile = get_profile(email) or {}
+        cohort = profile.get("cohort") or profile.get("track") or "General"
+    except Exception:
+        pass
+
+    # ── Cache hit ─────────────────────────────────────────────────────────────
+    cached = _get_field_intel_cached(cohort)
+    if cached is not None:
+        return {**cached, "cached": True}
+
+    # ── Pull DB data (single connection, two queries) ─────────────────────────
+    import datetime as _dt_fi
+    import psycopg2.extras as _pex_fi
+    from projects.dilly.api.database import get_db as _get_db_fi
+
+    month = _dt_fi.datetime.utcnow().strftime("%Y-%m")
+    skills: list[dict] = []
+    role_radar: list[dict] = []
+    data_ready = False
+
+    try:
+        with _get_db_fi() as conn:
+            cur = conn.cursor(cursor_factory=_pex_fi.RealDictCursor)
+
+            # Per-cohort AI-resilient skill list for this month
+            cur.execute(
+                """
+                SELECT skill, weight
+                FROM cohort_skill_lists
+                WHERE cohort = %s AND month = %s
+                ORDER BY weight DESC
+                LIMIT 15
+                """,
+                (cohort, month),
+            )
+            skills = [
+                {"skill": r["skill"], "weight": float(r["weight"])}
+                for r in cur.fetchall()
+            ]
+            data_ready = len(skills) > 0
+
+            # Role radar: top active role_clusters by posting volume × ai_fluency
+            cur.execute(
+                """
+                SELECT role_cluster, ai_fluency, COUNT(*) AS n
+                FROM internships
+                WHERE status = 'active'
+                  AND role_cluster IS NOT NULL
+                  AND ai_fluency IS NOT NULL
+                GROUP BY role_cluster, ai_fluency
+                ORDER BY n DESC
+                LIMIT 20
+                """
+            )
+            role_radar = [
+                {
+                    "role_cluster": r["role_cluster"],
+                    "ai_fluency": r["ai_fluency"],
+                    "count": int(r["n"]),
+                }
+                for r in cur.fetchall()
+            ]
+    except Exception:
+        pass  # DB not available or tables not yet created — sections fall back to defaults
+
+    # ── Disruption baseline ───────────────────────────────────────────────────
+    disruption: dict = {}
+    try:
+        from dilly_core.ai_disruption import get_cohort_disruption
+        disruption = get_cohort_disruption(cohort) or {}
+    except Exception:
+        pass
+
+    disruption_pct: int = int(disruption.get("disruption_pct") or 30)
+
+    # ── Build sections (each independently guarded) ───────────────────────────
+    sections: dict = {}
+
+    # 1. cohort_pulse — weekly headline for the cohort
+    try:
+        sections["cohort_pulse"] = {
+            "headline": disruption.get("headline") or f"AI is reshaping the {cohort} landscape.",
+            "disruption_pct": disruption_pct,
+            "trend": disruption.get("trend") or "rising",
+            "ai_resistant_skills": (disruption.get("ai_resistant_skills") or [])[:3],
+        }
+    except Exception:
+        sections["cohort_pulse"] = {
+            "headline": f"AI is transforming {cohort}.",
+            "disruption_pct": disruption_pct,
+            "trend": "rising",
+            "ai_resistant_skills": [],
+        }
+
+    # 2. threat_opportunity — split % derived from role_radar ai_fluency mix
+    try:
+        high_n = sum(1 for r in role_radar if r.get("ai_fluency") == "high")
+        med_n = sum(1 for r in role_radar if r.get("ai_fluency") == "medium")
+        total_n = len(role_radar) or 1
+        threat_pct = min(100, round(((high_n + med_n * 0.5) / total_n) * 100))
+        sections["threat_opportunity"] = {
+            "threat_pct": threat_pct,
+            "opportunity_pct": 100 - threat_pct,
+            "threat_label": "Roles where AI is displacing human work",
+            "opportunity_label": "Roles where human judgment still wins",
+        }
+    except Exception:
+        sections["threat_opportunity"] = {
+            "threat_pct": disruption_pct,
+            "opportunity_pct": 100 - disruption_pct,
+            "threat_label": "Roles at risk",
+            "opportunity_label": "Roles with opportunity",
+        }
+
+    # 3. role_radar — dot list of clusters × ai_fluency for the mobile chart
+    sections["role_radar"] = {
+        "roles": role_radar[:12],
+        "cohort": cohort,
+        "note": "Top active role clusters by posting volume, colored by AI-fluency level",
+    }
+
+    # 4. impact_score — gauge 0–100 (disruption_pct is our proxy score)
+    try:
+        label = (
+            "High impact" if disruption_pct >= 60
+            else "Medium impact" if disruption_pct >= 35
+            else "Lower impact"
+        )
+        sections["impact_score"] = {
+            "score": disruption_pct,
+            "label": label,
+            "description": disruption.get("what_to_do") or "Focus on uniquely human skills.",
+        }
+    except Exception:
+        sections["impact_score"] = {
+            "score": disruption_pct,
+            "label": "Impact pending",
+            "description": "Focus on uniquely human skills.",
+        }
+
+    # 5. playbook — AI-resilient skills from cohort_skill_lists
+    sections["playbook"] = {
+        "skills": skills,
+        "data_ready": data_ready,
+        "month": month,
+        "title": f"AI-Resilient Skills for {cohort}",
+    }
+
+    # 6. day_in_2027 — short narrative about what the role looks like in 2027
+    try:
+        top_skills = [s["skill"] for s in skills[:2]]
+        if not top_skills:
+            top_skills = (disruption.get("ai_resistant_skills") or [])[:2]
+        skills_str = " and ".join(top_skills) if top_skills else "domain expertise and judgment"
+        what_to_do = (disruption.get("what_to_do") or "").strip()
+        narrative = (
+            f"By 2027, a typical day in {cohort} centers on {skills_str}. "
+            f"AI handles the repetitive groundwork; your edge is what AI can't replicate. "
+            + (f"{what_to_do}" if what_to_do else "")
+        ).strip()
+        sections["day_in_2027"] = {"narrative": narrative, "cohort": cohort}
+    except Exception:
+        sections["day_in_2027"] = {
+            "narrative": (
+                f"In 2027, the most valued people in {cohort} combine deep domain expertise "
+                "with AI fluency."
+            ),
+            "cohort": cohort,
+        }
+
+    # 7. chapter_prompt — reflective question for the user
+    try:
+        top_skill = skills[0]["skill"] if skills else "strategic judgment"
+        sections["chapter_prompt"] = {
+            "prompt": (
+                f"What evidence do you have that you can do what AI can't — "
+                f"especially around {top_skill}?"
+            ),
+            "cohort": cohort,
+        }
+    except Exception:
+        sections["chapter_prompt"] = {
+            "prompt": "What makes you irreplaceable in your field?",
+            "cohort": cohort,
+        }
+
+    result = {
+        "data_ready": data_ready,
+        "cohort": cohort,
+        "cached": False,
+        "sections": sections,
+    }
+
+    _set_field_intel_cached(cohort, result)
+    return result
