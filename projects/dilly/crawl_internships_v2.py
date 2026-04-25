@@ -185,6 +185,20 @@ GREENHOUSE_COMPANIES = {
     'stackadapt':('StackAdapt','Tech'),                  # 125
     'triplelift':('TripleLift','Tech'),                  # 35
     'a24':('A24','Media'),                               # 5
+    'businessolver':('Businessolver','Tech'),            # 32
+    'bswift':('bswift','Tech'),                          # 8
+    'nayya':('Nayya','Tech'),                            # 6
+    'brainpop':('BrainPOP','Education'),                 # 4
+    'mattermost':('Mattermost','Tech'),                  # 22
+    'workato':('Workato','Tech'),                        # 171
+    'backblaze':('Backblaze','Tech'),                    # 26
+    'wasabi':('Wasabi Technologies','Tech'),             # 18
+    'touchbistro':('TouchBistro','Tech'),                # 8
+    'openly':('Openly','Finance'),                       # 9
+    'planetscale':('PlanetScale','Tech'),                # 7
+    'opentable':('OpenTable','Consumer'),                # 78
+    'upwork':('Upwork','Tech'),                          # 33
+    'sendbird':('Sendbird','Tech'),                      # 21
 
     # Below slugs may 404 — scraper handles gracefully
     'anduril':('Anduril Industries','Tech'),'scale':('Scale','Tech'),
@@ -1287,6 +1301,19 @@ ASHBY_COMPANIES = {
     "opslevel":("OpsLevel","Tech"),         # 2
     "hinge-health":("Hinge Health","Healthcare"), # 84
     "uniswap":("Uniswap","Finance"),        # 8
+    "perplexity":("Perplexity AI","Tech"),  # 72
+    "physicalintelligence":("Physical Intelligence","Tech"), # 21
+    "sanctuary":("Sanctuary AI","Tech"),    # 7
+    "procurify":("Procurify","Tech"),       # 17
+    "thinkific":("Thinkific","Tech"),       # 7
+    "reducto":("Reducto","Tech"),           # 21
+    "infracost":("Infracost","Tech"),       # 1
+    "vitally":("Vitally","Tech"),           # 1
+    "lm-studio":("LM Studio","Tech"),       # 4
+    "litellm":("LiteLLM","Tech"),           # 9
+    "influxdata":("InfluxData","Tech"),     # 2
+    "modal":("Modal","Tech"),               # 28
+    "lancedb":("LanceDB","Tech"),           # 5
 }
 
 SMARTRECRUITERS_COMPANIES = {
