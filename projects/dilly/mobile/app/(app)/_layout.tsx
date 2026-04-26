@@ -377,6 +377,10 @@ function AppLayoutInner() {
         name="customize"
         options={{ href: null, animation: 'fade' }}
       />
+      <Tabs.Screen
+        name="transcript-review"
+        options={{ href: null, animation: 'fade' }}
+      />
     </Tabs>
   );
 }

@@ -126,11 +126,11 @@ export default function TranscriptReviewScreen() {
       if (res.ok) {
         const body = await res.json();
         if (body.low_confidence) {
-          Alert.alert('Heads up', body.low_confidence_message ?? "We couldn't parse much from this — make sure it's the digital PDF from your school portal, not a scan or photo.");
+          Alert.alert('Heads up', body.low_confidence_message ?? "We parsed your transcript but couldn't find all the details — you can edit them below.");
         }
         await loadTranscript();
       } else {
-        Alert.alert('Upload failed', 'Use the official digital PDF from your school portal, not a scan or photo.');
+        Alert.alert('Upload failed', 'Could not read this file. Make sure it\'s a PDF with selectable text (not a photo).');
       }
     } catch {
       Alert.alert('Upload failed', 'Could not read the file.');
@@ -146,7 +146,7 @@ export default function TranscriptReviewScreen() {
     return (
       <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
         <View style={s.topBar}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity onPress={() => router.replace('/(app)/my-dilly-profile')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
           </TouchableOpacity>
           <Text style={[s.navTitle, { color: theme.surface.t1 }]}>Transcript</Text>
@@ -165,7 +165,7 @@ export default function TranscriptReviewScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[s.topBar, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity onPress={() => router.replace('/(app)/my-dilly-profile')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
         </TouchableOpacity>
         <Text style={[s.navTitle, { color: theme.surface.t1 }]}>Transcript</Text>
@@ -336,7 +336,7 @@ export default function TranscriptReviewScreen() {
 
         <View style={[s.reuploadSection, { borderColor: theme.surface.border }]}>
           <Text style={[s.reuploadHint, { color: theme.surface.t3 }]}>
-            Use the official digital PDF from your school portal. Scanned or photographed transcripts won't parse correctly.
+            Upload the PDF from your school portal. Any official or unofficial transcript PDF with selectable text will work.
           </Text>
           <AnimatedPressable
             style={[s.reuploadBtn, { borderColor: theme.surface.border, backgroundColor: theme.surface.s1 }]}

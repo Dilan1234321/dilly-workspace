@@ -1009,8 +1009,7 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
             "ok": True,
             "low_confidence": low_confidence,
             "low_confidence_message": (
-                "Hmm, we couldn't parse much from this — make sure it's the digital PDF "
-                "from your school portal, not a scan or photo. Want to try again?"
+                "We parsed your transcript but couldn't find all the details — check the fields below and fill in anything missing."
                 if low_confidence else None
             ),
             "transcript": {
