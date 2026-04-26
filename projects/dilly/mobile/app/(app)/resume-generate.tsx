@@ -301,82 +301,79 @@ export default function ResumeGenerateScreen() {
         Alert.alert('Saving resume…', 'Give it a second and tap Download again.');
         return;
       }
-      // expo-file-system v19 deprecated the top-level `downloadAsync` —
-      // the legacy entry point still exports the same function, so we
-      // import from there. We also try the new `File` API via the
-      // modern import if legacy isn't available; either produces a
-      // local URI we can hand to Sharing.
-      //
-      // Fallback if both fail: fetch the response, base64-encode
-      // manually, and use writeAsStringAsync(..., Base64). That covers
-      // any future SDK that drops legacy entirely.
-      let FileSystem: any = null;
-      try {
-        FileSystem = require('expo-file-system/legacy');
-      } catch {
-        try {
-          const mod: any = require('expo-file-system');
-          FileSystem = mod?.default ?? mod;
-        } catch {}
-      }
-      const token = await dilly.tokenProvider.getToken();
-      const name = (profile.name || 'Resume').replace(/[^a-zA-Z0-9 ]/g, '').trim();
-      const safeCompany = company.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Company';
-      const filename = `${name}_${safeCompany}_Resume.${format}`;
-      const cacheDir = FileSystem?.cacheDirectory || FileSystem?.documentDirectory || '';
-      const destPath = cacheDir + filename;
-      const url = `${(require('../../lib/tokens') as any).API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
 
-      let localUri: string | null = null;
-      if (FileSystem && typeof FileSystem.downloadAsync === 'function') {
-        const res = await FileSystem.downloadAsync(url, destPath, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (res?.status && res.status >= 300) {
-          throw new Error(`Server returned ${res.status} — try again.`);
-        }
-        localUri = res?.uri || null;
-      } else if (FileSystem && typeof FileSystem.writeAsStringAsync === 'function') {
-        // Manual fallback: fetch, base64-encode, write.
-        const resp = await fetch(url, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!resp.ok) throw new Error(`Download failed (${resp.status})`);
-        const arrayBuffer = await resp.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        // Inline base64 encoder — React Native doesn't ship btoa on
-        // every SDK, and we don't want to pull in a dependency for a
-        // fallback path. This is the standard base64 table + encode.
-        const b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-        let base64 = '';
-        for (let i = 0; i < binary.length; i += 3) {
-          const c1 = binary.charCodeAt(i);
-          const c2 = i + 1 < binary.length ? binary.charCodeAt(i + 1) : Number.NaN;
-          const c3 = i + 2 < binary.length ? binary.charCodeAt(i + 2) : Number.NaN;
-          base64 += b64chars[c1 >> 2];
-          base64 += b64chars[((c1 & 0x03) << 4) | (isNaN(c2) ? 0 : (c2 >> 4))];
-          base64 += isNaN(c2) ? '=' : b64chars[((c2 & 0x0f) << 2) | (isNaN(c3) ? 0 : (c3 >> 6))];
-          base64 += isNaN(c3) ? '=' : b64chars[c3 & 0x3f];
-        }
-        await FileSystem.writeAsStringAsync(destPath, base64, { encoding: 'base64' });
-        localUri = destPath;
-      } else {
+      const token = await dilly.tokenProvider.getToken();
+      if (!token) throw new Error('Not signed in — please sign out and back in.');
+
+      // Sanitize filename — no spaces or special chars so the file URI is valid
+      const safeName = (profile.name || 'Resume')
+        .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'Resume';
+      const safeCompany = (company || 'Company')
+        .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'Company';
+      const filename = `${safeName}_${safeCompany}_Resume.${format}`;
+
+      const { API_BASE } = require('../../lib/tokens') as any;
+      const url = `${API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
+
+      // Fetch binary from the API directly — more reliable than downloadAsync
+      // for authenticated requests across Expo SDK versions.
+      const resp = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!resp.ok) {
+        let detail = '';
+        try { detail = (await resp.json())?.detail || ''; } catch {}
+        throw new Error(
+          `Server error ${resp.status}${detail ? ': ' + detail : ''} — try again.`,
+        );
+      }
+
+      // Validate content-type so we never write a JSON error page to disk as a PDF
+      const ct = (resp.headers.get('content-type') || '').toLowerCase();
+      if (format === 'pdf' && !ct.includes('pdf')) {
+        throw new Error('Unexpected response from server — try again.');
+      }
+
+      // Acquire file system
+      let FileSystem: any = null;
+      try { FileSystem = require('expo-file-system/legacy'); } catch {
+        try { const m: any = require('expo-file-system'); FileSystem = m?.default ?? m; } catch {}
+      }
+      if (!FileSystem?.writeAsStringAsync) {
         throw new Error('File system not available on this device.');
       }
+      const cacheDir: string = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
+      if (!cacheDir) throw new Error('Device cache directory unavailable.');
+      const destPath = cacheDir + filename;
 
-      if (!localUri) throw new Error('Download failed');
+      // Convert ArrayBuffer → base64 without stack-overflowing on large files
+      const ab = await resp.arrayBuffer();
+      const bytes = new Uint8Array(ab);
+      const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+      let base64 = '';
+      for (let i = 0; i < bytes.length; i += 3) {
+        const b0 = bytes[i];
+        const b1 = i + 1 < bytes.length ? bytes[i + 1] : 0;
+        const b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
+        const rem = bytes.length - i;
+        base64 += B64[b0 >> 2];
+        base64 += B64[((b0 & 3) << 4) | (b1 >> 4)];
+        base64 += rem > 1 ? B64[((b1 & 15) << 2) | (b2 >> 6)] : '=';
+        base64 += rem > 2 ? B64[b2 & 63] : '=';
+      }
+      await FileSystem.writeAsStringAsync(destPath, base64, { encoding: 'base64' });
+
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(localUri, {
-          mimeType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        await Sharing.shareAsync(destPath, {
+          mimeType: format === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           UTI: format === 'pdf' ? 'com.adobe.pdf' : 'org.openxmlformats.wordprocessingml.document',
           dialogTitle: filename,
         });
       } else {
-        Alert.alert('Saved', `Saved to ${localUri}`);
+        Alert.alert('Saved', `Saved to ${destPath}`);
       }
     } catch (e: any) {
       Alert.alert('Download failed', e?.message || 'Could not download resume.');

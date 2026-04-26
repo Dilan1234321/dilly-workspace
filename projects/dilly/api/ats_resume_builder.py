@@ -18,16 +18,15 @@ import io
 import re
 from typing import Optional
 
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
+    HRFlowable,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
-    Table,
-    TableStyle,
 )
 from reportlab.lib import colors
 
@@ -37,14 +36,16 @@ from reportlab.lib import colors
 # ---------------------------------------------------------------------------
 
 _PAGE_WIDTH, _PAGE_HEIGHT = letter
-_MARGIN = 0.5 * inch
-_USABLE_WIDTH = _PAGE_WIDTH - 2 * _MARGIN
+_MARGIN_SIDE = 0.7 * inch
+_MARGIN_TOP = 0.7 * inch
+_USABLE_WIDTH = _PAGE_WIDTH - 2 * _MARGIN_SIDE
 
-_FONT_BODY = "Times-Roman"
-_FONT_BOLD = "Times-Bold"
-_FONT_ITALIC = "Times-Italic"
+# Sans-serif throughout — ATS-clean, modern, professional
+_FONT_BODY = "Helvetica"
+_FONT_BOLD = "Helvetica-Bold"
+_FONT_ITALIC = "Helvetica-Oblique"
 
-_SIZE_NAME = 14
+_SIZE_NAME = 16
 _SIZE_HEADER = 11
 _SIZE_BODY = 10
 _SIZE_CONTACT = 10
@@ -55,6 +56,7 @@ _WORKDAY_SYSTEMS = {"workday"}
 # Section key -> ATS-friendly header label
 _SECTION_HEADERS: dict[str, str] = {
     "education": "EDUCATION",
+    "experience": "EXPERIENCE",
     "professional_experience": "EXPERIENCE",
     "research": "RESEARCH EXPERIENCE",
     "campus_involvement": "LEADERSHIP & INVOLVEMENT",
@@ -72,6 +74,7 @@ _SECTION_HEADERS: dict[str, str] = {
 _WORKDAY_HEADERS: dict[str, str] = {
     **_SECTION_HEADERS,
     "professional_experience": "WORK EXPERIENCE",
+    "experience": "WORK EXPERIENCE",
 }
 
 
@@ -80,7 +83,6 @@ _WORKDAY_HEADERS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 def _build_styles() -> dict[str, ParagraphStyle]:
-    """Build paragraph styles for the PDF."""
     base = getSampleStyleSheet()
     return {
         "name": ParagraphStyle(
@@ -98,7 +100,7 @@ def _build_styles() -> dict[str, ParagraphStyle]:
             fontName=_FONT_BODY,
             fontSize=_SIZE_CONTACT,
             alignment=TA_CENTER,
-            spaceAfter=6,
+            spaceAfter=8,
             leading=_SIZE_CONTACT + 2,
         ),
         "section_header": ParagraphStyle(
@@ -106,12 +108,9 @@ def _build_styles() -> dict[str, ParagraphStyle]:
             parent=base["Normal"],
             fontName=_FONT_BOLD,
             fontSize=_SIZE_HEADER,
-            spaceBefore=8,
-            spaceAfter=3,
+            spaceBefore=10,
+            spaceAfter=1,
             leading=_SIZE_HEADER + 2,
-            borderWidth=0.5,
-            borderColor=colors.black,
-            borderPadding=(0, 0, 1, 0),
         ),
         "entry_header": ParagraphStyle(
             "EntryHeader",
@@ -142,7 +141,8 @@ def _build_styles() -> dict[str, ParagraphStyle]:
             parent=base["Normal"],
             fontName=_FONT_BODY,
             fontSize=_SIZE_BODY,
-            leftIndent=12,
+            leftIndent=14,
+            firstLineIndent=0,
             spaceAfter=1,
             leading=_SIZE_BODY + 3,
         ),
@@ -246,22 +246,11 @@ def _render_contact(section: dict, styles: dict, elements: list) -> None:
 
 
 def _render_section_divider(label: str, styles: dict, elements: list) -> None:
-    """Render a section header with a bottom border line."""
-    # Use a table with a bottom border for a clean ATS-safe divider
-    header_para = Paragraph(f"<b>{_esc(label)}</b>", styles["section_header"])
-    t = Table([[header_para]], colWidths=[_USABLE_WIDTH])
-    t.setStyle(TableStyle([
-        ("LINEBELOW", (0, 0), (-1, -1), 0.5, colors.black),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-    ]))
-    elements.append(t)
+    elements.append(Paragraph(_esc(label), styles["section_header"]))
+    elements.append(HRFlowable(width="100%", thickness=0.6, color=colors.black, spaceAfter=3))
 
 
 def _render_education(section: dict, styles: dict, elements: list, ats_system: str) -> None:
-    """Render education section."""
     edu = section.get("education") or {}
     if not edu:
         return
@@ -269,58 +258,47 @@ def _render_education(section: dict, styles: dict, elements: list, ats_system: s
     university = (edu.get("university") or "").strip()
     location = (edu.get("location") or "").strip()
     graduation = (edu.get("graduation") or "").strip()
-
-    # University line with location/graduation right-aligned via table
-    if university:
-        right_parts = []
-        if location:
-            right_parts.append(location)
-        if graduation:
-            right_parts.append(_format_date_for_ats(graduation, ats_system))
-        right_text = ", ".join(right_parts)
-
-        left = Paragraph(f"<b>{_esc(university)}</b>", styles["entry_header"])
-        right = Paragraph(_esc(right_text), ParagraphStyle(
-            "RightAlign", fontName=_FONT_BODY, fontSize=_SIZE_BODY,
-            alignment=TA_RIGHT, leading=_SIZE_BODY + 2,
-        ))
-        t = Table([[left, right]], colWidths=[_USABLE_WIDTH * 0.65, _USABLE_WIDTH * 0.35])
-        t.setStyle(TableStyle([
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]))
-        elements.append(t)
-
-    # Degree line
-    degree_parts = []
     major = (edu.get("major") or "").strip()
     minor = (edu.get("minor") or "").strip()
     gpa = (edu.get("gpa") or "").strip()
-
-    if major:
-        degree_parts.append(major)
-    if minor:
-        degree_parts.append(f"Minor: {minor}")
-    if gpa:
-        degree_parts.append(f"GPA: {gpa}")
-    if degree_parts:
-        elements.append(Paragraph(_esc(" | ".join(degree_parts)), styles["body"]))
-
-    # Honors
     honors = (edu.get("honors") or "").strip()
-    if honors and honors.lower() != "not honors":
+
+    # Line 1: University | Location | Graduation date — all inline, ATS-safe
+    line1_parts = []
+    if university:
+        line1_parts.append(university)
+    if location:
+        line1_parts.append(location)
+    if graduation:
+        line1_parts.append(_format_date_for_ats(graduation, ats_system))
+    if line1_parts:
+        elements.append(Paragraph(
+            f"<b>{_esc(line1_parts[0])}</b>" + (
+                "  |  " + _esc("  |  ".join(line1_parts[1:])) if len(line1_parts) > 1 else ""
+            ),
+            styles["entry_header"],
+        ))
+
+    # Line 2: Degree | GPA
+    line2_parts = []
+    if major:
+        line2_parts.append(major)
+    if minor:
+        line2_parts.append(f"Minor: {minor}")
+    if gpa:
+        line2_parts.append(f"GPA: {gpa}")
+    if line2_parts:
+        elements.append(Paragraph(_esc("  |  ".join(line2_parts)), styles["body"]))
+
+    if honors and honors.lower() not in ("not honors", "none", ""):
         elements.append(Paragraph(_esc(honors), styles["body"]))
 
-    elements.append(Spacer(1, 3))
+    elements.append(Spacer(1, 4))
 
 
 def _render_experiences(
     section: dict, styles: dict, elements: list, ats_system: str,
 ) -> None:
-    """Render experience entries (professional, research, volunteer, etc.)."""
     entries = section.get("experiences") or []
     for entry in entries:
         if not isinstance(entry, dict):
@@ -330,96 +308,62 @@ def _render_experiences(
         date = (entry.get("date") or "").strip()
         location = (entry.get("location") or "").strip()
 
-        # Company/Role on left, date on right
-        left_text = ""
-        if company and role:
-            left_text = f"<b>{_esc(company)}</b> - {_esc(role)}"
-        elif company:
-            left_text = f"<b>{_esc(company)}</b>"
-        elif role:
-            left_text = f"<b>{_esc(role)}</b>"
+        # Line 1: Company (bold) — single authoritative line, ATS extracts cleanly
+        if company:
+            elements.append(Paragraph(f"<b>{_esc(company)}</b>", styles["entry_header"]))
 
-        right_parts = []
-        if date:
-            right_parts.append(_format_date_for_ats(date, ats_system))
+        # Line 2: Role | Location | Date — scannable meta line
+        meta_parts = []
+        if role:
+            meta_parts.append(role)
         if location:
-            right_parts.append(location)
-        right_text = " | ".join(right_parts)
-
-        if left_text:
-            left = Paragraph(left_text, styles["entry_header"])
-            right = Paragraph(_esc(right_text), ParagraphStyle(
-                "RightAlign", fontName=_FONT_BODY, fontSize=_SIZE_BODY,
-                alignment=TA_RIGHT, leading=_SIZE_BODY + 2,
-            ))
-            t = Table([[left, right]], colWidths=[_USABLE_WIDTH * 0.65, _USABLE_WIDTH * 0.35])
-            t.setStyle(TableStyle([
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ]))
-            elements.append(t)
+            meta_parts.append(location)
+        if date:
+            meta_parts.append(_format_date_for_ats(date, ats_system))
+        if meta_parts:
+            elements.append(Paragraph(_esc("  |  ".join(meta_parts)), styles["entry_sub"]))
 
         # Bullets
-        bullets = entry.get("bullets") or []
-        for b in bullets:
+        for b in (entry.get("bullets") or []):
             text = b.get("text", "") if isinstance(b, dict) else str(b)
-            text = text.strip()
-            if not text:
-                continue
-            # Strip existing bullet chars, then add a simple dash
-            text = re.sub(r"^[\u2022\u2023\u25aa\u25cf\u2013\u2014*\-]+\s*", "", text)
-            elements.append(Paragraph(f"- {_esc(text)}", styles["bullet"]))
+            text = re.sub(r"^[\u2022\u2023\u25aa\u25cf\u2013\u2014*\-]+\s*", "", text.strip())
+            if text:
+                elements.append(Paragraph(f"\u2022 {_esc(text)}", styles["bullet"]))
 
-        elements.append(Spacer(1, 3))
+        elements.append(Spacer(1, 4))
 
 
 def _render_projects(section: dict, styles: dict, elements: list, ats_system: str) -> None:
-    """Render project entries."""
     projects = section.get("projects") or []
     for proj in projects:
         if not isinstance(proj, dict):
             continue
         name = (proj.get("name") or "").strip()
         date = (proj.get("date") or "").strip()
-        location = (proj.get("location") or "").strip()
+        tech = (proj.get("tech") or "").strip()
 
-        left_text = f"<b>{_esc(name)}</b>" if name else ""
-        right_parts = []
+        # Project name | tech stack | date — all inline
+        header_parts = []
+        if name:
+            header_parts.append(f"<b>{_esc(name)}</b>")
+        meta_parts = []
+        if tech:
+            meta_parts.append(tech)
         if date:
-            right_parts.append(_format_date_for_ats(date, ats_system))
-        if location:
-            right_parts.append(location)
-        right_text = " | ".join(right_parts)
+            meta_parts.append(_format_date_for_ats(date, ats_system))
+        if meta_parts:
+            header_parts.append(_esc("  |  ".join(meta_parts)))
 
-        if left_text:
-            left = Paragraph(left_text, styles["entry_header"])
-            right = Paragraph(_esc(right_text), ParagraphStyle(
-                "RightAlign", fontName=_FONT_BODY, fontSize=_SIZE_BODY,
-                alignment=TA_RIGHT, leading=_SIZE_BODY + 2,
-            ))
-            t = Table([[left, right]], colWidths=[_USABLE_WIDTH * 0.65, _USABLE_WIDTH * 0.35])
-            t.setStyle(TableStyle([
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ]))
-            elements.append(t)
+        if header_parts:
+            elements.append(Paragraph("  |  ".join(header_parts), styles["entry_header"]))
 
-        bullets = proj.get("bullets") or []
-        for b in bullets:
+        for b in (proj.get("bullets") or []):
             text = b.get("text", "") if isinstance(b, dict) else str(b)
-            text = text.strip()
-            if not text:
-                continue
-            text = re.sub(r"^[\u2022\u2023\u25aa\u25cf\u2013\u2014*\-]+\s*", "", text)
-            elements.append(Paragraph(f"- {_esc(text)}", styles["bullet"]))
+            text = re.sub(r"^[\u2022\u2023\u25aa\u25cf\u2013\u2014*\-]+\s*", "", text.strip())
+            if text:
+                elements.append(Paragraph(f"\u2022 {_esc(text)}", styles["bullet"]))
 
-        elements.append(Spacer(1, 3))
+        elements.append(Spacer(1, 4))
 
 
 def _render_simple(section: dict, styles: dict, elements: list) -> None:
@@ -460,10 +404,10 @@ def build_ats_pdf(sections: list[dict], ats_system: str = "greenhouse") -> bytes
     doc = SimpleDocTemplate(
         buf,
         pagesize=letter,
-        leftMargin=_MARGIN,
-        rightMargin=_MARGIN,
-        topMargin=_MARGIN,
-        bottomMargin=_MARGIN,
+        leftMargin=_MARGIN_SIDE,
+        rightMargin=_MARGIN_SIDE,
+        topMargin=_MARGIN_TOP,
+        bottomMargin=_MARGIN_TOP,
         title="Resume",
         author="Dilly",
     )
@@ -490,7 +434,7 @@ def build_ats_pdf(sections: list[dict], ats_system: str = "greenhouse") -> bytes
             _render_education(section, styles, elements, ats_system)
 
         elif key in (
-            "professional_experience", "research",
+            "experience", "professional_experience", "research",
             "campus_involvement", "volunteer_experience",
         ) and section.get("experiences"):
             _render_experiences(section, styles, elements, ats_system)
@@ -502,7 +446,6 @@ def build_ats_pdf(sections: list[dict], ats_system: str = "greenhouse") -> bytes
             _render_simple(section, styles, elements)
 
         elif section.get("experiences"):
-            # Catch-all for custom experience-like sections
             _render_experiences(section, styles, elements, ats_system)
 
         elif section.get("projects"):
