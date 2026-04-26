@@ -12,8 +12,24 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, radius, spacing } from '../../lib/tokens';
+import { AnimatedModal } from '../../components/AnimatedModal';
 
 export const PENDING_UPLOAD_KEY = 'dilly_pending_upload';
+
+// ── File-type heuristics ──────────────────────────────────────────────────────
+
+// Matches filenames that strongly suggest a transcript rather than a resume.
+const TRANSCRIPT_NAME_RE = /\b(transcript|registrar|unofficial|cumulative|grade.?point|institution)\b/i;
+// Matches filenames that clearly are a resume/CV — no warning needed.
+const RESUME_NAME_RE = /\b(resume|cv|curriculum.?vitae)\b/i;
+
+type FileKind = 'transcript' | 'ambiguous' | 'resume';
+
+function detectFileKind(filename: string): FileKind {
+  if (TRANSCRIPT_NAME_RE.test(filename)) return 'transcript';
+  if (RESUME_NAME_RE.test(filename)) return 'resume';
+  return 'ambiguous';
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -110,8 +126,10 @@ export default function UploadScreen() {
   const insets     = useSafeAreaInsets();
   const scaleAnim  = useRef(new Animated.Value(1)).current;
 
-  const [zoneState, setZoneState] = useState<ZoneState>('idle');
-  const [file, setFile]           = useState<PickedFile | null>(null);
+  const [zoneState, setZoneState]     = useState<ZoneState>('idle');
+  const [file, setFile]               = useState<PickedFile | null>(null);
+  const [pendingFile, setPendingFile] = useState<PickedFile | null>(null);
+  const [warningKind, setWarningKind] = useState<FileKind | null>(null);
 
   const isError    = zoneState === 'error_format' || zoneState === 'error_size';
   const isSelected = zoneState === 'selected';
@@ -143,9 +161,28 @@ export default function UploadScreen() {
         setFile(null); setZoneState('error_size'); return;
       }
 
-      setFile({ name: asset.name, size, uri: asset.uri, mimeType: asset.mimeType });
+      const picked = { name: asset.name, size, uri: asset.uri, mimeType: asset.mimeType };
+      const kind = detectFileKind(asset.name);
+      if (kind === 'transcript' || kind === 'ambiguous') {
+        setPendingFile(picked);
+        setWarningKind(kind);
+        return;
+      }
+      setFile(picked);
       setZoneState('selected');
     } catch { /* cancelled */ }
+  }
+
+  function handleWarningCancel() {
+    setPendingFile(null);
+    setWarningKind(null);
+  }
+
+  function handleWarningConfirm() {
+    setFile(pendingFile);
+    setZoneState('selected');
+    setPendingFile(null);
+    setWarningKind(null);
   }
 
   async function handleContinue() {
@@ -267,6 +304,37 @@ export default function UploadScreen() {
           <Text style={s.skipText}>I'll add things manually</Text>
         </TouchableOpacity>
       </View>
+
+      {/* File-type warning modal */}
+      <AnimatedModal
+        visible={warningKind !== null}
+        onDismiss={handleWarningCancel}
+        backdropDismissable={false}
+      >
+        <View style={ms.card}>
+          <View style={ms.iconRow}>
+            <Ionicons name="warning" size={22} color={colors.gold} />
+          </View>
+          <Text style={ms.title}>
+            {warningKind === 'transcript'
+              ? 'This looks like a transcript'
+              : "We couldn't confirm this is a resume"}
+          </Text>
+          <Text style={ms.body}>
+            {warningKind === 'transcript'
+              ? "Uploading a transcript as your resume will overwrite your profile with the wrong data. Please upload your resume instead."
+              : "We couldn't tell if this is a resume. Uploading a non-resume file will mess with your profile."}
+          </Text>
+          <View style={ms.btnRow}>
+            <TouchableOpacity style={ms.cancelBtn} onPress={handleWarningCancel} activeOpacity={0.8}>
+              <Text style={ms.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={ms.confirmBtn} onPress={handleWarningConfirm} activeOpacity={0.8}>
+              <Text style={ms.confirmText}>Upload anyway</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </AnimatedModal>
     </View>
   );
 }
@@ -420,5 +488,64 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.t3,
+  },
+});
+
+const ms = StyleSheet.create({
+  card: {
+    backgroundColor: colors.s2,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.b1,
+    padding: 20,
+    gap: 10,
+  },
+  iconRow: {
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.t1,
+    textAlign: 'center',
+  },
+  body: {
+    fontSize: 12,
+    color: colors.t2,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: colors.s4,
+    borderRadius: 11,
+    padding: 11,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.b1,
+  },
+  cancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.t2,
+  },
+  confirmBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(255,69,58,0.12)',
+    borderRadius: 11,
+    padding: 11,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,69,58,0.35)',
+  },
+  confirmText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.coral,
   },
 });

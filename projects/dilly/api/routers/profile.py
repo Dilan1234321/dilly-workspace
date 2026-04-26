@@ -1056,6 +1056,21 @@ async def delete_profile_transcript_endpoint(request: Request):
 
 _DOCX_MAGIC = b"PK\x03\x04"
 
+import re as _re
+
+# Transcript detector: strong signal that the file is an academic transcript.
+_TRANSCRIPT_RE = _re.compile(
+    r"\b(grade\s*point\s*average|cumulative\s*gpa|credit[s]?\s*(earned|attempted)|"
+    r"undergraduate\s*transcript|official\s*transcript|registrar|semester\s+gpa|"
+    r"spring\s+20\d\d|fall\s+20\d\d|credit[s]?\s*hour|academic\s*record)\b",
+    _re.IGNORECASE,
+)
+# Resume sanity check: at least 2 of these should appear in a real resume.
+_RESUME_SANITY_RE = _re.compile(
+    r"\b(experience|education|skills|projects?|linkedin|@[^\s]{2,}\.(com|edu|org|net)|phone)\b",
+    _re.IGNORECASE,
+)
+
 
 def _fan_out_resume_facts(email: str, text: str, name: str) -> None:
     """Extract profile facts from resume text via LLM and upsert into profile_facts.
@@ -1192,6 +1207,17 @@ async def upload_profile_resume(request: Request, file: UploadFile = File(...)):
         _rlog.info("resume_upload: extracted %d chars for %s (is_pdf=%s)", len(raw_text), email, is_pdf)
         if len(raw_text.strip()) < 20:
             raise errors.validation_error("Could not read text from resume. Upload a text-based PDF or DOCX.")
+
+        # Server-side defense: reject files that look like transcripts.
+        sample = raw_text[:4000]
+        transcript_hits = len(_TRANSCRIPT_RE.findall(sample))
+        resume_hits = len(_RESUME_SANITY_RE.findall(sample))
+        if transcript_hits >= 3 and transcript_hits > resume_hits:
+            raise errors.validation_error(
+                "This file looks like a transcript, not a resume. "
+                "Please upload your resume instead."
+            )
+
         parsed = parse_resume(raw_text, filename=file.filename)
         normalized = parsed.normalized_text or raw_text
 
