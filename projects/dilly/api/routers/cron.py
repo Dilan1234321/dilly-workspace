@@ -1322,3 +1322,17 @@ def purge_llm_usage_log(token: str = "", retention_days: int = 90):
         return {"ok": True, "purged": n, "retention_days": retention_days}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+@router.get("/healthcheck-deps", summary="Verify parsing deps are installed")
+def healthcheck_deps(token: str = ""):
+    """Check that pypdf and pymupdf (fitz) are importable in the deployed environment."""
+    _require_cron_secret(token)
+    results = {}
+    for pkg, import_name in [("pypdf", "pypdf"), ("pymupdf", "fitz"), ("docx2txt", "docx2txt")]:
+        try:
+            mod = __import__(import_name)
+            results[pkg] = {"ok": True, "version": getattr(mod, "__version__", "unknown")}
+        except ImportError as e:
+            results[pkg] = {"ok": False, "error": str(e)}
+    return {"deps": results, "all_ok": all(v["ok"] for v in results.values())}
