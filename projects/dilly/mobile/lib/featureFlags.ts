@@ -19,3 +19,12 @@ export const SKILLS_RECOMMENDED_FIRST_ENABLED = true;
  * also enabled on Railway and you're ready to test the full flow.
  */
 export const CHAPTER_V2_ENABLED = true;
+
+/**
+ * Skills persona-awareness — gates persona-specific copy and backend
+ * reason strings for the three Dilly modes: student / seeker / holder.
+ * Persona is derived from profile.app_mode / profile.user_path (same
+ * logic as mobile/lib/appMode.ts). Flip to false to revert all copy
+ * to the generic "Today's picks for you" fallback strings.
+ */
+export const SKILLS_PERSONA_AWARE = true;

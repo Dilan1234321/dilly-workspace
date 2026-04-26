@@ -39,7 +39,7 @@ import { useResolvedTheme } from '../../../hooks/useTheme';
 import { DillyFace } from '../../../components/DillyFace';
 import { FirstVisitCoach } from '../../../components/FirstVisitCoach';
 import { dilly } from '../../../lib/dilly';
-import { SKILLS_RECOMMENDED_FIRST_ENABLED } from '../../../lib/featureFlags';
+import { SKILLS_RECOMMENDED_FIRST_ENABLED, SKILLS_PERSONA_AWARE } from '../../../lib/featureFlags';
 import { getAppMode, type AppMode } from '../../../lib/appMode';
 import { CertificationsSection } from '../../../components/skills/CertificationsSection';
 
@@ -100,6 +100,32 @@ function fmtDuration(sec: number): string {
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
+
+// ─── Persona copy — subhead / section label / empty state per AppMode ────────
+
+const PERSONA_COPY: Record<AppMode, { subhead: string; sectionLabel: string; emptyState: string }> = {
+  student: {
+    subhead: 'Skills to ace your senior year',
+    sectionLabel: 'YOUR STUDENT SKILL LAB',
+    emptyState: "No picks yet — add your major and graduation year to unlock your skill queue.",
+  },
+  seeker: {
+    subhead: 'Skills to land your next role',
+    sectionLabel: 'YOUR JOB SEARCH SKILL LAB',
+    emptyState: "No picks yet — complete your target role to unlock tailored recommendations.",
+  },
+  holder: {
+    subhead: 'Skills to grow into your next title',
+    sectionLabel: 'YOUR CAREER SKILL LAB',
+    emptyState: "No picks yet — add your current role and growth goals to see what to learn.",
+  },
+};
+
+const GENERIC_COPY = {
+  subhead: "Today's picks for you",
+  sectionLabel: 'YOUR SKILL LAB TODAY',
+  emptyState: 'No recommendations yet. Finish setting up your profile and check back.',
+};
 
 // ─── Root export — thin flag gate, no hooks ───────────────────────────────────
 
@@ -223,6 +249,8 @@ function FeedLanding() {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('student');
 
+  const copy = SKILLS_PERSONA_AWARE ? PERSONA_COPY[appMode] : GENERIC_COPY;
+
   useEffect(() => {
     (dilly as any).get('/skill-lab/feed')
       .then((data: FeedData) => setFeed(data))
@@ -246,7 +274,7 @@ function FeedLanding() {
           <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
         </View>
 
-        <Text style={[feedStyles.subhead, { color: theme.surface.t2 }]}>Today's picks for you</Text>
+        <Text style={[feedStyles.subhead, { color: theme.surface.t2 }]}>{copy.subhead}</Text>
 
         {loading ? (
           <View style={feedStyles.loadingWrap}>
@@ -255,7 +283,7 @@ function FeedLanding() {
         ) : !feed?.hero ? (
           <View style={feedStyles.emptyWrap}>
             <Text style={[feedStyles.emptyText, { color: theme.surface.t2 }]}>
-              No recommendations yet. Finish setting up your profile and check back.
+              {copy.emptyState}
             </Text>
             <TouchableOpacity
               activeOpacity={0.88}
@@ -270,7 +298,7 @@ function FeedLanding() {
         ) : (
           <>
             {/* ── Hero card ── */}
-            <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 6 }]}>YOUR SKILL LAB TODAY</Text>
+            <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 6 }]}>{copy.sectionLabel}</Text>
             <TouchableOpacity
               activeOpacity={0.88}
               style={[feedStyles.heroCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}

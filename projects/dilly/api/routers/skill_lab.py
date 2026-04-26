@@ -696,6 +696,7 @@ def skills_feed(user: dict = Depends(require_auth)):
     user_cohort: str | None = None
     application_target: str = ""
     career_goal: str = ""
+    app_mode: str = "seeker"  # mirrors mobile/lib/appMode.ts derivation
 
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -713,6 +714,15 @@ def skills_feed(user: dict = Depends(require_auth)):
                     or pj.get("application_target")
                     or ""
                 ).strip()
+                _override = (pj.get("app_mode") or "").strip().lower()
+                if _override in ("holder", "seeker", "student"):
+                    app_mode = _override
+                else:
+                    _path = (pj.get("user_path") or "").strip().lower()
+                    if _path == "i_have_a_job":
+                        app_mode = "holder"
+                    elif _path == "student":
+                        app_mode = "student"
 
     # ── Watched video IDs (skip/de-emphasise) ─────────────────────────────
     with get_db() as conn:
@@ -785,16 +795,21 @@ def skills_feed(user: dict = Depends(require_auth)):
     ranked = [v for (_, v) in sorted(scored.values(), key=lambda x: -x[0])]
 
     # ── Reason strings ────────────────────────────────────────────────────
+    _mode_suffix = {"student": " students", "holder": " professionals", "seeker": ""}
+    _mode_fallback = {
+        "student": "Curated for your student journey",
+        "seeker": "Curated for your job search",
+        "holder": "Curated for your career growth",
+    }
+
     def _reason(v: dict) -> str:
         if application_target:
-            snippet = application_target[:48]
-            return f"For your {snippet} track"
+            return f"For your {application_target[:48]} track"
         if career_goal:
-            snippet = career_goal[:48]
-            return f"Aligned with: {snippet}"
+            return f"Aligned with: {career_goal[:48]}"
         if user_cohort:
-            return f"Top pick for {user_cohort}"
-        return "Top-rated pick for you"
+            return f"Top pick for {user_cohort}{_mode_suffix.get(app_mode, '')}"
+        return _mode_fallback.get(app_mode, "Top-rated pick for you")
 
     # ── Cohort slug ───────────────────────────────────────────────────────
     name_to_slug = {v: k for k, v in _SLUG_TO_COHORT.items()}
