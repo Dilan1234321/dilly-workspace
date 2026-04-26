@@ -45,7 +45,8 @@ SCREEN_NAMES = {
     2: "surface",
     3: "synthesis",
     4: "converge",
-    5: "recap",
+    5: "close",
+    6: "recap",
 }
 SCREEN_MOODS = {
     0: "curious",
@@ -54,9 +55,10 @@ SCREEN_MOODS = {
     3: "focused",
     4: "direct",
     5: "settled",
+    6: "settled",
 }
 # Max user turns allowed per screen
-SCREEN_TURN_LIMITS = {0: 6, 1: 3, 2: 5, 3: 5, 4: 5, 5: 2}
+SCREEN_TURN_LIMITS = {0: 6, 1: 3, 2: 5, 3: 5, 4: 5, 5: 3, 6: 0}
 
 
 # ── Feature flag check ────────────────────────────────────────────────────────
@@ -274,7 +276,7 @@ def _generate_opening_message(
     cached_block, dynamic_suffix = _build_system_prompt_parts(persona, prompt_ctx)
 
     screen_name = SCREEN_NAMES.get(screen, "unknown")
-    instruction_suffix = f"\n\nGenerate the opening message for Screen {screen} ({screen_name})."
+    instruction_suffix = f"\n\nGenerate the opening message for the {screen_name} phase."
     if prior_captures and screen > 0:
         captures_text = "\n".join(
             f"Screen {k} capture: {v}" for k, v in prior_captures.items()
@@ -400,7 +402,7 @@ async def chapter_start(request: Request):
 
     session_id = str(session["id"])
     start_screen = 0 if is_first_session else 1
-    screens_total = 6 if is_first_session else 5
+    screens_total = 7 if is_first_session else 6
 
     # Build prompt context for opening message
     prompt_ctx = _build_prompt_ctx(
@@ -764,7 +766,7 @@ async def chapter_complete(session_id: str, request: Request):
     prompt_ctx = _build_prompt_ctx(
         email=email,
         persona=persona,
-        current_screen=5,
+        current_screen=6,
         screen_turn_count=0,
         arena_snapshot=arena_snapshot,
         intake_json=intake_json,
