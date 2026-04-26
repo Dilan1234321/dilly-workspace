@@ -747,157 +747,6 @@ async def simulate_career(request: Request, body: SimulateRequest):
         raise errors.internal(f"Simulation failed: {type(e).__name__}")
 
 
-# ── Field Intel — AI Arena V2 center screen ──────────────────────────────────
-
-@router.get("/ai-arena/field-intel")
-async def get_field_intel(request: Request):
-    """Cohort-level AI disruption + pulse for the Arena V2 field-intel screen.
-
-    Resolves cohort from user profile, returns threat/opportunity data from
-    COHORT_AI_DISRUPTION, tries live pulse from cohort_pulse_store, falls
-    back to synthesized pulse from disruption rankings. Zero LLM.
-    """
-    user = deps.require_auth(request)
-    email = (user.get("email") or "").strip().lower()
-    if not email:
-        raise errors.unauthorized()
-
-    # ── 1. Resolve cohort display name ────────────────────────────────────────
-    cohort_raw = "General"
-    try:
-        from projects.dilly.api.profile_store import get_profile
-        profile = get_profile(email) or {}
-        cohort_raw = profile.get("cohort") or profile.get("track") or "General"
-    except Exception:
-        pass
-
-    from dilly_core.ai_disruption import get_cohort_disruption, COHORT_AI_DISRUPTION
-    from projects.dilly.api.cohort_pulse_store import current_week_start_iso
-
-    # COHORT_AI_DISRUPTION keys are display names ("Finance & Accounting").
-    # Profiles may store an internal key ("business_finance") or a fuzzy match.
-    _INTERNAL_TO_DISPLAY: dict[str, str] = {
-        "tech_software_engineering": "Software Engineering & CS",
-        "tech_data_science": "Data Science & Analytics",
-        "tech_cybersecurity": "Software Engineering & CS",
-        "business_finance": "Finance & Accounting",
-        "business_accounting": "Finance & Accounting",
-        "business_consulting": "Consulting & Strategy",
-        "business_marketing": "Marketing & Advertising",
-        "pre_health": "Healthcare & Clinical",
-        "health_nursing_allied": "Healthcare & Clinical",
-        "arts_design": "Design & Creative",
-        "pre_law": "Legal & Compliance",
-        "humanities_communications": "Consulting & Strategy",
-        "quantitative_math_stats": "Data Science & Analytics",
-        "science_research": "Data Science & Analytics",
-        "management_operations": "Management & Operations",
-        "social_sciences": "Consulting & Strategy",
-        "education": "Education & Teaching",
-        "sport_management": "Management & Operations",
-    }
-
-    cohort_display = cohort_raw
-    if cohort_raw not in COHORT_AI_DISRUPTION:
-        mapped = _INTERNAL_TO_DISPLAY.get(cohort_raw.lower().replace(" ", "_").replace("&", "and"))
-        if mapped:
-            cohort_display = mapped
-        else:
-            # Case-insensitive direct match
-            for key in COHORT_AI_DISRUPTION:
-                if key.lower() == cohort_raw.lower():
-                    cohort_display = key
-                    break
-            else:
-                # Substring match ("Finance" → "Finance & Accounting")
-                for key in COHORT_AI_DISRUPTION:
-                    if cohort_raw.lower() in key.lower():
-                        cohort_display = key
-                        break
-
-    disruption = get_cohort_disruption(cohort_display)
-    week_start = current_week_start_iso()
-
-    # ── 2. Threat & Opportunity (from COHORT_AI_DISRUPTION) ──────────────────
-    threat_opportunity = {
-        "disruption_pct": disruption.get("disruption_pct", 30),
-        "trend": disruption.get("trend", "stable"),
-        "headline": disruption.get("headline", ""),
-        "threats": (disruption.get("ai_vulnerable_skills") or [])[:5],
-        "opportunities": (disruption.get("ai_resistant_skills") or [])[:5],
-        "what_to_do": disruption.get("what_to_do", ""),
-        "live_total_listings": 0,
-        "live_ai_pct": disruption.get("disruption_pct", 30),
-    }
-
-    # ── 3. Pulse — live first, synthesised fallback ───────────────────────────
-    pulse = None
-    try:
-        from projects.dilly.api.cohort_pulse_store import get_current_user_pulse
-        pulse_row = get_current_user_pulse(email)
-        if pulse_row:
-            cp = pulse_row.get("cohort") or {}
-            pulse = {
-                "headline": cp.get("headline") or disruption.get("headline", ""),
-                "ai_fluency_pct": cp.get("ai_fluency_pct") or disruption.get("disruption_pct", 30),
-                "total_listings": cp.get("total_listings") or 0,
-                "ai_listings": cp.get("ai_listings") or 0,
-                "cross_cohort_rank": cp.get("cross_cohort_rank") or 1,
-                "cross_cohort_total": cp.get("cross_cohort_total") or len(COHORT_AI_DISRUPTION),
-                "above_average": bool(cp.get("above_average", False)),
-                "week_start": str(pulse_row.get("week_start") or week_start),
-            }
-    except Exception:
-        pass
-
-    if pulse is None:
-        ranked = sorted(
-            COHORT_AI_DISRUPTION.items(),
-            key=lambda x: x[1].get("disruption_pct", 0),
-            reverse=True,
-        )
-        rank = next(
-            (i + 1 for i, (k, _) in enumerate(ranked) if k == cohort_display),
-            len(COHORT_AI_DISRUPTION),
-        )
-        all_pcts = [v.get("disruption_pct", 0) for v in COHORT_AI_DISRUPTION.values()]
-        avg_pct = sum(all_pcts) / len(all_pcts) if all_pcts else 30
-        pulse = {
-            "headline": disruption.get("headline", ""),
-            "ai_fluency_pct": disruption.get("disruption_pct", 30),
-            "total_listings": 0,
-            "ai_listings": 0,
-            "cross_cohort_rank": rank,
-            "cross_cohort_total": len(COHORT_AI_DISRUPTION),
-            "above_average": disruption.get("disruption_pct", 30) > avg_pct,
-            "week_start": week_start,
-        }
-
-    # ── 4. Cross-cohort rankings (disruption_pct as ai_fluency proxy) ─────────
-    cross_cohort = [
-        {
-            "cohort": k,
-            "ai_fluency_pct": v.get("disruption_pct", 0),
-            "total_listings": 0,
-        }
-        for k, v in sorted(
-            COHORT_AI_DISRUPTION.items(),
-            key=lambda x: x[1].get("disruption_pct", 0),
-            reverse=True,
-        )
-    ]
-
-    return {
-        "cohort": cohort_display,
-        "week_start": week_start,
-        "data_ready": True,
-        "pulse": pulse,
-        "threat_opportunity": threat_opportunity,
-        "role_radar": [],  # populated by future cron; empty renders gracefully
-        "cross_cohort": cross_cohort,
-    }
-
-
 # ── Disruption Data ───────────────────────────────────────────────────────────
 
 @router.get("/ai-arena/disruption")
@@ -1000,12 +849,51 @@ async def get_field_intel(request: Request):
     if not email:
         raise errors.unauthorized()
 
-    # ── Resolve cohort ────────────────────────────────────────────────────────
+    # ── Resolve cohort → normalise to COHORT_AI_DISRUPTION display name ─────────
     cohort = "General"
     try:
         from projects.dilly.api.profile_store import get_profile
+        from dilly_core.ai_disruption import COHORT_AI_DISRUPTION as _CAD
         profile = get_profile(email) or {}
-        cohort = profile.get("cohort") or profile.get("track") or "General"
+        raw = profile.get("cohort") or profile.get("track") or "General"
+        _I2D: dict[str, str] = {
+            "tech_software_engineering": "Software Engineering & CS",
+            "tech_data_science": "Data Science & Analytics",
+            "tech_cybersecurity": "Software Engineering & CS",
+            "business_finance": "Finance & Accounting",
+            "business_accounting": "Finance & Accounting",
+            "business_consulting": "Consulting & Strategy",
+            "business_marketing": "Marketing & Advertising",
+            "pre_health": "Healthcare & Clinical",
+            "health_nursing_allied": "Healthcare & Clinical",
+            "arts_design": "Design & Creative",
+            "pre_law": "Legal & Compliance",
+            "humanities_communications": "Consulting & Strategy",
+            "quantitative_math_stats": "Data Science & Analytics",
+            "science_research": "Data Science & Analytics",
+            "management_operations": "Management & Operations",
+            "social_sciences": "Consulting & Strategy",
+            "education": "Education & Teaching",
+            "sport_management": "Management & Operations",
+        }
+        if raw in _CAD:
+            cohort = raw
+        else:
+            mapped = _I2D.get(raw.lower().replace(" ", "_").replace("&", "and"))
+            if mapped:
+                cohort = mapped
+            else:
+                for key in _CAD:
+                    if key.lower() == raw.lower():
+                        cohort = key
+                        break
+                else:
+                    for key in _CAD:
+                        if raw.lower() in key.lower():
+                            cohort = key
+                            break
+                    else:
+                        cohort = raw
     except Exception:
         pass
 

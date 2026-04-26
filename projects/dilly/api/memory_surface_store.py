@@ -144,6 +144,10 @@ def _normalize_memory_item(email: str, raw: dict[str, Any]) -> dict[str, Any] | 
     # dropped valid categories like 'skill', 'education', 'project', etc.
     if not category or not label or not value:
         return None
+    # Reject single-character values — always LLM/parser garbage (e.g. "S", "D", "J").
+    # Reject labels under 3 chars for the same reason.
+    if len(value) < 2 or len(label) < 3:
+        return None
     source = str(raw.get("source") or "voice").strip().lower()
     if source not in {"voice", "audit", "profile", "application"}:
         source = "voice"
