@@ -1415,6 +1415,46 @@ def backfill_transcript_facts(token: str = ""):
         return {"ok": False, "error": str(e)}
 
 
+@router.get("/backfill-resume-facts", summary="Re-run LLM resume fact extraction for all uploaded resumes")
+def backfill_resume_facts(token: str = ""):
+    """Scan every user who has resume_uploaded_at + resume_text in their profile and
+    kick off _fan_out_resume_facts for each. Idempotent (ON CONFLICT DO UPDATE).
+    Fan-out runs in background threads per user; this endpoint returns immediately."""
+    _require_cron_secret(token)
+    import json as _json
+    try:
+        from projects.dilly.api.database import get_db
+        from projects.dilly.api.routers.profile import _fan_out_resume_facts
+        processed = 0
+        errors_count = 0
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT email, profile_json FROM users "
+                "WHERE profile_json->>'resume_uploaded_at' IS NOT NULL "
+                "  AND profile_json->>'resume_text' IS NOT NULL"
+            )
+            rows = cur.fetchall()
+        for row in rows:
+            try:
+                email = row[0]
+                pj = row[1] or {}
+                if isinstance(pj, str):
+                    pj = _json.loads(pj)
+                resume_text = pj.get("resume_text") or ""
+                if not resume_text:
+                    continue
+                name = pj.get("resume_name") or pj.get("first_name") or ""
+                _fan_out_resume_facts(email, resume_text, name)
+                processed += 1
+            except Exception:
+                errors_count += 1
+        return {"ok": True, "processed": processed, "errors": errors_count,
+                "note": "fan-out runs in background; check profile_facts for results"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @router.get("/healthcheck-deps", summary="Verify parsing deps are installed")
 def healthcheck_deps(token: str = ""):
     """Check that pypdf and pymupdf (fitz) are importable in the deployed environment."""

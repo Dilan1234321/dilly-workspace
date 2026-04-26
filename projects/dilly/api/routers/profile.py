@@ -1179,17 +1179,19 @@ async def upload_profile_resume(request: Request, file: UploadFile = File(...)):
         with os.fdopen(fd, "wb") as f:
             f.write(content)
 
+        import logging as _logging
+        _rlog = _logging.getLogger(__name__)
         try:
-            from projects.dilly.dilly_resume_auditor import DillyResumeAuditor
+            from dilly_core.pdf_extract import extract_text_best_effort, extract_text_best_effort_from_bytes
             from dilly_core.resume_parser import parse_resume
         except ImportError:
             raise errors.internal("Resume processing unavailable.")
 
-        auditor = DillyResumeAuditor(temp_path)
-        if not auditor.extract_text():
+        raw_text = (extract_text_best_effort_from_bytes(content) if is_pdf
+                    else extract_text_best_effort(temp_path))
+        _rlog.info("resume_upload: extracted %d chars for %s (is_pdf=%s)", len(raw_text), email, is_pdf)
+        if len(raw_text.strip()) < 20:
             raise errors.validation_error("Could not read text from resume. Upload a text-based PDF or DOCX.")
-
-        raw_text = auditor.raw_text or ""
         parsed = parse_resume(raw_text, filename=file.filename)
         normalized = parsed.normalized_text or raw_text
 
