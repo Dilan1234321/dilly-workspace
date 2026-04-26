@@ -65,6 +65,7 @@ app = FastAPI(
         {"name": "ready_check", "description": "Am I Ready loop: verdicts, roadmap, history, compare, follow-ups"},
         {"name": "cohort_pulse", "description": "Weekly cohort pulse cards: current, history, seen/acted, generation"},
         {"name": "actions", "description": "Conversation-derived action items: list, count, update, voice history"},
+        {"name": "chapter", "description": "Chapter advisor: sessions, messages, recaps, upcoming (FEATURE_CHAPTER_API=true to enable)"},
     ],
 )
 
@@ -169,8 +170,10 @@ from projects.dilly.api.routers import wins as wins_router
 from projects.dilly.api.routers import field_pulse as field_pulse_router
 from projects.dilly.api.routers import cron_jobs_cleanup
 from projects.dilly.api.routers import skill_lab as skill_lab_router
+from projects.dilly.api.routers import chapter as chapter_router
 app.include_router(cron_jobs_cleanup.router)
 app.include_router(skill_lab_router.router)
+app.include_router(chapter_router.router)
 app.include_router(aha_signals_router.router)
 app.include_router(chapters_router.router)
 app.include_router(pulse_router.router)

@@ -1198,6 +1198,114 @@ def regenerate_cohort_skills(token: str = "", max_postings_per_cohort: int = 25)
 
 
 @router.get(
+    "/setup-chapter-tables",
+    summary="One-time: create chapter advisor tables and add users columns",
+)
+def setup_chapter_tables(token: str = ""):
+    """
+    Materialize the Chapter advisor schema — Phase 2.
+
+    Creates:
+      - chapter_recaps
+      - chapter_sessions
+      - chapter_messages
+
+    Adds columns to users:
+      - chapter_cadence, next_chapter_at,
+        chapter_calendar_event_id, chapter_total_sessions
+
+    All statements are idempotent (IF NOT EXISTS / IF NOT EXISTS for columns).
+    Run once after deploy. Never called automatically at startup.
+    """
+    _require_cron_secret(token)
+    from projects.dilly.api.database import get_db
+
+    results = {}
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+
+            # 1. chapter_recaps (no FK to sessions — avoids circular dep)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS chapter_recaps (
+                    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    session_id              UUID NOT NULL,
+                    user_id                 TEXT NOT NULL,
+                    headline                TEXT NOT NULL DEFAULT '',
+                    observations            TEXT[] NOT NULL DEFAULT '{}',
+                    commitment              TEXT NOT NULL DEFAULT '',
+                    commitment_deadline     DATE,
+                    between_sessions_prompt TEXT NOT NULL DEFAULT '',
+                    next_chapter_at         TIMESTAMPTZ,
+                    render_json             JSONB,
+                    created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_chapter_recaps_user "
+                "ON chapter_recaps(user_id, created_at DESC)"
+            )
+            results["chapter_recaps"] = "ok"
+
+            # 2. chapter_sessions (FK to chapter_recaps.id for recap_id)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS chapter_sessions (
+                    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id           TEXT NOT NULL,
+                    persona_at_time   TEXT NOT NULL DEFAULT 'student',
+                    is_first_session  BOOLEAN NOT NULL DEFAULT false,
+                    started_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    completed_at      TIMESTAMPTZ,
+                    screens_completed INTEGER NOT NULL DEFAULT 0,
+                    recap_id          UUID,
+                    calendar_event_id TEXT,
+                    intake_json       JSONB,
+                    arena_snapshot    JSONB,
+                    screen_captures   JSONB DEFAULT '{}',
+                    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_chapter_sessions_user "
+                "ON chapter_sessions(user_id, started_at DESC)"
+            )
+            results["chapter_sessions"] = "ok"
+
+            # 3. chapter_messages
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS chapter_messages (
+                    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    session_id   UUID NOT NULL,
+                    screen_index INTEGER NOT NULL DEFAULT 0,
+                    role         TEXT NOT NULL DEFAULT 'user',
+                    content      TEXT NOT NULL DEFAULT '',
+                    ts           TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_chapter_messages_session "
+                "ON chapter_messages(session_id, screen_index, ts)"
+            )
+            results["chapter_messages"] = "ok"
+
+            # 4. Add columns to users table
+            for stmt in [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS chapter_cadence TEXT DEFAULT 'weekly'",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS next_chapter_at TIMESTAMPTZ",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS chapter_calendar_event_id TEXT",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS chapter_total_sessions INTEGER NOT NULL DEFAULT 0",
+            ]:
+                cur.execute(stmt)
+            results["users_columns"] = "ok"
+
+        return {"ok": True, "tables": results}
+    except Exception as exc:
+        import traceback as _tb
+        _tb.print_exc()
+        return {"ok": False, "error": str(exc)[:500]}
+
+
+@router.get(
     "/purge-llm-usage-log",
     summary="Daily: purge llm_usage_log rows older than 90 days",
 )
