@@ -40,6 +40,8 @@ import { DillyFace } from '../../../components/DillyFace';
 import { FirstVisitCoach } from '../../../components/FirstVisitCoach';
 import { dilly } from '../../../lib/dilly';
 import { SKILLS_RECOMMENDED_FIRST_ENABLED } from '../../../lib/featureFlags';
+import { getAppMode, type AppMode } from '../../../lib/appMode';
+import { CertificationsSection } from '../../../components/skills/CertificationsSection';
 
 /** 22 backend cohort slugs — must stay in sync with
  *  projects/dilly/api/routers/skill_lab.py `_SLUG_TO_COHORT`.
@@ -219,12 +221,17 @@ function FeedLanding() {
   const [feed, setFeed] = useState<FeedData | null>(null);
   const [loading, setLoading] = useState(true);
   const [browseOpen, setBrowseOpen] = useState(false);
+  const [appMode, setAppMode] = useState<AppMode>('student');
 
   useEffect(() => {
     (dilly as any).get('/skill-lab/feed')
       .then((data: FeedData) => setFeed(data))
       .catch(() => setFeed({ hero: null, queue: [], cohort_slug: null, user_cohort: null, cohort_preview: [] }))
       .finally(() => setLoading(false));
+
+    (dilly as any).get('/profile')
+      .then((profile: any) => setAppMode(getAppMode(profile)))
+      .catch(() => {});
   }, []);
 
   return (
@@ -393,6 +400,14 @@ function FeedLanding() {
               <Ionicons name="chevron-forward" size={13} color={theme.surface.t3} />
             </TouchableOpacity>
           </>
+        )}
+
+        {/* ── Recommended Certifications ── */}
+        {!loading && (
+          <CertificationsSection
+            cohortSlug={feed?.cohort_slug ?? null}
+            appMode={appMode}
+          />
         )}
       </ScrollView>
 
