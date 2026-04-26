@@ -1322,3 +1322,47 @@ def purge_llm_usage_log(token: str = "", retention_days: int = 90):
         return {"ok": True, "purged": n, "retention_days": retention_days}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+@router.get("/backfill-transcript-facts", summary="One-shot: fan transcript data from profile_json into profile_facts")
+def backfill_transcript_facts(token: str = ""):
+    """Scan every user whose profile_json has transcript_uploaded_at set and upsert
+    profile_facts rows for courses, GPA, major, minor, and honors.
+    Idempotent — ON CONFLICT DO UPDATE means re-running is safe."""
+    _require_cron_secret(token)
+    import json as _json
+    try:
+        from projects.dilly.api.database import get_db
+        from projects.dilly.api.routers.profile import _fan_out_transcript_facts
+        processed = 0
+        errors = 0
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT email, profile_json FROM users WHERE profile_json->>'transcript_uploaded_at' IS NOT NULL"
+            )
+            rows = cur.fetchall()
+        for row in rows:
+            try:
+                email = row[0]
+                pj = row[1] or {}
+                if isinstance(pj, str):
+                    pj = _json.loads(pj)
+                courses = pj.get("transcript_courses") or []
+                if isinstance(courses, str):
+                    courses = _json.loads(courses)
+                _fan_out_transcript_facts(
+                    email,
+                    gpa=pj.get("transcript_gpa"),
+                    bcpm_gpa=pj.get("transcript_bcpm_gpa"),
+                    major=pj.get("transcript_major"),
+                    minor=pj.get("transcript_minor"),
+                    honors=pj.get("transcript_honors"),
+                    courses=courses,
+                )
+                processed += 1
+            except Exception:
+                errors += 1
+        return {"ok": True, "processed": processed, "errors": errors}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
