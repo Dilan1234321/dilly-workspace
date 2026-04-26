@@ -122,8 +122,8 @@ TONE AND STYLE:
 
 CHAPTER SESSION RULES:
 - You are on a structured 5-screen arc. Each screen has a purpose and a message cap (≤5 user turns per screen).
-- Do not volunteer information outside the current screen's scope. Screen 1 is reconnection. Screen 2 is surfacing. Screen 3 is synthesis. Screen 4 is convergence. Screen 5 is commitment.
-- On Screen 4, you must propose exactly one action with a specific deadline. Not a list. One thing.
+- Do not volunteer information outside the current phase's scope. welcome is reconnection. surface is surfacing. synthesis is synthesis. converge is convergence. close is wrap-up.
+- In the converge phase, you must propose exactly one action with a specific deadline. Not a list. One thing.
 - Never ask more than one question per message.
 - If the user goes off-topic, gently redirect: "Let's hold that for a second — we were talking about X."
 
@@ -196,7 +196,7 @@ Jobs viewed: {jobs_viewed}
 Conversations: {convo_count} voice/chat sessions
 Last win logged: {last_win_str}
 
-CURRENT SCREEN: {screen_num} — {screen_name}
-SCREEN TURN COUNT: {turn_count} of 5"""
+CURRENT PHASE: {screen_name}
+SCREEN TURN COUNT: {turn_count}"""
 
     return cached_block, dynamic_suffix

@@ -60,7 +60,8 @@ const SCREEN_LABEL: Record<number, string> = {
   2: "What's on your mind",
   3: "Here's what I'm seeing",
   4: "Let's pick one thing",
-  5: 'Recap',
+  5: 'Closing thoughts',
+  6: 'Recap',
 };
 
 // Fallback DillyFace mood per screen if the API doesn't send one.
@@ -71,6 +72,7 @@ const SCREEN_MOOD: Record<number, DillyMood> = {
   3: 'focused',
   4: 'direct',
   5: 'settled',
+  6: 'settled',
 };
 
 const VALID_MOODS = new Set<string>([
@@ -347,11 +349,11 @@ export default function ChapterV2Screen() {
 
         sessionIdRef.current = d.session_id;
         setIsFirstSession(!!d.is_first_session);
-        setScreensTotal(d.screens_total ?? 5);
+        setScreensTotal(d.screens_total ?? 6);
 
         const si: number = d.current_screen ?? 1;
         const mood = parseMood(d.dilly_mood, SCREEN_MOOD[si] ?? 'warm');
-        setTurnMax(si === 5 ? 2 : 5);
+        setTurnMax(si === 6 ? 0 : si === 5 ? 3 : 5);
         setPhase('session');
         transitionToScreen(si, mood, d.opening_message || '');
       } catch {
@@ -370,7 +372,7 @@ export default function ChapterV2Screen() {
   useEffect(() => {
     if (
       phase !== 'session' ||
-      screenIndex !== 5 ||
+      screenIndex !== 6 ||
       !commitment ||
       recapCalledRef.current
     ) return;
@@ -459,8 +461,8 @@ export default function ChapterV2Screen() {
       return;
     }
 
-    // Screen 5: close back to recap surface.
-    if (screenIndex === 5) {
+    // Screen 6: close back to recap surface.
+    if (screenIndex === 6) {
       router.replace('/(app)/chapter/recap' as any);
       return;
     }
@@ -486,7 +488,7 @@ export default function ChapterV2Screen() {
 
       const nextIdx: number = d.next_screen ?? screenIndex + 1;
       const mood = parseMood(d.dilly_mood, SCREEN_MOOD[nextIdx] ?? 'warm');
-      const nextTurnMax = nextIdx === 5 ? 2 : 5;
+      const nextTurnMax = nextIdx === 6 ? 0 : nextIdx === 5 ? 3 : 5;
       transitionToScreen(nextIdx, mood, d.opening_message || '', nextTurnMax);
     } catch {
       setChatBlocked('Could not continue. Please try again.');
@@ -500,6 +502,7 @@ export default function ChapterV2Screen() {
 
   const isScreen4 = screenIndex === 4;
   const isScreen5 = screenIndex === 5;
+  const isScreen6 = screenIndex === 6;
   const atTurnLimit = turnCount >= turnMax;
   const canSend = !!input.trim() && !isSending && !isTyping && !chatBlocked && !isAdvancing;
 
@@ -513,19 +516,19 @@ export default function ChapterV2Screen() {
 
   // Advance button visibility + label
   const needsAdvance =
-    isScreen5 || isTyping || canAdvance || atTurnLimit ||
-    (screenIndex <= 3) || // screens 0-3 always show continue
+    isScreen6 || isTyping || canAdvance || atTurnLimit ||
+    (screenIndex <= 3 || isScreen5) || // screens 0-3 and closing screen always show continue
     isAdvancing;
 
   const advanceLabel = (() => {
     if (isTyping || isAdvancing) return isAdvancing ? 'One moment…' : 'Skip typing';
-    if (isScreen5) return 'Close session';
+    if (isScreen6) return 'Close session';
     if (isScreen4 && canAdvance) return "Yes, I'll do this";
     if (screenIndex === 1) return "Let's get into it →";
     return 'Continue →';
   })();
 
-  const faceSize = screenIndex === 0 || isScreen5 ? 110 : 90;
+  const faceSize = screenIndex === 0 || isScreen6 ? 110 : 90;
   const faceMood: DillyMood =
     isTyping || isAdvancing ? 'writing' : screenMood;
   const faceAccessory =
@@ -722,8 +725,8 @@ export default function ChapterV2Screen() {
             </View>
           )}
 
-          {/* Screen 5: recap card */}
-          {isScreen5 && (
+          {/* Screen 6: recap card */}
+          {isScreen6 && (
             <View style={{ marginTop: 20 }}>
               {recapLoading && !recap ? (
                 <View
@@ -745,8 +748,8 @@ export default function ChapterV2Screen() {
         </View>
       </ScrollView>
 
-      {/* Chat input — hidden on Screen 5 and when blocked/at limit */}
-      {!isScreen5 && !chatBlocked && !atTurnLimit && (
+      {/* Chat input — hidden on Screen 6 (recap) and when blocked/at limit */}
+      {!isScreen6 && !chatBlocked && !atTurnLimit && (
         <View
           style={[
             s.inputBar,
@@ -822,8 +825,8 @@ export default function ChapterV2Screen() {
             style={[
               s.advanceBtn,
               {
-                backgroundColor: isScreen5 ? theme.accent : theme.accentSoft,
-                borderColor: isScreen5 ? theme.accent : theme.accentBorder,
+                backgroundColor: isScreen6 ? theme.accent : theme.accentSoft,
+                borderColor: isScreen6 ? theme.accent : theme.accentBorder,
                 flex: 1,
                 opacity: isAdvancing ? 0.65 : 1,
               },
@@ -832,10 +835,10 @@ export default function ChapterV2Screen() {
             disabled={isAdvancing && !isTyping}
             scaleDown={0.98}
           >
-            <Text style={[s.advanceText, { color: isScreen5 ? '#fff' : theme.accent }]}>
+            <Text style={[s.advanceText, { color: isScreen6 ? '#fff' : theme.accent }]}>
               {advanceLabel}
             </Text>
-            {!isScreen5 && !isAdvancing && (
+            {!isScreen6 && !isAdvancing && (
               <Ionicons name="arrow-forward" size={15} color={theme.accent} />
             )}
           </AnimatedPressable>
