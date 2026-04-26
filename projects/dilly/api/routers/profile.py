@@ -873,6 +873,62 @@ async def get_profile_photo(request: Request):
     )
 
 
+def _fan_out_transcript_facts(
+    email: str,
+    *,
+    gpa=None,
+    bcpm_gpa=None,
+    major=None,
+    minor=None,
+    honors=None,
+    courses=None,
+) -> None:
+    """Upsert parsed transcript fields into profile_facts. Best-effort; never raises."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    try:
+        from projects.dilly.api.memory_surface_store import save_memory_surface
+        items: list[dict] = []
+        if gpa is not None:
+            items.append({"category": "gpa", "label": "cumulative", "value": str(gpa),
+                          "source": "transcript", "confidence": "high"})
+        if bcpm_gpa is not None:
+            items.append({"category": "gpa", "label": "bcpm", "value": str(bcpm_gpa),
+                          "source": "transcript", "confidence": "high"})
+        if major:
+            items.append({"category": "major", "label": major[:80], "value": major[:500],
+                          "source": "transcript", "confidence": "high"})
+        if minor:
+            items.append({"category": "minor", "label": minor[:80], "value": minor[:500],
+                          "source": "transcript", "confidence": "high"})
+        for honor in (honors or []):
+            items.append({"category": "honor", "label": honor[:80], "value": honor[:500],
+                          "source": "transcript", "confidence": "high"})
+        for c in (courses or []):
+            code = (c.get("code") or "").strip()
+            name = (c.get("name") or "").strip()
+            term = (c.get("term") or "").strip()
+            grade = (c.get("grade") or "").strip()
+            credits = c.get("credits")
+            label = (f"{code} ({term})" if code and term else code or name or "unknown")[:80]
+            parts = [p for p in [code, name, grade, term,
+                                  (f"{credits} cr" if credits is not None else None)] if p]
+            value = " — ".join(parts)[:500]
+            items.append({
+                "category": "course",
+                "label": label,
+                "value": value,
+                "source": "transcript",
+                "confidence": "high",
+                "action_payload": {"term": term or None, "grade": grade or None, "credits": credits},
+            })
+        if items:
+            save_memory_surface(email, items=items)
+            _log.info("transcript_fanout: wrote %d facts for %s", len(items), email)
+    except Exception as exc:
+        _log.error("transcript_fanout: failed for %s: %s", email, exc)
+
+
 @router.post("/profile/transcript")
 async def upload_profile_transcript(request: Request, file: UploadFile = File(...)):
     """Upload transcript (PDF). Validates file type and size; parses GPA, courses, honors. Replaces any existing transcript."""
@@ -920,6 +976,15 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
             "transcript_warnings": getattr(result, "warnings", []) or [],
         }
         save_profile(email, payload)
+        _fan_out_transcript_facts(
+            email,
+            gpa=result.gpa,
+            bcpm_gpa=getattr(result, "bcpm_gpa", None),
+            major=getattr(result, "major", None),
+            minor=getattr(result, "minor", None),
+            honors=getattr(result, "honors", None),
+            courses=result.to_dict().get("courses", []),
+        )
         try:
             from projects.dilly.api.dilly_profile_txt import write_dilly_profile_txt
             write_dilly_profile_txt(email)
