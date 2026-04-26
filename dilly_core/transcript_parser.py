@@ -42,6 +42,7 @@ class TranscriptParseResult:
     bcpm_gpa: float | None = None
     major: str | None = None
     minor: str | None = None
+    school: str | None = None
     honors: list[str] = field(default_factory=list)
     courses: list[TranscriptCourse] = field(default_factory=list)
     # Quality signals for API/UI: only set when we're confident.
@@ -54,6 +55,7 @@ class TranscriptParseResult:
             "bcpm_gpa": self.bcpm_gpa,
             "major": self.major,
             "minor": self.minor,
+            "school": self.school,
             "honors": list(self.honors),
             "courses": [
                 {
@@ -149,6 +151,39 @@ _HONORS_KEYWORDS = [
     "president\u2019s list", "chancellor's list", "scholarship",
     "honor roll", "phi beta kappa",
 ]
+
+# School extraction: labeled ("Institution: X") or unlabeled header line.
+_SCHOOL_LABELED_PAT = re.compile(
+    r"(?:institution|school)\s*[:]\s*([A-Za-z][A-Za-z\s,&\-\'\.]{2,79})",
+    re.I,
+)
+_SCHOOL_SUFFIX_PAT = re.compile(
+    r"\b(?:university|college|institute of technology|polytechnic institute)\b",
+    re.I,
+)
+_SCHOOL_PREFIX_PAT = re.compile(r"^university of\s+[A-Za-z]", re.I)
+_SCHOOL_NOISE_PAT = re.compile(
+    r"\b(?:gpa|credit|grade|transcript|official|student|date|page|term|semester|cumulative)\b",
+    re.I,
+)
+
+
+def _extract_school(text: str) -> str | None:
+    """Extract institution name. Returns None rather than a wrong guess."""
+    m = _SCHOOL_LABELED_PAT.search(text)
+    if m:
+        cand = re.sub(r"\s+", " ", m.group(1).split("\n")[0]).strip()
+        if len(cand) >= 4:
+            return cand[:100]
+    for line in text.split("\n")[:20]:
+        line = line.strip()
+        if not line or len(line) < 4 or len(line) > 100:
+            continue
+        if _SCHOOL_NOISE_PAT.search(line):
+            continue
+        if _SCHOOL_SUFFIX_PAT.search(line) or _SCHOOL_PREFIX_PAT.match(line):
+            return re.sub(r"\s+", " ", line).strip()[:100]
+    return None
 
 
 def _extract_gpa_strict(text: str) -> tuple[float | None, str | None, list[str]]:
@@ -295,11 +330,13 @@ def parse_transcript_text(text: str) -> TranscriptParseResult:
     honors = _extract_honors(text)
     courses = _extract_courses(text)
     major, minor = _extract_major_minor(text)
+    school = _extract_school(text)
     return TranscriptParseResult(
         gpa=gpa,
         bcpm_gpa=bcpm,
         major=major,
         minor=minor,
+        school=school,
         honors=honors,
         courses=courses,
         gpa_source=gpa_source,
