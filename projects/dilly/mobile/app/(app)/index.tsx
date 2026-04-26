@@ -1090,7 +1090,7 @@ function SeekerHome() {
   const [gsTranscript,  setGsTranscript]  = useState(false);
   const [gsWin,         setGsWin]         = useState(false);
   const [gsChapter,     setGsChapter]     = useState(false);
-  const [gsCalendar,    setGsCalendar]    = useState(false);
+  const [gsCustomize,   setGsCustomize]   = useState(false);
 
   // Auth guard
   useFocusEffect(
@@ -1125,7 +1125,7 @@ function SeekerHome() {
         setGsTranscript(Boolean(p.gs_transcript));
         setGsWin(Boolean(p.gs_win));
         setGsChapter(Boolean(p.gs_chapter));
-        setGsCalendar(Boolean(p.gs_calendar));
+        setGsCustomize(Boolean(p.gs_customize));
         const dismissed: string[] = Array.isArray(p.getting_started_dismissed)
           ? p.getting_started_dismissed : [];
         setGsDismissed(new Set(dismissed));
@@ -1325,7 +1325,7 @@ function SeekerHome() {
     transcript: gsTranscript,
     win:        gsWin,
     chapter:    gsChapter,
-    calendar:   gsCalendar,
+    customize:  gsCustomize,
   };
   // Auto-dismiss any step whose predicate just became true.
   Object.entries(gsPredicates).forEach(([id, done]) => { if (done) autoDissmissStep(id); });
@@ -1356,10 +1356,10 @@ function SeekerHome() {
       onPress: () => router.push('/(app)/chapter' as any),
     },
     {
-      id: 'calendar', title: 'Connect your calendar', subtitle: 'Get your Dilly deadlines in your calendar app.',
-      icon: 'calendar', color: '#00C853',
-      completed: gsPredicates.calendar || gsDismissed.has('calendar'),
-      onPress: () => router.push('/(app)/calendar' as any),
+      id: 'customize', title: 'Make Dilly yours', subtitle: 'Pick your colors and make the app feel like you.',
+      icon: 'color-palette', color: '#FF6B6B',
+      completed: gsPredicates.customize || gsDismissed.has('customize'),
+      onPress: () => router.push('/(app)/customize' as any),
     },
   ];
   const completedCount = journeySteps.filter(s => s.completed).length;

@@ -1597,6 +1597,45 @@ async def ai_chat(request: Request, body: ChatRequest):
     if not raw_messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
+    # ── Chapter-mode augmentation ─────────────────────────────────────────
+    # When the client sends mode='chapter', this is an inline Q&A chat from
+    # the Chapter question screen. Apply three overlays on top of the base
+    # rich system prompt:
+    #   1. Chapter framing: persona, scope, clean prose rules.
+    #   2. Pacing: inject a wrap-up nudge at turns 4 and 5 so the cap lands
+    #      gracefully rather than cutting off mid-thought.
+    #   3. Prohibit markdown and meta-text: Dilly must not mention screens,
+    #      turn counts, or session metadata in its responses.
+    if body.mode == "chapter" and isinstance(system, str):
+        _chapter_base = (
+            "\n\nYOU ARE IN A CHAPTER SESSION INLINE CHAT.\n"
+            "This is the question screen inside a structured weekly advisory session. "
+            "The user is responding to a question Dilly posed. Your job is to listen, "
+            "validate, and go one level deeper — never more than one question per message.\n"
+            "CLEAN PROSE RULES: Do not use markdown. No asterisks, no underscores, no "
+            "bullet points, no headers. Write plain conversational prose only. "
+            "Do not mention screen numbers, turn counts, or session structure in your response. "
+            "The user sees clean chat bubbles — formatting characters will appear as literal symbols."
+        )
+        # Count user turns to determine pacing position.
+        _user_turn_count = sum(1 for m in raw_messages if m.get("role") == "user")
+        if _user_turn_count >= 5:
+            _pacing = (
+                "\n\nPACING — FINAL TURN: This is your last response on this screen. "
+                "Wrap up gracefully: synthesize the conversation in one or two sentences, "
+                "offer a closing thought that lands, and gesture toward moving forward. "
+                "Do not ask another open question. End with something that feels resolved."
+            )
+        elif _user_turn_count == 4:
+            _pacing = (
+                "\n\nPACING — PENULTIMATE TURN: This is your second-to-last response. "
+                "Start gathering threads — name the core thing you are hearing. "
+                "Do not introduce new tangents or open new topics."
+            )
+        else:
+            _pacing = ""
+        system = system + _chapter_base + _pacing
+
     # ── Cost optimization: truncate chat history ──────────────────────────
     # Send at most the last N message turns to Claude. Older context is
     # captured in the persistent profile (extraction runs after every chat),

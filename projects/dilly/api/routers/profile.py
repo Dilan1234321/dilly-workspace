@@ -102,6 +102,12 @@ async def get_profile(request: Request):
             profile["gs_chapter"] = chapters_store.count_chapters(email) > 0
         except Exception:
             profile["gs_chapter"] = False
+        # gs_customize: true once the user has changed accent or surface from defaults.
+        _theme = profile.get("theme") or {}
+        profile["gs_customize"] = bool(
+            _theme.get("accent", "indigo") != "indigo"
+            or _theme.get("surface", "cloud") != "cloud"
+        )
 
         # Fallback: if scores still missing, pull them from the latest audit in audit_history.json
         if not profile.get("overall_dilly_score"):
@@ -997,12 +1003,20 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
             write_dilly_profile_txt(email)
         except Exception:
             pass
+        courses_count = len(result.courses)
+        low_confidence = courses_count < 3 or result.gpa is None
         return {
             "ok": True,
+            "low_confidence": low_confidence,
+            "low_confidence_message": (
+                "Hmm, we couldn't parse much from this — make sure it's the digital PDF "
+                "from your school portal, not a scan or photo. Want to try again?"
+                if low_confidence else None
+            ),
             "transcript": {
                 "gpa": result.gpa,
                 "bcpm_gpa": result.bcpm_gpa,
-                "courses_count": len(result.courses),
+                "courses_count": courses_count,
                 "honors": result.honors,
                 "major": result.major,
                 "minor": result.minor,
@@ -1202,6 +1216,84 @@ async def upload_profile_resume(request: Request, file: UploadFile = File(...)):
                 os.remove(temp_path)
             except OSError:
                 pass
+
+
+@router.get("/profile/transcript")
+async def get_profile_transcript(request: Request):
+    """Return the user's current transcript data (parsed + any manual edits)."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized("Sign in required.")
+    try:
+        from projects.dilly.api.profile_store import ensure_profile_exists
+        profile = ensure_profile_exists(email)
+    except Exception:
+        raise errors.internal("Could not load profile.")
+    return {
+        "ok": True,
+        "transcript": {
+            "uploaded_at": profile.get("transcript_uploaded_at"),
+            "gpa": profile.get("transcript_gpa"),
+            "bcpm_gpa": profile.get("transcript_bcpm_gpa"),
+            "courses": profile.get("transcript_courses") or [],
+            "honors": profile.get("transcript_honors") or [],
+            "major": profile.get("transcript_major"),
+            "minor": profile.get("transcript_minor"),
+            "warnings": profile.get("transcript_warnings") or [],
+            "manually_edited": profile.get("transcript_manually_edited") or {},
+            "last_edited_at": profile.get("transcript_last_edited_at"),
+        },
+    }
+
+
+@router.patch("/profile/transcript")
+async def patch_profile_transcript(request: Request, body: dict = Body(...)):
+    """Persist manual edits to the user's transcript data.
+    Accepts a partial update. Tracks which fields were manually edited."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized("Sign in required.")
+    try:
+        from projects.dilly.api.profile_store import ensure_profile_exists, save_profile
+    except ImportError:
+        raise errors.internal("Profile store unavailable.")
+
+    ensure_profile_exists(email)
+
+    _editable_fields = {
+        "transcript_gpa", "transcript_bcpm_gpa", "transcript_courses",
+        "transcript_honors", "transcript_major", "transcript_minor",
+    }
+    payload: dict = {}
+    manually_edited: dict = {}
+
+    for field in _editable_fields:
+        if field in body:
+            payload[field] = body[field]
+            manually_edited[field.replace("transcript_", "")] = True
+
+    if not payload:
+        return {"ok": True, "updated": []}
+
+    payload["transcript_last_edited_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    try:
+        from projects.dilly.api.profile_store import ensure_profile_exists as _ep
+        existing = _ep(email) or {}
+        existing_edited = existing.get("transcript_manually_edited") or {}
+        payload["transcript_manually_edited"] = {**existing_edited, **manually_edited}
+    except Exception:
+        payload["transcript_manually_edited"] = manually_edited
+
+    save_profile(email, payload)
+    try:
+        from projects.dilly.api.dilly_profile_txt import write_dilly_profile_txt
+        write_dilly_profile_txt(email)
+    except Exception:
+        pass
+    return {"ok": True, "updated": list(payload.keys())}
 
 
 @router.delete("/profile/photo")

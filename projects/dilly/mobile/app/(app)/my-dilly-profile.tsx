@@ -23,6 +23,7 @@ import {
   Dimensions, Image, TextInput, Keyboard, Alert, Switch, Modal,
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -476,6 +477,7 @@ function SeekerProfileScreen() {
   // smooth animation coming in and coming out."
   const [addFactMounted, setAddFactMounted] = useState(false);
   const addFactAnim = useRef(new Animated.Value(0)).current;
+  const [uploadingTranscript, setUploadingTranscript] = useState(false);
   useEffect(() => {
     if (addFactModal.visible) {
       setAddFactMounted(true);
@@ -662,6 +664,32 @@ function SeekerProfileScreen() {
   }, []);
 
   useEffect(() => { fetchData(); }, []);
+
+  async function uploadTranscript() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      setUploadingTranscript(true);
+      const formData = new FormData();
+      formData.append('file', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'application/pdf' } as any);
+      const res = await dilly.fetch('/profile/transcript', { method: 'POST', body: formData });
+      if (res.ok) {
+        const body = await res.json();
+        setProfile((prev: any) => ({ ...prev, transcript_uploaded_at: body.transcript?.uploaded_at ?? new Date().toISOString() }));
+        router.push('/(app)/transcript-review' as any);
+      } else {
+        Alert.alert('Upload failed', 'Something went wrong. Try again with the digital PDF from your school portal.');
+      }
+    } catch {
+      Alert.alert('Upload failed', 'Could not read the file. Make sure it is a PDF or DOCX.');
+    } finally {
+      setUploadingTranscript(false);
+    }
+  }
 
   // Re-fetch when tab becomes active (after AI conversation adds new facts)
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
@@ -1994,10 +2022,7 @@ function SeekerProfileScreen() {
           </FadeInView>
         )}
 
-        {/* ── 8. Resume Upload (one-time) ─────────────────────
-            Visible only until the user uploads their original resume.
-            Once uploaded, gs_resume flips true and this section never
-            comes back — Dilly-generated resumes replace the original. */}
+        {/* ── 8. Resume Upload (one-time) — hidden once uploaded */}
         {!profile.gs_resume && (
           <FadeInView delay={410}>
             <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR RESUME</Text>
@@ -2036,6 +2061,38 @@ function SeekerProfileScreen() {
             </AnimatedPressable>
           </FadeInView>
         )}
+
+        {/* ── 9. Transcript ───────────────────────────────────── */}
+        <FadeInView delay={415}>
+          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>MY TRANSCRIPT</Text>
+          <AnimatedPressable
+            style={[d.resumeCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+            onPress={profile.transcript_uploaded_at
+              ? () => router.push('/(app)/transcript-review' as any)
+              : uploadTranscript}
+            disabled={uploadingTranscript}
+            scaleDown={0.98}
+          >
+            <Ionicons
+              name={profile.transcript_uploaded_at ? 'school-outline' : 'cloud-upload-outline'}
+              size={18}
+              color={theme.accent}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>
+                {profile.transcript_uploaded_at ? 'View transcript' : 'Upload transcript'}
+              </Text>
+              <Text style={[d.resumeSub, { color: theme.surface.t3 }]}>
+                {profile.transcript_uploaded_at
+                  ? `Uploaded ${new Date(profile.transcript_uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                  : 'Use the digital PDF from your school portal'}
+              </Text>
+            </View>
+            {uploadingTranscript
+              ? <Ionicons name="reload-outline" size={16} color={theme.surface.t3} />
+              : <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />}
+          </AnimatedPressable>
+        </FadeInView>
 
         {/* ── 9. Milestones ───────────────────────────────────── */}
         <FadeInView delay={420}>

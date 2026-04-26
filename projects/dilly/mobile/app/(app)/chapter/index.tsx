@@ -74,6 +74,17 @@ async function markChapterCompleted(chapterId: string | undefined) {
   } catch { /* ignore */ }
 }
 
+function stripMd(s: string): string {
+  return s
+    .replace(/\*\*(.+?)\*\*/gs, '$1')
+    .replace(/\*(.+?)\*/gs, '$1')
+    .replace(/__(.+?)__/gs, '$1')
+    .replace(/_(.+?)_/gs, '$1')
+    .replace(/#{1,6}\s*/g, '')
+    .replace(/^[-*•]\s+/gm, '')
+    .trim();
+}
+
 const PUNCT_PAUSE_MS: Record<string, number> = {
   '.': 260, '!': 300, '?': 300, ',': 120,
   ';': 160, ':': 160, '—': 200, '\n': 320,
@@ -193,6 +204,30 @@ function ChapterV1() {
   const chatMessagesRef = useRef<ChatMsg[]>([]);
   useEffect(() => { chatMessagesRef.current = chatMessages; }, [chatMessages]);
 
+  const scrollRef = useRef<ScrollView>(null);
+  const atBottomRef = useRef(true);
+
+  useEffect(() => {
+    const onQuestionScreen = chapter?.screens[index]?.slot === 'question';
+    if (!onQuestionScreen || !atBottomRef.current) return;
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    return () => clearTimeout(t);
+  }, [chatMessages.length, chapter, index]);
+
+  useEffect(() => {
+    const onQuestionScreen = chapter?.screens[index]?.slot === 'question';
+    if (!onQuestionScreen || !isTyping || !atBottomRef.current) return;
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    return () => clearTimeout(t);
+  }, [isTyping, chapter, index]);
+
+  // Flush extraction on Chapter unmount. The AI overlay wraps its
+  // own close handler to call /ai/chat/flush, but the Chapter screen
+  // uses its own inline chat with a private conv_id. Without this
+  // cleanup, anything the user typed on the question screen never
+  // extracted — they'd talk to Dilly and see no new facts on the
+  // profile after the Chapter closed. Fires only if the user sent
+  // at least one message AND the chapter has an id.
   useEffect(() => {
     return () => {
       const msgs = chatMessagesRef.current;
@@ -499,24 +534,62 @@ function ChapterV1() {
         ))}
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={s.bodyScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={s.bodyScroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={32}
+        onScroll={({ nativeEvent: { contentOffset, contentSize, layoutMeasurement } }) => {
+          atBottomRef.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - 40;
+        }}
+      >
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <DillyFace size={isFirst || isLast ? 120 : 84} mood={isTyping ? 'writing' : (isFirst ? 'happy' : isLast ? 'proud' : 'idle')} accessory={isTyping ? 'pencil' : 'none'} />
         </View>
         {label ? <Text style={[s.label, { color: theme.accent }]}>{label.toUpperCase()}</Text> : null}
         {!isQuestion && (
           <Animated.View style={{ opacity: fade }}>
-            <Text style={[s.body, { color: theme.surface.t1, fontWeight: isFirst ? '800' : '700', fontSize: isFirst ? 28 : 22, lineHeight: isFirst ? 36 : 30 }]}>
-              {typedBody}{isTyping ? <Text style={{ color: theme.accent }}>▍</Text> : null}
+            <Text
+              style={[
+                s.body,
+                {
+                  color: theme.surface.t1,
+                  fontWeight: isFirst ? '800' : '700',
+                  fontSize: isFirst ? 28 : 22,
+                  lineHeight: isFirst ? 36 : 30,
+                },
+              ]}
+            >
+              {stripMd(typedBody)}
+              {isTyping ? <Text style={{ color: theme.accent }}>▍</Text> : null}
             </Text>
           </Animated.View>
         )}
         {isQuestion && (
           <View style={{ gap: 10, marginTop: 8, alignSelf: 'stretch' }}>
             {chatMessages.map(m => (
-              <View key={m.id} style={[s.chatBubble, m.role === 'user' ? { alignSelf: 'flex-end', backgroundColor: theme.accent } : { alignSelf: 'flex-start', backgroundColor: theme.surface.s1, borderColor: theme.surface.border, borderWidth: 1 }]}>
-                <Text style={{ fontSize: 15, lineHeight: 22, color: m.role === 'user' ? '#fff' : theme.surface.t1 }}>
-                  {m.content}{isTyping && m === chatMessages[chatMessages.length - 1] && m.role === 'assistant' ? <Text style={{ color: theme.accent }}>▍</Text> : null}
+              <View
+                key={m.id}
+                style={[
+                  s.chatBubble,
+                  m.role === 'user'
+                    ? { alignSelf: 'flex-end', backgroundColor: theme.accent }
+                    : { alignSelf: 'flex-start', backgroundColor: theme.surface.s1, borderColor: theme.surface.border, borderWidth: 1 },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: 15,
+                    lineHeight: 22,
+                    color: m.role === 'user' ? '#fff' : theme.surface.t1,
+                  }}
+                >
+                  {stripMd(m.content)}
+                  {isTyping && m === chatMessages[chatMessages.length - 1] && m.role === 'assistant'
+                    ? <Text style={{ color: theme.accent }}>▍</Text>
+                    : null}
                 </Text>
               </View>
             ))}

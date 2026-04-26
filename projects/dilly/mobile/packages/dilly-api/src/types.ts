@@ -568,6 +568,8 @@ export type AppProfile = {
   transcript_major?: string | null;
   transcript_minor?: string | null;
   transcript_warnings?: string[];
+  transcript_manually_edited?: Record<string, boolean>;
+  transcript_last_edited_at?: string | null;
 
   /** Achievements & share */
   achievements?: ProfileAchievements;
