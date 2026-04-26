@@ -883,6 +883,7 @@ def _fan_out_transcript_facts(
     minor=None,
     honors=None,
     courses=None,
+    school=None,
 ) -> None:
     """Upsert parsed transcript fields into profile_facts. Best-effort; never raises."""
     import logging as _logging
@@ -901,6 +902,9 @@ def _fan_out_transcript_facts(
                           "source": "transcript", "confidence": "high"})
         if minor:
             items.append({"category": "minor", "label": minor[:80], "value": minor[:500],
+                          "source": "transcript", "confidence": "high"})
+        if school:
+            items.append({"category": "school", "label": school[:80], "value": school[:500],
                           "source": "transcript", "confidence": "high"})
         for honor in (honors or []):
             items.append({"category": "honor", "label": honor[:80], "value": honor[:500],
@@ -974,6 +978,7 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
             "transcript_honors": result.honors,
             "transcript_major": result.major,
             "transcript_minor": result.minor,
+            "transcript_school": result.school,
             "transcript_warnings": getattr(result, "warnings", []) or [],
         }
         save_profile(email, payload)
@@ -985,6 +990,7 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
             minor=getattr(result, "minor", None),
             honors=getattr(result, "honors", None),
             courses=result.to_dict().get("courses", []),
+            school=getattr(result, "school", None),
         )
         try:
             from projects.dilly.api.dilly_profile_txt import write_dilly_profile_txt
@@ -1000,6 +1006,7 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
                 "honors": result.honors,
                 "major": result.major,
                 "minor": result.minor,
+                "school": result.school,
                 "warnings": getattr(result, "warnings", []),
             },
         }

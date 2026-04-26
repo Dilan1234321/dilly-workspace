@@ -1327,7 +1327,7 @@ def purge_llm_usage_log(token: str = "", retention_days: int = 90):
 @router.get("/backfill-transcript-facts", summary="One-shot: fan transcript data from profile_json into profile_facts")
 def backfill_transcript_facts(token: str = ""):
     """Scan every user whose profile_json has transcript_uploaded_at set and upsert
-    profile_facts rows for courses, GPA, major, minor, and honors.
+    profile_facts rows for courses, GPA, major, minor, honors, and school.
     Idempotent — ON CONFLICT DO UPDATE means re-running is safe."""
     _require_cron_secret(token)
     import json as _json
@@ -1359,6 +1359,7 @@ def backfill_transcript_facts(token: str = ""):
                     minor=pj.get("transcript_minor"),
                     honors=pj.get("transcript_honors"),
                     courses=courses,
+                    school=pj.get("transcript_school"),
                 )
                 processed += 1
             except Exception:
