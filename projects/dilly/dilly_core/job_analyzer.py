@@ -200,36 +200,83 @@ def _canonical_cohorts_for(legacy_labels: list[str]) -> list[str]:
 
 # ── Seniority detection ──────────────────────────────────────────────────────
 
+_JA_EXEC_WORDS = (
+    "managing director", "managing partner", "vice president", " vp ", "head of",
+    "chief ", " cto", " cfo", " coo", " ceo", " cmo", " ciso",
+    "director", "partner ", "president",
+)
+_JA_SENIOR_WORDS = ("senior", " sr ", "sr.", "lead ", "staff ", "principal ")
+_JA_INTERN_WORDS = (
+    "intern", "internship", "co-op", "coop",
+    "summer analyst", "summer associate", "summer fellow",
+    "summer engineer", "summer swe", "summer program", "summer intern",
+    "apprentice", "trainee", "rotational analyst", "rotational program",
+)
+_JA_ENTRY_WORDS = (
+    "entry level", "entry-level", "new grad", "new graduate",
+    "junior", "jr ", "jr.", "graduate", "associate",
+    "early career", "level 1", "analyst i ", "engineer i ",
+)
+
+
 def _detect_seniority(title: str, desc: str) -> str:
     tl = title.lower()
-    if any(w in tl for w in ["intern", "internship", "co-op", "coop"]):
-        return "intern"
-    if any(w in tl for w in ["junior", "jr.", "jr ", "entry level", "entry-level", "associate", "new grad", "graduate"]):
-        return "junior"
-    if any(w in tl for w in ["senior", "sr.", "sr ", "lead", "principal", "staff"]):
+    # Exec → treat as senior for S/G/B purposes
+    if any(w in tl for w in _JA_EXEC_WORDS):
         return "senior"
-    # Check description for experience requirements
-    exp_match = re.search(r"(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)", desc.lower())
+    # Intern/summer keywords → intern
+    if any(w in tl for w in _JA_INTERN_WORDS):
+        return "intern"
+    # Year-prefixed summer programs: "2025 Summer Analyst"
+    if re.search(r"\b20\d{2}\s+summer\b|\bsummer\s+20\d{2}\b", tl):
+        return "intern"
+    if any(w in tl for w in _JA_SENIOR_WORDS):
+        return "senior"
+    if any(w in tl for w in _JA_ENTRY_WORDS):
+        return "junior"
+    # Description experience heuristic
+    exp_match = re.search(r"(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)", (desc or "").lower())
     if exp_match:
         years = int(exp_match.group(1))
-        if years <= 1:
+        if years <= 2:
             return "junior"
-        if years <= 3:
-            return "junior"
-        if years <= 5:
+        if years <= 4:
             return "mid"
         return "senior"
     return "junior"  # default for entry-level focus
 
+
 def _detect_job_type(title: str, desc: str) -> str:
     tl = title.lower()
-    if any(w in tl for w in ["intern", "internship", "co-op", "coop"]):
+    # Exec disqualifier — these are clearly full-time senior roles
+    if any(w in tl for w in _JA_EXEC_WORDS):
+        return "full_time"
+    # Intern/summer signals
+    if any(w in tl for w in _JA_INTERN_WORDS):
+        # Exclude if senior modifiers are also present ("Senior Intern Coordinator")
+        if not any(w in tl for w in _JA_SENIOR_WORDS):
+            return "internship"
+    # Year-prefixed summer programs: "2025 Summer Analyst", "Summer 2025 Associate"
+    if re.search(r"\b20\d{2}\s+summer\b|\bsummer\s+20\d{2}\b", tl):
         return "internship"
-    if any(w in tl for w in ["entry level", "entry-level", "new grad", "graduate", "junior", "associate"]):
-        return "entry_level"
-    if any(w in tl for w in ["part time", "part-time"]):
+    # Senior IC → full-time
+    if any(w in tl for w in _JA_SENIOR_WORDS):
+        return "full_time"
+    # Part-time
+    if any(w in tl for w in ("part time", "part-time")):
         return "part_time"
-    return "entry_level"  # default assumption for our audience
+    # Entry-level
+    if any(w in tl for w in _JA_ENTRY_WORDS):
+        return "entry_level"
+    # Description experience heuristic
+    exp = re.search(r"(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)", (desc or "").lower())
+    if exp:
+        years = int(exp.group(1))
+        if years >= 5:
+            return "full_time"
+        if years <= 2:
+            return "entry_level"
+    return "full_time"  # safer default; entry_level was over-broad
 
 # ── S/G/B requirement estimation ─────────────────────────────────────────────
 

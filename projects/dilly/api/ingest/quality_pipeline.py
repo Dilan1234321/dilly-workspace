@@ -239,22 +239,93 @@ def pass_spam_filter(conn) -> dict:
 # Pass 4 — level classifier sweep
 # ──────────────────────────────────────────────────────────────────────
 
-_INTERN_RX = re.compile(r"\b(intern(?:ship)?|co-?op|summer\s+20\d{2}\s+(?:swe|engineer|analyst))\b", re.I)
-_ENTRY_RX = re.compile(r"\b(new\s*grad(?:uate)?|entry[\s-]?level|junior|associate(?!\s+(?:director|vp))|graduate\s+(?:engineer|analyst|program))\b", re.I)
-_SENIOR_RX = re.compile(r"\b(senior|staff|principal|lead(?!\s+generation)|head\s+of|director|vp|vice\s+president)\b", re.I)
+# Matches internship signals — title-first, then description fallback.
+# Finance-specific: "Summer Analyst", "Summer Associate" are internships.
+# Healthcare: "extern" / "externship" = short-term clinical placement.
+# Year-prefix variants: "2025 Summer Analyst", "Summer 2025 Associate".
+_INTERN_TITLE_RX = re.compile(
+    r"\b(intern(?:ship)?|co-?op|extern(?:ship)?|"
+    r"summer\s+(?:analyst|associate|fellow|engineer|swe|"
+    r"scholar|researcher|student|program)|"
+    r"apprentice(?!\s+electrician)|trainee|"
+    r"rotational\s+program|rotational\s+analyst)\b",
+    re.I,
+)
+# "Summer Teaching Fellow", "Summer Policy Analyst" — 'summer' anywhere in
+# title followed by a typical intern-role word, with optional words between.
+_INTERN_SUMMER_TITLE_RX = re.compile(
+    r"\bsummer\b.{0,40}\b(fellow|analyst|associate|engineer|researcher|scholar|intern)\b",
+    re.I,
+)
+_INTERN_YEAR_RX = re.compile(
+    r"\b(20\d{2}\s+summer\s+(?:analyst|associate|engineer|swe|fellow|intern)|"
+    r"summer\s+20\d{2}\s+(?:analyst|associate|engineer|swe|fellow|intern))\b",
+    re.I,
+)
+# Executive / leadership — hard disqualifier for internship or entry-level
+_EXEC_RX = re.compile(
+    r"\b(managing\s+director|managing\s+partner|director|vice\s+president|"
+    r"head\s+of|chief|svp|evp|c-?suite|president(?!\s+club)|partner(?!\s+program))\b",
+    re.I,
+)
+# Senior individual-contributor — disqualifier for internship; maps to full_time
+_SENIOR_RX = re.compile(
+    r"\b(senior|sr\.?\s|lead(?!\s+generation)|staff\b|principal\b)\b",
+    re.I,
+)
+_ENTRY_RX = re.compile(
+    r"\b(new\s*grad(?:uate)?|entry[\s-]?level|junior|jr\.?\s|"
+    r"associate(?!\s+(?:director|vp|professor|dean))|"
+    r"graduate\s+(?:engineer|analyst|program|hire|rotational)|"
+    r"early\s+career|analyst\s+i\b|engineer\s+i\b|level\s+1\b)\b",
+    re.I,
+)
 _PARTTIME_RX = re.compile(r"\bpart[\s-]?time\b", re.I)
 
 
 def _classify(title: str, description: str) -> str:
-    blob = (title + " " + (description or "")[:800]).lower()
-    if _INTERN_RX.search(blob):
-        return "internship"
-    if _PARTTIME_RX.search(blob):
-        return "part_time"
-    if _SENIOR_RX.search(title or ""):
+    title = title or ""
+    tl = title.lower()
+
+    # Exec titles are always full_time — check title only to avoid false
+    # positives from descriptions ("reports to the Director of...").
+    if _EXEC_RX.search(tl):
         return "full_time"
+
+    # Senior IC signals in title → full_time (before checking intern so
+    # "Senior Intern Program Manager" doesn't slip through as internship).
+    if _SENIOR_RX.search(tl):
+        return "full_time"
+
+    # Internship — title wins over description to prevent sentences like
+    # "manage our intern class" from tagging a Director role as internship.
+    if _INTERN_TITLE_RX.search(tl) or _INTERN_YEAR_RX.search(tl) or _INTERN_SUMMER_TITLE_RX.search(tl):
+        return "internship"
+
+    # Part-time before we check description-level signals
+    if _PARTTIME_RX.search(tl):
+        return "part_time"
+
+    # Description-level exec/senior guard (rare: "Vice President" buried
+    # in first 400 chars of a job that has a vague title like "Analyst").
+    desc_snippet = (description or "")[:400].lower()
+    if _EXEC_RX.search(desc_snippet) and not _ENTRY_RX.search(tl):
+        return "full_time"
+
+    # Entry-level signals in title or first 400 chars of description
+    blob = tl + " " + desc_snippet
     if _ENTRY_RX.search(blob):
         return "entry_level"
+
+    # Experience-years heuristic in description
+    exp = re.search(r"(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)", blob)
+    if exp:
+        years = int(exp.group(1))
+        if years >= 5:
+            return "full_time"
+        if years <= 2:
+            return "entry_level"
+
     return "full_time"
 
 
@@ -281,6 +352,37 @@ def pass_reclassify_levels(conn) -> dict:
 
     conn.commit()
     return {"scanned": len(rows), "updated": updated}
+
+
+def pass_reclassify_all_levels(conn) -> dict:
+    """Re-classify job_type for ALL active rows using the current rules.
+    Unlike pass_reclassify_levels which only fills NULL/other rows, this
+    overwrites every active row — intended for backfills after classifier
+    improvements. Returns before/after distribution counts."""
+    with conn.cursor() as cur:
+        # Before distribution
+        cur.execute(
+            "SELECT job_type, COUNT(*) FROM internships WHERE status='active' GROUP BY job_type"
+        )
+        before = {(row[0] or "null"): int(row[1]) for row in cur.fetchall()}
+
+        cur.execute("SELECT id, title, description FROM internships WHERE status='active'")
+        rows = cur.fetchall()
+
+    buckets: dict[str, int] = {"internship": 0, "entry_level": 0, "full_time": 0, "part_time": 0}
+    changed = 0
+    for rid, title, desc in rows:
+        new_type = _classify(title or "", desc or "")
+        buckets[new_type] = buckets.get(new_type, 0) + 1
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE internships SET job_type=%s, updated_at=now() WHERE id=%s AND job_type IS DISTINCT FROM %s",
+                (new_type, rid, new_type),
+            )
+            changed += cur.rowcount
+
+    conn.commit()
+    return {"scanned": len(rows), "changed": changed, "before": before, "after": buckets}
 
 
 # ──────────────────────────────────────────────────────────────────────
