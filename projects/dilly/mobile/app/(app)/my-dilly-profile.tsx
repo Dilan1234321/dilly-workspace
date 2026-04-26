@@ -24,9 +24,11 @@ import {
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
+import { authHeaders } from '../../lib/auth';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { CAREER_FIELDS as CAREER_FIELD_OPTIONS, ALL_COHORTS, MAJOR_TO_COHORTS, detectCohorts } from '../../lib/cohorts';
 import { mediumHaptic } from '../../lib/haptics';
@@ -464,6 +466,8 @@ function SeekerProfileScreen() {
     saving: boolean;
   }>({ visible: false, category: '', categoryLabel: '', label: '', value: '', saving: false });
 
+  const [resumeUploading, setResumeUploading] = useState(false);
+
   // Mount-lifecycle animation for the Add-Fact modal. `mounted`
   // stays true through the exit fade so the card can animate OUT
   // instead of being yanked from the tree. `anim` drives opacity
@@ -534,6 +538,54 @@ function SeekerProfileScreen() {
       setAddFactModal(prev => ({ ...prev, saving: false }));
     }
   }
+  async function pickAndUploadResume() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const nameLower = asset.name.toLowerCase();
+      if (!nameLower.endsWith('.pdf') && !nameLower.endsWith('.docx')) {
+        Alert.alert('Unsupported file', 'Please upload a PDF or DOCX file.');
+        return;
+      }
+      if ((asset.size ?? 0) > 10 * 1024 * 1024) {
+        Alert.alert('File too large', 'Resume must be under 10 MB.');
+        return;
+      }
+      setResumeUploading(true);
+      const hdrs = await authHeaders();
+      const formData = new FormData();
+      formData.append('file', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'application/pdf' } as any);
+      const res = await fetch(`${API_BASE}/profile/resume`, {
+        method: 'POST',
+        headers: { ...hdrs },
+        body: formData,
+      });
+      if (res.ok) {
+        // Flip the flag locally so the button disappears immediately,
+        // then re-fetch the full profile to pick up seeded facts.
+        setProfile(prev => ({ ...prev, gs_resume: true, resume_uploaded_at: new Date().toISOString() }));
+        fetchData();
+      } else if (res.status === 409) {
+        // Already uploaded — sync local state
+        setProfile(prev => ({ ...prev, gs_resume: true }));
+      } else {
+        const body = await res.json().catch(() => ({}));
+        Alert.alert('Upload failed', body?.detail || 'Something went wrong. Try again.');
+      }
+    } catch {
+      Alert.alert('Upload failed', 'Something went wrong. Try again.');
+    } finally {
+      setResumeUploading(false);
+    }
+  }
+
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
   async function addCity(city: string) {
@@ -1942,7 +1994,50 @@ function SeekerProfileScreen() {
           </FadeInView>
         )}
 
-        {/* ── 8. Milestones ───────────────────────────────────── */}
+        {/* ── 8. Resume Upload (one-time) ─────────────────────
+            Visible only until the user uploads their original resume.
+            Once uploaded, gs_resume flips true and this section never
+            comes back — Dilly-generated resumes replace the original. */}
+        {!profile.gs_resume && (
+          <FadeInView delay={410}>
+            <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR RESUME</Text>
+            <AnimatedPressable
+              style={[
+                d.resumeCard,
+                {
+                  backgroundColor: theme.surface.s1,
+                  borderColor: resumeUploading ? theme.accentBorder : theme.surface.border,
+                  borderStyle: 'dashed',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingVertical: 20,
+                },
+              ]}
+              onPress={resumeUploading ? undefined : pickAndUploadResume}
+              scaleDown={resumeUploading ? 1 : 0.98}
+              disabled={resumeUploading}
+            >
+              <View style={[d.strengthIcon, { backgroundColor: theme.accentSoft }]}>
+                <Ionicons
+                  name={resumeUploading ? 'hourglass-outline' : 'cloud-upload-outline'}
+                  size={18}
+                  color={theme.accent}
+                />
+              </View>
+              <View style={{ alignItems: 'center', gap: 3 }}>
+                <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>
+                  {resumeUploading ? 'Uploading…' : 'Upload your resume'}
+                </Text>
+                <Text style={[d.resumeSub, { color: theme.surface.t3 }]}>
+                  {resumeUploading ? 'Hang tight' : 'PDF or DOCX · one-time · helps Dilly know you instantly'}
+                </Text>
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
+        {/* ── 9. Milestones ───────────────────────────────────── */}
         <FadeInView delay={420}>
           <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR MILESTONES</Text>
           <View style={{ gap: 6 }}>
