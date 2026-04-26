@@ -1367,3 +1367,17 @@ def backfill_transcript_facts(token: str = ""):
         return {"ok": True, "processed": processed, "errors": errors}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+@router.get("/healthcheck-deps", summary="Verify parsing deps are installed")
+def healthcheck_deps(token: str = ""):
+    """Check that pypdf and pymupdf (fitz) are importable in the deployed environment."""
+    _require_cron_secret(token)
+    results = {}
+    for pkg, import_name in [("pypdf", "pypdf"), ("pymupdf", "fitz"), ("docx2txt", "docx2txt")]:
+        try:
+            mod = __import__(import_name)
+            results[pkg] = {"ok": True, "version": getattr(mod, "__version__", "unknown")}
+        except ImportError as e:
+            results[pkg] = {"ok": False, "error": str(e)}
+    return {"deps": results, "all_ok": all(v["ok"] for v in results.values())}
