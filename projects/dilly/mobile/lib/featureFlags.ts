@@ -12,3 +12,10 @@
  *   immediately. Flip to false to revert to the raw library grid.
  */
 export const SKILLS_RECOMMENDED_FIRST_ENABLED = true;
+
+/**
+ * Chapter V2 — the new 5-screen advisor arc with live backend sessions.
+ * Baked false for build 406. Flip to true when FEATURE_CHAPTER_API is
+ * also enabled on Railway and you're ready to test the full flow.
+ */
+export const CHAPTER_V2_ENABLED = true;

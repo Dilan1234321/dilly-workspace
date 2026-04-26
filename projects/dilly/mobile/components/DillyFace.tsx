@@ -31,6 +31,15 @@ export type DillyMood =
   | 'sleeping'
   | 'proud'
   | 'writing'
+  // Chapter V2 arc moods — returned by the backend per screen/message
+  | 'warm'       // Screen 1: warm re-connection
+  | 'attentive'  // Screen 1: focused listening
+  | 'thoughtful' // Screen 2: observing, weighing
+  | 'focused'    // Screen 3: data mode, synthesis
+  | 'confident'  // Screen 3: assured analysis
+  | 'direct'     // Screen 4: making the call
+  | 'settled'    // Screen 5: session complete
+  | 'open'       // Screen 0: intake, no-agenda welcome
 
 export type DillyAccessory = 'none' | 'pencil' | 'magnifier' | 'paintbrush'
 
@@ -77,16 +86,25 @@ interface MoodShape {
 
 function shapeFor(mood: DillyMood): MoodShape {
   switch (mood) {
-    case 'happy':       return { smile:  0.85, eyeScale: 1,    eyeLift:  0, archEyes: false, tilt:  0, lockGaze: true,  browLift: 0 }
-    case 'celebrating': return { smile:  1,    eyeScale: 0.25, eyeLift: -0.5, archEyes: true,  tilt:  0, lockGaze: true,  browLift: 0 }
-    case 'thinking':    return { smile:  0.1,  eyeScale: 0.7,  eyeLift: -1, archEyes: false, tilt:  4, lockGaze: true,  browLift: 0.3 }
-    case 'curious':     return { smile:  0.4,  eyeScale: 1.1,  eyeLift:  0, archEyes: false, tilt: -5, lockGaze: false, browLift: 0.8 }
-    case 'concerned':   return { smile: -0.3,  eyeScale: 0.9,  eyeLift:  0.5, archEyes: false, tilt:  0, lockGaze: true,  browLift: 0 }
-    case 'sleeping':    return { smile:  0.2,  eyeScale: 0,    eyeLift:  1, archEyes: false, tilt:  6, lockGaze: true,  browLift: 0 }
-    case 'proud':       return { smile:  0.7,  eyeScale: 0.2,  eyeLift:  0, archEyes: true,  tilt: -3, lockGaze: true,  browLift: 0 }
-    case 'writing':     return { smile:  0.3,  eyeScale: 0.5,  eyeLift: -0.5, archEyes: false, tilt:  2, lockGaze: true,  browLift: 0 }
+    case 'happy':       return { smile:  0.85, eyeScale: 1,    eyeLift:  0,    archEyes: false, tilt:  0, lockGaze: true,  browLift: 0   }
+    case 'celebrating': return { smile:  1,    eyeScale: 0.25, eyeLift: -0.5,  archEyes: true,  tilt:  0, lockGaze: true,  browLift: 0   }
+    case 'thinking':    return { smile:  0.1,  eyeScale: 0.7,  eyeLift: -1,    archEyes: false, tilt:  4, lockGaze: true,  browLift: 0.3 }
+    case 'curious':     return { smile:  0.4,  eyeScale: 1.1,  eyeLift:  0,    archEyes: false, tilt: -5, lockGaze: false, browLift: 0.8 }
+    case 'concerned':   return { smile: -0.3,  eyeScale: 0.9,  eyeLift:  0.5,  archEyes: false, tilt:  0, lockGaze: true,  browLift: 0   }
+    case 'sleeping':    return { smile:  0.2,  eyeScale: 0,    eyeLift:  1,    archEyes: false, tilt:  6, lockGaze: true,  browLift: 0   }
+    case 'proud':       return { smile:  0.7,  eyeScale: 0.2,  eyeLift:  0,    archEyes: true,  tilt: -3, lockGaze: true,  browLift: 0   }
+    case 'writing':     return { smile:  0.3,  eyeScale: 0.5,  eyeLift: -0.5,  archEyes: false, tilt:  2, lockGaze: true,  browLift: 0   }
+    // Chapter V2 moods
+    case 'warm':        return { smile:  0.85, eyeScale: 1.0,  eyeLift:  0,    archEyes: false, tilt: -2, lockGaze: true,  browLift: 0   }
+    case 'attentive':   return { smile:  0.3,  eyeScale: 1.1,  eyeLift: -0.3,  archEyes: false, tilt:  0, lockGaze: true,  browLift: 0.2 }
+    case 'thoughtful':  return { smile:  0.15, eyeScale: 0.8,  eyeLift: -0.8,  archEyes: false, tilt:  3, lockGaze: true,  browLift: 0.5 }
+    case 'focused':     return { smile:  0.2,  eyeScale: 0.9,  eyeLift: -0.3,  archEyes: false, tilt:  0, lockGaze: true,  browLift: 0.1 }
+    case 'confident':   return { smile:  0.55, eyeScale: 1.0,  eyeLift:  0,    archEyes: false, tilt: -2, lockGaze: true,  browLift: 0   }
+    case 'direct':      return { smile:  0.35, eyeScale: 1.0,  eyeLift:  0,    archEyes: false, tilt:  0, lockGaze: true,  browLift: 0   }
+    case 'settled':     return { smile:  0.65, eyeScale: 0.85, eyeLift:  0,    archEyes: false, tilt: -2, lockGaze: true,  browLift: 0   }
+    case 'open':        return { smile:  0.5,  eyeScale: 1.2,  eyeLift: -0.2,  archEyes: false, tilt: -5, lockGaze: false, browLift: 0.6 }
     case 'idle':
-    default:            return { smile:  0.3,  eyeScale: 1,    eyeLift:  0, archEyes: false, tilt:  0, lockGaze: false, browLift: 0 }
+    default:            return { smile:  0.3,  eyeScale: 1,    eyeLift:  0,    archEyes: false, tilt:  0, lockGaze: false, browLift: 0   }
   }
 }
 
