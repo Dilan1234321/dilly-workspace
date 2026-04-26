@@ -94,6 +94,7 @@ async def get_profile(request: Request):
         # client never has to re-derive them from raw profile state.
         profile["gs_profile_done"] = bool(profile.get("name") and profile.get("has_run_first_audit"))
         profile["gs_transcript"]   = bool(profile.get("transcript_uploaded_at"))
+        profile["gs_resume"]       = bool(profile.get("resume_uploaded_at"))
         profile["gs_win"]          = bool(len(profile.get("wins") or []) > 0)
         profile["gs_calendar"]     = bool(profile.get("calendar_feed_token"))
         try:
@@ -1029,6 +1030,171 @@ async def delete_profile_transcript_endpoint(request: Request):
         return {"ok": True, "deleted": deleted}
     except Exception:
         raise errors.internal( "Could not delete transcript.")
+
+
+# ── Resume upload (one-time) ──────────────────────────────────────────────────
+
+_DOCX_MAGIC = b"PK\x03\x04"
+
+
+def _fan_out_resume_facts(email: str, text: str, name: str) -> None:
+    """Extract profile facts from resume text via LLM and upsert into profile_facts.
+
+    Best-effort; runs in a daemon thread; never raises.
+    """
+    import logging as _logging
+    import threading as _threading
+    _log = _logging.getLogger(__name__)
+
+    _text = text[:8000]
+    _name = name or ""
+    _email = email
+
+    def _bg():
+        try:
+            import anthropic, json as _j
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+            if not api_key:
+                return
+            client = anthropic.Anthropic(api_key=api_key)
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2000,
+                temperature=0.2,
+                system=(
+                    "Extract profile facts from this resume. Return JSON array of objects. "
+                    "Each object: {\"category\": \"...\", \"label\": \"short title\", \"value\": \"detail\", \"confidence\": \"high\" or \"medium\"}. "
+                    "Categories: skill_unlisted (technical skills), soft_skill (interpersonal), "
+                    "achievement (accomplishments with impact), experience (roles held), "
+                    "project_detail (projects built), education (degrees/certs), goal (career goals). "
+                    "Extract 15-25 facts. Be specific. Cite real details from the resume. "
+                    "Never use em dashes. JSON array only, no markdown."
+                ),
+                messages=[{"role": "user", "content": f"Resume for {_name}:\n\n{_text}"}],
+            )
+            try:
+                from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+                log_from_anthropic_response(_email, FEATURES.PROFILE, resp,
+                                            metadata={"op": "seed_from_resume_upload"})
+            except Exception:
+                pass
+            raw = resp.content[0].text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3].strip()
+            if raw.startswith("json"):
+                raw = raw[4:].strip()
+            facts = _j.loads(raw)
+            if not isinstance(facts, list):
+                return
+            from projects.dilly.api.memory_surface_store import save_memory_surface
+            items = []
+            for f in facts[:30]:
+                if not isinstance(f, dict) or not f.get("label"):
+                    continue
+                items.append({
+                    "category": f.get("category", "skill_unlisted"),
+                    "label": str(f.get("label", ""))[:100],
+                    "value": str(f.get("value", ""))[:500],
+                    "confidence": f.get("confidence", "medium"),
+                    "source": "resume",
+                })
+            if items:
+                save_memory_surface(_email, items=items)
+                _log.info("resume_fanout: wrote %d facts for %s", len(items), _email)
+        except Exception as exc:
+            _log.error("resume_fanout: failed for %s: %s", _email, exc)
+
+    _threading.Thread(target=_bg, daemon=True).start()
+
+
+@router.post("/profile/resume")
+async def upload_profile_resume(request: Request, file: UploadFile = File(...)):
+    """Upload resume (PDF or DOCX). One-time only — rejected if already uploaded."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized("Sign in required.")
+
+    fn = (file.filename or "").lower()
+    if not fn.endswith(".pdf") and not fn.endswith(".docx"):
+        raise errors.validation_error("Resume must be a PDF or DOCX file.")
+
+    try:
+        from projects.dilly.api.profile_store import (
+            get_profile_folder_path,
+            save_profile,
+            ensure_profile_exists,
+            get_profile,
+        )
+    except ImportError:
+        raise errors.internal("Resume processing unavailable.")
+
+    ensure_profile_exists(email)
+
+    # One-time gate — reject if already uploaded
+    existing = get_profile(email)
+    if existing.get("resume_uploaded_at"):
+        raise HTTPException(status_code=409, detail="Resume already uploaded. Upload is one-time only.")
+
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise errors.validation_error("Resume must be under 10MB.")
+
+    is_pdf = fn.endswith(".pdf")
+    if is_pdf and not content.startswith(_PDF_MAGIC):
+        raise errors.validation_error("File is not a valid PDF.")
+    if not is_pdf and not content.startswith(_DOCX_MAGIC):
+        raise errors.validation_error("File is not a valid DOCX.")
+
+    folder = get_profile_folder_path(email)
+    if not folder:
+        raise errors.validation_error("Invalid profile.")
+    os.makedirs(folder, exist_ok=True)
+
+    ext = ".pdf" if is_pdf else ".docx"
+    fd, temp_path = tempfile.mkstemp(dir=folder, suffix=ext)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(content)
+
+        try:
+            from projects.dilly.dilly_resume_auditor import DillyResumeAuditor
+            from dilly_core.resume_parser import parse_resume
+        except ImportError:
+            raise errors.internal("Resume processing unavailable.")
+
+        auditor = DillyResumeAuditor(temp_path)
+        if not auditor.extract_text():
+            raise errors.validation_error("Could not read text from resume. Upload a text-based PDF or DOCX.")
+
+        raw_text = auditor.raw_text or ""
+        parsed = parse_resume(raw_text, filename=file.filename)
+        normalized = parsed.normalized_text or raw_text
+
+        save_profile(email, {
+            "resume_uploaded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "resume_text": normalized[:8000],
+            "resume_gpa": parsed.gpa,
+            "resume_major": parsed.major or None,
+        })
+
+        _fan_out_resume_facts(email, normalized, parsed.name or "")
+
+        try:
+            from projects.dilly.api.dilly_profile_txt import write_dilly_profile_txt
+            write_dilly_profile_txt(email)
+        except Exception:
+            pass
+
+        return {"ok": True}
+    finally:
+        if os.path.isfile(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 @router.delete("/profile/photo")
