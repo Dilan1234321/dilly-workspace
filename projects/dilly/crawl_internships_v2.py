@@ -703,6 +703,103 @@ GREENHOUSE_COMPANIES = {
     'zilliz-io':('Zilliz','Tech'),
     'vespa-engine':('Vespa','Tech'),
     'marqo-ai':('Marqo','Tech'),
+
+    # ── Batch added 2026-04-26: cross-cohort parity ──
+    # Slugs that 404 are logged and skipped gracefully.
+
+    # Sport & Recreation
+    'seatgeek':('SeatGeek','Consumer'),'fanatics':('Fanatics','Consumer'),
+    'bleacherreport':('Bleacher Report','Media'),
+    'nfl':('NFL','Media'),'nba':('NBA','Media'),'mlb':('MLB','Media'),
+    'nhl':('NHL','Media'),'underarmour':('Under Armour','Consumer'),
+    'dicks-sporting-goods':('Dick\'s Sporting Goods','Consumer'),
+    'rei':('REI','Consumer'),'callaway':('Callaway Golf','Consumer'),
+    'topgolf':('Topgolf','Consumer'),'titleist':('Titleist','Consumer'),
+    'yeti-coolers':('YETI','Consumer'),'brumate':('BrüMate','Consumer'),
+    'onrunning':('On Running','Consumer'),
+
+    # Design & Creative Arts
+    'ideo':('IDEO','Consulting'),'huge':('Huge','Tech'),'rga':('R/GA','Tech'),
+    'akqa':('AKQA','Tech'),'frog':('frog Design','Consulting'),
+    'instrument':('Instrument','Tech'),'ueno':('Ueno','Tech'),
+    'character':('Character','Tech'),'superhuman-design':('Superhuman','Tech'),
+    'pentagram-design':('Pentagram','Consulting'),
+    'wolff-olins':('Wolff Olins','Consulting'),
+
+    # Accounting & Audit — mid-tier (many use Greenhouse)
+    'grant-thornton':('Grant Thornton','Finance'),
+    'rsm-us':('RSM US','Finance'),
+    'bdo-usa':('BDO USA','Finance'),
+    'baker-tilly':('Baker Tilly','Finance'),
+    'moss-adams':('Moss Adams','Finance'),
+    'cohn-reznick':('CohnReznick','Finance'),
+    'plante-moran':('Plante Moran','Finance'),
+    'crowe-llp':('Crowe','Finance'),
+    'citrin-cooperman':('Citrin Cooperman','Finance'),
+    'marcum-llp':('Marcum','Finance'),
+    'Dixon-Hughes':('Dixon Hughes Goodman','Finance'),
+    'eide-bailly':('Eide Bailly','Finance'),
+
+    # Media & Communications — PR / ad agencies
+    'edelman':('Edelman','Media'),'weber-shandwick':('Weber Shandwick','Media'),
+    'fleishman-hillard':('FleishmanHillard','Media'),'ketchum':('Ketchum','Media'),
+    'golin':('Golin','Media'),'ogilvy':('Ogilvy','Media'),
+    'bbdo':('BBDO','Media'),'grey-global':('Grey Worldwide','Media'),
+    'ddb-worldwide':('DDB Worldwide','Media'),
+    'mccann-worldgroup':('McCann','Media'),'fcb':('FCB','Media'),
+
+    # Education & Teaching
+    'pearson':('Pearson','Education'),'mcgraw-hill':('McGraw-Hill','Education'),
+    'cengage':('Cengage','Education'),'scholastic':('Scholastic','Education'),
+    'powerschool':('PowerSchool','Education'),
+    'instructure':('Instructure','Education'),
+    'varsitytutors':('Varsity Tutors','Education'),
+    'outlier-org':('Outlier.org','Education'),
+    'brighthorizons':('Bright Horizons','Education'),
+    'renaissance-learning':('Renaissance Learning','Education'),
+    'amplify':('Amplify','Education'),'byju':('BYJU\'S','Education'),
+    'prodigy-education':('Prodigy','Education'),
+
+    # HR & People — HR tech companies on Greenhouse
+    'hibob':('HiBob','Tech'),'workable':('Workable','Tech'),
+    'greenhouse-software':('Greenhouse Software','Tech'),
+    'ashby-hq':('Ashby','Tech'),'dover-hq':('Dover','Tech'),
+    'gem-co':('Gem','Tech'),'fetcher':('Fetcher','Tech'),
+    'paradox-ai':('Paradox AI','Tech'),'eightfold':('Eightfold','Tech'),
+    'beamery':('Beamery','Tech'),'phenom-people':('Phenom','Tech'),
+
+    # Economics & Public Policy — think tanks / civic tech
+    'urban-inst':('Urban Institute','Nonprofit'),
+    'pewresearch':('Pew Research Center','Nonprofit'),
+    'cfr':('Council on Foreign Relations','Nonprofit'),
+    'third-way':('Third Way','Nonprofit'),
+    'niskanen-center':('Niskanen Center','Nonprofit'),
+    'govini':('Govini','Government'),
+    'coding-it-forward':('Coding it Forward','Nonprofit'),
+    'beeck-center':('Beeck Center','Nonprofit'),
+
+    # Legal & Compliance tech
+    'clio-legal':('Clio','Tech'),'everlaw':('Everlaw','Tech'),
+    'ironclad':('Ironclad','Tech'),'litify':('Litify','Tech'),
+    'filevine':('Filevine','Tech'),'smokeball':('Smokeball','Tech'),
+    'lawmatics':('Lawmatics','Tech'),
+
+    # Entrepreneurship & Innovation — VC firms posting internships
+    'first-round':('First Round Capital','Finance'),
+    'general-catalyst':('General Catalyst','Finance'),
+    'bain-capital-ventures':('Bain Capital Ventures','Finance'),
+    'index-ventures':('Index Ventures','Finance'),
+    'bessemer-vp':('Bessemer Venture Partners','Finance'),
+    'insight-partners':('Insight Partners','Finance'),
+    'greylock':('Greylock','Finance'),
+
+    # Nursing / Allied Health — digital health companies
+    'headway':('Headway','Healthcare'),'spring-health':('Spring Health','Healthcare'),
+    'cerebral':('Cerebral','Healthcare'),'brightline':('Brightline','Healthcare'),
+    'alma':('Alma','Healthcare'),'ophelia':('Ophelia','Healthcare'),
+    'pelago':('Pelago','Healthcare'),'workit-health':('Workit Health','Healthcare'),
+    'novu-health':('Novu Health','Healthcare'),'pair-team':('Pair Team','Healthcare'),
+    'elemy':('Elemy','Healthcare'),
 }
 
 LEVER_COMPANIES = {
@@ -937,6 +1034,84 @@ LEVER_COMPANIES = {
     "bazaarvoice":("Bazaarvoice","Tech"), # 30 jobs verified
     "neon":("Neon","Tech"),               # 15 jobs verified
     "prismic":("Prismic","Tech"),         # 7 jobs verified
+
+    # ── Batch added 2026-04-26: cross-cohort parity (Lever) ──
+
+    # Sport & Recreation
+    "espn":("ESPN","Media"),"nfl-careers":("NFL","Media"),
+    "nba-careers":("NBA","Media"),"mlb-careers":("MLB","Media"),
+    "underarmour":("Under Armour","Consumer"),
+    "fanatics-inc":("Fanatics","Consumer"),"seatgeek":("SeatGeek","Consumer"),
+    "peloton-careers":("Peloton","Consumer"),
+    "strava":("Strava","Consumer"),"whoop":("Whoop","Consumer"),
+    "topgolf":("Topgolf","Consumer"),"golf-now":("GolfNow","Consumer"),
+
+    # Design & Creative
+    "huge-nyc":("Huge","Tech"),"rga-nyc":("R/GA","Tech"),
+    "akqa-careers":("AKQA","Tech"),"instrument-pdx":("Instrument","Tech"),
+    "superside":("Superside","Tech"),'99designs':("99designs","Tech"),
+    "canva":("Canva","Tech"),"adobe":("Adobe","Tech"),
+
+    # Accounting & Audit — mid-tier
+    "grantthornton-us":("Grant Thornton","Finance"),
+    "rsm-careers":("RSM","Finance"),
+    "bdo-careers":("BDO","Finance"),
+    "baker-tilly-us":("Baker Tilly","Finance"),
+    "eide-bailly":("Eide Bailly","Finance"),
+    "mcgladrey":("RSM","Finance"),
+    "cliftonlarsonallen":("CliftonLarsonAllen","Finance"),
+
+    # Media & Communications — PR/advertising
+    "edelman-pr":("Edelman","Media"),"ketchum-careers":("Ketchum","Media"),
+    "golin-pr":("Golin","Media"),"fleishman":("FleishmanHillard","Media"),
+    "weber-shandwick":("Weber Shandwick","Media"),
+    "finsbury-careers":("Finsbury Glover Hering","Media"),
+    "axios-media":("Axios","Media"),"morning-brew":("Morning Brew","Media"),
+    "vox-media":("Vox Media","Media"),"the-atlantic":("The Atlantic","Media"),
+
+    # Education & Teaching
+    "chegg":("Chegg","Education"),"varsity-tutors":("Varsity Tutors","Education"),
+    "outschool":("Outschool","Education"),"brilliant-org":("Brilliant","Education"),
+    "codecademy":("Codecademy","Education"),
+    "brainly":("Brainly","Education"),"studysmarter":("StudySmarter","Education"),
+    "albert-io":("Albert","Education"),"khanacademy":("Khan Academy","Education"),
+    "coursera":("Coursera","Education"),'2u-careers':("2U","Education"),
+
+    # HR & People
+    "rippling":("Rippling","Tech"),"lattice-hq":("Lattice","Tech"),
+    "culture-amp":("Culture Amp","Tech"),"15five":("15Five","Tech"),
+    "betterup":("BetterUp","Tech"),"leapsome":("Leapsome","Tech"),
+    "envoy":("Envoy","Tech"),"deel":("Deel","Tech"),
+    "remote-work":("Remote","Tech"),"papaya-global":("Papaya Global","Tech"),
+    "oyster-hr":("Oyster HR","Tech"),
+
+    # Economics & Policy
+    "demo-cracy":("Democracy Works","Nonprofit"),
+    "aclu":("ACLU","Nonprofit"),"naacp":("NAACP","Nonprofit"),
+    "aspca":("ASPCA","Nonprofit"),"wwf":("World Wildlife Fund","Nonprofit"),
+    "nature-conservancy":("The Nature Conservancy","Nonprofit"),
+    "feedamerica":("Feeding America","Nonprofit"),
+    "humanesociety":("Humane Society","Nonprofit"),
+
+    # Legal & Compliance
+    "clio":("Clio","Tech"),"everlaw":("Everlaw","Tech"),
+    "ironclad-legal":("Ironclad","Tech"),"litify-legal":("Litify","Tech"),
+    "filevine":("Filevine","Tech"),
+
+    # Entrepreneurship & Innovation
+    "a16z":("Andreessen Horowitz","Finance"),
+    "sequoia":("Sequoia Capital","Finance"),
+    "greylock":("Greylock","Finance"),
+    "yc":("Y Combinator","Tech"),
+    "ycombinator":("Y Combinator","Tech"),
+    "techstars":("Techstars","Tech"),
+
+    # Nursing / Allied Health — digital health
+    "cerebral-co":("Cerebral","Healthcare"),"springhealth":("Spring Health","Healthcare"),
+    "headway-health":("Headway","Healthcare"),"alma-health":("Alma","Healthcare"),
+    "ophelia-health":("Ophelia","Healthcare"),"pelago-health":("Pelago","Healthcare"),
+    "workit":("Workit Health","Healthcare"),"brightline":("Brightline","Healthcare"),
+    "novu":("Novu Health","Healthcare"),"pair-team":("Pair Team","Healthcare"),
 }
 
 ASHBY_COMPANIES = {
@@ -1364,6 +1539,170 @@ SMARTRECRUITERS_COMPANIES = {
     "McDermott":("McDermott","Consulting"),
     "Foster-Wheeler":("Foster Wheeler","Consulting"),
     "CB-I":("CBI","Consulting"),
+
+    # ── Batch added 2026-04-26: cross-cohort parity (SmartRecruiters) ──
+
+    # Sport & Recreation — leagues, gear, fitness
+    "ESPN":("ESPN","Media"),"NFL":("NFL","Media"),
+    "NBA":("NBA","Media"),"MLB":("MLB","Media"),
+    "NHL":("NHL","Media"),"MLS":("MLS","Media"),
+    "PGATour":("PGA Tour","Consumer"),"USGA":("USGA","Consumer"),
+    "UnderArmour":("Under Armour","Consumer"),
+    "DicksSportingGoods":("Dick's Sporting Goods","Consumer"),
+    "Callaway":("Callaway Golf","Consumer"),
+    "TaylorMadeGolf":("TaylorMade Golf","Consumer"),
+    "Titleist":("Titleist/Acushnet","Consumer"),
+    "TopGolf":("Topgolf","Consumer"),
+    "YETI":("YETI","Consumer"),
+    "LifeFitness":("Life Fitness","Consumer"),
+    "Peloton":("Peloton","Consumer"),
+    "Equinox":("Equinox","Consumer"),
+    "SoulCycle":("SoulCycle","Consumer"),
+
+    # Education & Teaching — publishers, EdTech, testing orgs
+    "Pearson":("Pearson","Education"),
+    "McGrawHill":("McGraw-Hill","Education"),
+    "Cengage":("Cengage","Education"),
+    "Scholastic":("Scholastic","Education"),
+    "HMH":("Houghton Mifflin Harcourt","Education"),
+    "CollegeBoard":("College Board","Education"),
+    "ETS":("ETS","Education"),
+    "ACTInc":("ACT","Education"),
+    "Kaplan":("Kaplan","Education"),
+    "PowerSchool":("PowerSchool","Education"),
+    "Instructure":("Instructure/Canvas","Education"),
+    "IXL":("IXL Learning","Education"),
+    "VarsityTutors":("Varsity Tutors","Education"),
+    "BrightHorizons":("Bright Horizons","Education"),
+
+    # Accounting & Audit — mid-tier beyond Big 4
+    "GrantThornton":("Grant Thornton","Finance"),
+    "RSM":("RSM","Finance"),
+    "BDO":("BDO","Finance"),
+    "BakerTilly":("Baker Tilly","Finance"),
+    "MossAdams":("Moss Adams","Finance"),
+    "CohnReznick":("CohnReznick","Finance"),
+    "PlanteMoran":("Plante Moran","Finance"),
+    "Crowe":("Crowe","Finance"),
+    "CitrinCooperman":("Citrin Cooperman","Finance"),
+    "Marcum":("Marcum","Finance"),
+    "EideBailly":("Eide Bailly","Finance"),
+    "CliftonLarsonAllen":("CliftonLarsonAllen","Finance"),
+    "DixonHughes":("Dixon Hughes Goodman","Finance"),
+    "WithumSmith":("WithumSmith+Brown","Finance"),
+    "KPMGSpark":("KPMG Spark","Finance"),
+
+    # Media & Communications — holding companies, PR networks
+    "WPP":("WPP","Media"),
+    "Omnicom":("Omnicom","Media"),
+    "Publicis":("Publicis Groupe","Media"),
+    "DentsuInc":("Dentsu","Media"),
+    "HavasGroup":("Havas","Media"),
+    "Edelman":("Edelman","Media"),
+    "WeberShandwick":("Weber Shandwick","Media"),
+    "FleishmanHillard":("FleishmanHillard","Media"),
+    "Ketchum":("Ketchum","Media"),
+    "Golin":("Golin","Media"),
+    "Ogilvy":("Ogilvy","Media"),
+    "BBDO":("BBDO","Media"),
+    "GreyGroup":("Grey Worldwide","Media"),
+    "DDBWorldwide":("DDB Worldwide","Media"),
+    "McCann":("McCann Worldgroup","Media"),
+    "FCBGlobal":("FCB","Media"),
+    "HearstCorp":("Hearst","Media"),
+    "CondeNast":("Condé Nast","Media"),
+    "MeredithCorp":("Meredith","Media"),
+    "iHeartMedia":("iHeartMedia","Media"),
+    "PenguinRandomHouse":("Penguin Random House","Media"),
+    "HarperCollins":("HarperCollins","Media"),
+    "SimonSchuster":("Simon & Schuster","Media"),
+
+    # HR & People — staffing, HR software
+    "ManpowerGroup":("ManpowerGroup","Finance"),
+    "Randstad":("Randstad","Finance"),
+    "RobertHalf":("Robert Half","Finance"),
+    "KornFerry":("Korn Ferry","Finance"),
+    "Heidrick":("Heidrick & Struggles","Finance"),
+    "SpencerStuart":("Spencer Stuart","Finance"),
+    "Aon-HR":("Aon Hewitt","Finance"),
+    "MercerHR":("Mercer HR","Consulting"),
+    "Hay-Group":("Hay Group","Consulting"),
+    "Ceridian":("Ceridian","Tech"),
+    "ADP-Jobs":("ADP","Tech"),
+    "Paychex":("Paychex","Tech"),
+
+    # Legal & Compliance — legal-adjacent firms
+    "ThomsonReuters":("Thomson Reuters","Finance"),
+    "LexisNexis":("LexisNexis","Finance"),
+    "WoltersKluwer":("Wolters Kluwer","Finance"),
+    "ReedElsevier":("RELX","Finance"),
+    "FTI-Consulting":("FTI Consulting","Consulting"),
+    "Navigant":("Navigant","Consulting"),
+    "Exponent":("Exponent","Consulting"),
+
+    # Economics & Public Policy — intl orgs, think tanks
+    "WorldBank":("World Bank","Nonprofit"),
+    "IMF":("IMF","Nonprofit"),
+    "UNDP":("UNDP","Nonprofit"),
+    "USAID":("USAID","Government"),
+    "BrookingsInst":("Brookings Institution","Nonprofit"),
+    "UrbanInstitute":("Urban Institute","Nonprofit"),
+    "PewResearch":("Pew Research Center","Nonprofit"),
+    "AspenInstitute":("Aspen Institute","Nonprofit"),
+    "CarnegieEndowment":("Carnegie Endowment","Nonprofit"),
+    "CFR":("Council on Foreign Relations","Nonprofit"),
+    "RAND-Corp":("RAND Corporation","Nonprofit"),
+
+    # Nursing & Allied Health — large hospital systems on SmartRecruiters
+    "MayoClinic":("Mayo Clinic","Healthcare"),
+    "ClevelandClinic":("Cleveland Clinic","Healthcare"),
+    "JohnsHopkins":("Johns Hopkins Medicine","Healthcare"),
+    "UPMC":("UPMC","Healthcare"),
+    "Ascension":("Ascension","Healthcare"),
+    "CommonSpirit":("CommonSpirit Health","Healthcare"),
+    "Providence":("Providence Health","Healthcare"),
+    "TrinityHealth":("Trinity Health","Healthcare"),
+    "AdventHealth":("AdventHealth","Healthcare"),
+    "BannerHealth":("Banner Health","Healthcare"),
+    "SutterHealth":("Sutter Health","Healthcare"),
+    "Geisinger":("Geisinger","Healthcare"),
+    "BaylorScottWhite":("Baylor Scott & White","Healthcare"),
+    "InnovaHealth":("Inova Health","Healthcare"),
+    "NYULangone":("NYU Langone","Healthcare"),
+    "CedarsSinai":("Cedars-Sinai","Healthcare"),
+    "MassGeneralBrigham":("Mass General Brigham","Healthcare"),
+    "MedStarHealth":("MedStar Health","Healthcare"),
+    "MemorialHermann":("Memorial Hermann","Healthcare"),
+    "SentaraHealthcare":("Sentara Healthcare","Healthcare"),
+    "PiedmontHealthcare":("Piedmont Healthcare","Healthcare"),
+    "AtlantiCare":("AtlantiCare","Healthcare"),
+    "MUSC":("MUSC Health","Healthcare"),
+    "UAB":("UAB Medicine","Healthcare"),
+    "UCHealth":("UCHealth","Healthcare"),
+    "OhioHealth":("OhioHealth","Healthcare"),
+    "Beaumont":("Beaumont Health","Healthcare"),
+    "RushHealth":("Rush Health","Healthcare"),
+    "NorthShore":("NorthShore University HealthSystem","Healthcare"),
+
+    # Mechanical & Aerospace Engineering — additional firms
+    "PrattWhitney":("Pratt & Whitney","Tech"),
+    "L3Harris":("L3Harris","Tech"),
+    "Leidos":("Leidos","Tech"),
+    "SAICorp":("SAIC","Tech"),
+    "Textron":("Textron","Tech"),
+    "Caterpillar":("Caterpillar","Tech"),
+    "JohnDeere":("John Deere","Tech"),
+    "ParkerHannifin":("Parker Hannifin","Tech"),
+    "EatonCorp":("Eaton","Tech"),
+    "CumminsCorp":("Cummins","Tech"),
+    "EmersonElectric":("Emerson","Tech"),
+    "IngersollRand":("Ingersoll Rand","Tech"),
+    "OshkoshCorp":("Oshkosh Corporation","Tech"),
+    "3MCorp":("3M","Tech"),
+    "DanaInc":("Dana Incorporated","Tech"),
+    "BorgWarner":("BorgWarner","Tech"),
+    "Danaher":("Danaher","Tech"),
+    "Fortive":("Fortive","Tech"),
 }
 
 JAZZHR_COMPANIES = {

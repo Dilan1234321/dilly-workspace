@@ -605,6 +605,52 @@ def ingest_quality_sweep(token: str = "", sync: bool = False):
     }
 
 
+@router.get("/reclassify-job-types", summary="Backfill job_type for ALL active rows with the current classifier")
+def reclassify_job_types(token: str = "", sync: bool = False):
+    """Re-run the level classifier on every active internship row.
+    Unlike the quality-sweep's pass_reclassify_levels (which only fills
+    NULL/'other' rows), this overwrites every active row so classifier
+    improvements take effect immediately across the full feed.
+
+    Returns before/after distribution by job_type plus per-cohort counts.
+    Pass sync=true to wait for completion (slow on large tables — use for
+    manual runs; leave async for cron calls)."""
+    _require_cron_secret(token)
+    from projects.dilly.api.ingest.quality_pipeline import pass_reclassify_all_levels
+    from projects.dilly.api.database import get_db as _get_db_ctx
+
+    def _run():
+        with _get_db_ctx() as conn:
+            result = pass_reclassify_all_levels(conn)
+            # Append per-cohort internship count for reporting
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        cr->>'cohort' AS cohort,
+                        job_type,
+                        COUNT(*) AS cnt
+                    FROM internships,
+                         LATERAL jsonb_array_elements(cohort_requirements) AS cr
+                    WHERE status='active'
+                    GROUP BY cohort, job_type
+                    ORDER BY cohort, job_type
+                    """
+                )
+                rows = cur.fetchall()
+            result["cohort_breakdown"] = [
+                {"cohort": r[0], "job_type": r[1], "count": r[2]} for r in rows
+            ]
+        return result
+
+    if sync:
+        return {"ok": True, "result": _run()}
+
+    import threading
+    threading.Thread(target=_run, daemon=True).start()
+    return {"ok": True, "mode": "async", "message": "Reclassification running in background."}
+
+
 @router.get("/crawl-niche-sources", summary="Scrape NSF REU + USAJobs into internships table")
 def crawl_niche_sources(token: str = ""):
     """Run the niche-source ingester (NSF REU for pre-health/science research,
