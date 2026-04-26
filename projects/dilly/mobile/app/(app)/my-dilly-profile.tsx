@@ -578,7 +578,9 @@ function SeekerProfileScreen() {
         setProfile(prev => ({ ...prev, gs_resume: true }));
       } else {
         const body = await res.json().catch(() => ({}));
-        Alert.alert('Upload failed', body?.detail || 'Something went wrong. Try again.');
+        const detail = body?.detail;
+        const errMsg = typeof detail === 'string' ? detail : (detail?.message ?? 'Something went wrong. Try again.');
+        Alert.alert('Upload failed', errMsg);
       }
     } catch {
       Alert.alert('Upload failed', 'Something went wrong. Try again.');
