@@ -19,8 +19,7 @@ import FadeInView from '../../components/FadeInView';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { setToken } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
-import { signInWithApple, signInWithGoogle } from '../../lib/oauthSignIn';
-import { Platform } from 'react-native';
+import { signInWithApple } from '../../lib/oauthSignIn';
 
 export default function ChoosePathScreen() {
   const insets = useSafeAreaInsets();
@@ -49,7 +48,7 @@ export default function ChoosePathScreen() {
   // (showStudentFirst === false). Either button kicks the user through
   // the same auto-account-create flow as email-code, then routes to
   // profile-pro for non-student onboarding.
-  const [oauthLoading, setOauthLoading] = useState<null | 'apple' | 'google'>(null);
+  const [oauthLoading, setOauthLoading] = useState<null | 'apple'>(null);
   const [oauthError, setOauthError] = useState('');
 
   // Student email state
@@ -164,23 +163,6 @@ export default function ChoosePathScreen() {
       const msg = err?.message || 'Apple sign-in failed.';
       // Suppress the user-cancel case so the screen doesn't shout at them.
       if (!/cancel|user.+cancell?ed|ERR_REQUEST_CANCELED/i.test(msg)) {
-        setOauthError(msg);
-      }
-    } finally {
-      setOauthLoading(null);
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    setOauthError('');
-    setOauthLoading('google');
-    try {
-      const result = await signInWithGoogle();
-      if (!result?.token) throw new Error('Google sign-in returned no token.');
-      await _completeOAuthSignIn(result.token);
-    } catch (err: any) {
-      const msg = err?.message || 'Google sign-in failed.';
-      if (!/cancel/i.test(msg)) {
         setOauthError(msg);
       }
     } finally {
