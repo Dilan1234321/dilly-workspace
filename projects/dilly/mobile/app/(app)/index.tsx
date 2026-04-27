@@ -1664,15 +1664,9 @@ function SeekerHome() {
               borderColor: theme.accentBorder,
             }}
           >
-            <View
-              style={{
-                width: 34, height: 34, borderRadius: 10,
-                alignItems: 'center', justifyContent: 'center',
-                backgroundColor: theme.accentSoft,
-              }}
-            >
-              <Ionicons name="trophy" size={17} color={theme.accent} />
-            </View>
+            {/* Trophy Dilly. Replaces the static trophy tile so the
+                pill feels celebratory before the user even taps it. */}
+            <DillyFace size={36} mood="proud" accessory="trophy" />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, fontWeight: '800', color: theme.surface.t1 }}>
                 Log a win

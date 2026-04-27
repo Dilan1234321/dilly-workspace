@@ -26,6 +26,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSubscription } from '../hooks/useSubscription';
 import { useResolvedTheme } from '../hooks/useTheme';
+import { DillyFace } from './DillyFace';
 
 type Size = 'sm' | 'md';
 
@@ -41,6 +42,31 @@ export function TierBadge({ size = 'sm' }: { size?: Size }) {
   const fs = size === 'md' ? 10 : 9;
   const iconSize = size === 'md' ? 11 : 9;
 
+  // Pro tier: render a tiny crowned Dilly + the PRO mark. The crowned
+  // face IS the badge — no chip wrapper. Reads as "this user has
+  // ascended" rather than "this user has a sticker." Dilly tier keeps
+  // the existing star-chip treatment so the two tiers read as
+  // different levels of earned status.
+  if (isPro) {
+    const faceSize = size === 'md' ? 26 : 22;
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <DillyFace size={faceSize} mood="proud" accessory="crown" />
+        <Text
+          style={{
+            fontSize: fs,
+            fontWeight: '900',
+            letterSpacing: 2.0,
+            color: theme.accent,
+            lineHeight: fs + 2,
+          }}
+        >
+          DILLY PRO
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
@@ -50,34 +76,22 @@ export function TierBadge({ size = 'sm' }: { size?: Size }) {
         height: h,
         paddingHorizontal: 8,
         borderRadius: h / 2,
-        // Pro gets a thicker border - reads as "heavier" visually
-        // without needing extra color. Dilly gets the soft-fill chip
-        // treatment that matches the Plan card's member-pride panel.
-        backgroundColor: isPro ? 'transparent' : theme.accentSoft,
-        borderWidth: isPro ? 2 : 1,
+        backgroundColor: theme.accentSoft,
+        borderWidth: 1,
         borderColor: theme.accent,
       }}
     >
-      <Ionicons
-        name={isPro ? 'diamond' : 'star'}
-        size={iconSize}
-        color={theme.accent}
-      />
+      <Ionicons name="star" size={iconSize} color={theme.accent} />
       <Text
         style={{
           fontSize: fs,
           fontWeight: '900',
-          // Pro gets tighter letter-spacing and the PRO suffix to
-          // read as the heavier tier. Dilly gets a single-word
-          // mark that feels clean rather than ornate.
-          letterSpacing: isPro ? 2.0 : 1.4,
+          letterSpacing: 1.4,
           color: theme.accent,
-          // Match the icon's vertical alignment - the Cinzel-style
-          // caps need a tiny nudge to sit true on the baseline.
           lineHeight: fs + 2,
         }}
       >
-        {isPro ? 'DILLY PRO' : 'DILLY'}
+        DILLY
       </Text>
     </View>
   );

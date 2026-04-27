@@ -535,7 +535,7 @@ export default function InternshipTrackerScreen() {
   if (loading) {
     return (
       <View style={[ts.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80, backgroundColor: theme.surface.bg }]}>
-        <DillyFace size={100} />
+        <DillyFace size={100} mood="confident" accessory="briefcase" />
         <Text style={{ color: theme.surface.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your pipeline...</Text>
       </View>
     );

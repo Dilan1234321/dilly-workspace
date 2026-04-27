@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { dilly } from '../lib/dilly';
 import { useResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
+import { DillyFace } from './DillyFace';
 import { triggerCelebration } from '../hooks/useCelebration';
 import { scheduleOutcomePushes } from '../hooks/useOutcomePushes';
 
@@ -253,7 +254,12 @@ export function LogWinSheet({
           { backgroundColor: theme.surface.s1, borderTopColor: theme.surface.border },
         ]}>
           <View style={s.sheetHeader}>
-            <Text style={[s.sheetTitle, { color: theme.surface.t1 }]}>Log a win</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+              {/* Trophy Dilly. Carries the celebratory feeling into the
+                  sheet header so logging a win feels like a moment. */}
+              <DillyFace size={32} mood="celebrating" accessory="trophy" />
+              <Text style={[s.sheetTitle, { color: theme.surface.t1 }]}>Log a win</Text>
+            </View>
             <AnimatedPressable onPress={onClose} hitSlop={10} scaleDown={0.9}>
               <Ionicons name="close" size={22} color={theme.surface.t3} />
             </AnimatedPressable>

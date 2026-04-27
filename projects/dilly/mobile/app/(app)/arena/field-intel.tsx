@@ -254,8 +254,8 @@ export default function FieldIntelScreen() {
     return (
       <DillyLoadingState
         insetTop={insets.top}
-        mood="writing"
-        accessory="pencil"
+        mood="thoughtful"
+        accessory="glasses"
         messages={['Reading your field…', 'Pulling live market data…', 'Mapping threats and openings…']}
         onRetry={load}
       />

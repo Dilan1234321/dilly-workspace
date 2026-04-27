@@ -232,7 +232,8 @@ export default function ModeSwitchScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={{ opacity: fadeFace, alignItems: 'center', marginBottom: 18 }}>
-            <DillyFace size={120} />
+            {/* Compass Dilly. Mode-switch is the literal pivot moment. */}
+            <DillyFace size={120} mood="curious" accessory="compass" />
           </Animated.View>
 
           <Animated.View style={{ opacity: fadeText, gap: 14 }}>

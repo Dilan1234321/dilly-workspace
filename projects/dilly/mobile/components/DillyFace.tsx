@@ -41,7 +41,7 @@ export type DillyMood =
   | 'settled'    // Screen 5: session complete
   | 'open'       // Screen 0: intake, no-agenda welcome
 
-export type DillyAccessory = 'none' | 'pencil' | 'magnifier' | 'paintbrush'
+export type DillyAccessory = 'none' | 'pencil' | 'magnifier' | 'paintbrush' | 'crown' | 'briefcase' | 'headphones' | 'glasses' | 'trophy' | 'compass'
 
 interface DillyFaceProps {
   size: number
@@ -503,8 +503,190 @@ function Accessory({ kind, cx, cy, s, color, scribbleAnim, isDark }: AccessoryPr
     case 'pencil':     return <PencilAccessory cx={cx} cy={cy} s={s} color={color} scribbleAnim={scribbleAnim} isDark={isDark} />
     case 'magnifier':  return <MagnifierAccessory cx={cx} cy={cy} s={s} color={color} />
     case 'paintbrush': return <PaintbrushAccessory cx={cx} cy={cy} s={s} color={color} />
+    case 'crown':      return <CrownAccessory cx={cx} cy={cy} s={s} color={color} />
+    case 'briefcase':  return <BriefcaseAccessory cx={cx} cy={cy} s={s} color={color} />
+    case 'headphones': return <HeadphonesAccessory cx={cx} cy={cy} s={s} color={color} />
+    case 'glasses':    return <GlassesAccessory cx={cx} cy={cy} s={s} color={color} />
+    case 'trophy':     return <TrophyAccessory cx={cx} cy={cy} s={s} color={color} />
+    case 'compass':    return <CompassAccessory cx={cx} cy={cy} s={s} color={color} />
     default:           return null
   }
+}
+
+/** Royal crown for the "Dilly Pro" badge surface. Three gold peaks
+ *  sitting on the forehead area inside the ring, with a center jewel
+ *  that themes to the user's accent. */
+function CrownAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+  const GOLD = '#E5B143'
+  const GOLD_DARK = '#B88A1F'
+  const baseY = cy - 12 * s
+  const peakY = cy - 18 * s
+  const valleyY = cy - 14.5 * s
+  const half = 7 * s
+  const crownPath = [
+    `M ${cx - half} ${baseY}`,
+    `L ${cx - half} ${valleyY + 1.5 * s}`,
+    `L ${cx - 5 * s} ${peakY}`,
+    `L ${cx - 2.5 * s} ${valleyY}`,
+    `L ${cx} ${peakY - 1 * s}`,
+    `L ${cx + 2.5 * s} ${valleyY}`,
+    `L ${cx + 5 * s} ${peakY}`,
+    `L ${cx + half} ${valleyY + 1.5 * s}`,
+    `L ${cx + half} ${baseY}`,
+    `Z`,
+  ].join(' ')
+  return (
+    <>
+      <Path d={crownPath} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.6 * s} strokeLinejoin="round" />
+      <Circle cx={cx} cy={peakY + 0.5 * s} r={1.1 * s} fill={color} />
+      <Circle cx={cx - 5 * s} cy={peakY + 1.2 * s} r={0.7 * s} fill="#FFF6D6" />
+      <Circle cx={cx + 5 * s} cy={peakY + 1.2 * s} r={0.7 * s} fill="#FFF6D6" />
+    </>
+  )
+}
+
+/** Briefcase for Jobs / Internship Tracker surfaces. Sits in the
+ *  bottom-right hand zone like the pencil. Leather-brown body with a
+ *  brass clasp + arched handle. */
+function BriefcaseAccessory({ cx, cy, s }: Omit<AccessoryProps, 'kind' | 'scribbleAnim' | 'color'> & { color?: string }) {
+  const LEATHER = '#3F2E1B'
+  const LEATHER_DARK = '#2A1F12'
+  const BRASS = '#B88A1F'
+  const HIGHLIGHT = '#5C4626'
+  const bodyX = cx + 9 * s
+  const bodyY = cy + 11 * s
+  const bodyW = 9 * s
+  const bodyH = 6 * s
+  const cornerR = 0.8 * s
+  const handleY = bodyY - 1.5 * s
+  const handleLeftX = bodyX + 2.2 * s
+  const handleRightX = bodyX + bodyW - 2.2 * s
+  const handlePath = `M ${handleLeftX} ${bodyY} Q ${handleLeftX} ${handleY} ${(handleLeftX + handleRightX) / 2} ${handleY} Q ${handleRightX} ${handleY} ${handleRightX} ${bodyY}`
+  const claspX = bodyX + bodyW / 2 - 1.2 * s
+  const claspY = bodyY + 0.6 * s
+  const claspW = 2.4 * s
+  const claspH = 1.2 * s
+  const stitchY = bodyY + bodyH * 0.45
+  return (
+    <>
+      <Rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={cornerR} ry={cornerR} fill={LEATHER} stroke={LEATHER_DARK} strokeWidth={0.5 * s} />
+      <Path d={handlePath} stroke={LEATHER_DARK} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
+      <Line x1={bodyX + 0.5 * s} y1={stitchY} x2={bodyX + bodyW - 0.5 * s} y2={stitchY} stroke={HIGHLIGHT} strokeWidth={0.3 * s} />
+      <Rect x={claspX} y={claspY} width={claspW} height={claspH} rx={0.2 * s} ry={0.2 * s} fill={BRASS} />
+    </>
+  )
+}
+
+/** Over-ear headphones for Voice mode. Arched band over the head,
+ *  ear cups on each side. Cushion uses theme accent. */
+function HeadphonesAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+  const BODY = '#2A2F3A'
+  const BODY_DARK = '#15181F'
+  const cupOuterX = 14 * s
+  const cupInnerX = 11 * s
+  const cupTopY = -3 * s
+  const cupBottomY = 5 * s
+  const cupW = cupOuterX - cupInnerX
+  const cupH = cupBottomY - cupTopY
+  const bandLeftX = cx - (cupInnerX + cupW / 2)
+  const bandRightX = cx + (cupInnerX + cupW / 2)
+  const bandLeftY = cy + cupTopY
+  const bandPeakY = cy - 17 * s
+  const bandPath = `M ${bandLeftX} ${bandLeftY} Q ${cx} ${bandPeakY} ${bandRightX} ${bandLeftY}`
+  return (
+    <>
+      <Path d={bandPath} stroke={BODY} strokeWidth={1.6 * s} strokeLinecap="round" fill="none" />
+      <Rect x={cx - cupOuterX} y={cy + cupTopY} width={cupW} height={cupH} rx={cupW / 2} ry={cupW / 2} fill={BODY} stroke={BODY_DARK} strokeWidth={0.4 * s} />
+      <Rect x={cx - cupOuterX + 0.6 * s} y={cy + cupTopY + 0.8 * s} width={cupW - 1.2 * s} height={cupH - 1.6 * s} rx={(cupW - 1.2 * s) / 2} ry={(cupW - 1.2 * s) / 2} fill={color} opacity={0.9} />
+      <Rect x={cx + cupInnerX} y={cy + cupTopY} width={cupW} height={cupH} rx={cupW / 2} ry={cupW / 2} fill={BODY} stroke={BODY_DARK} strokeWidth={0.4 * s} />
+      <Rect x={cx + cupInnerX + 0.6 * s} y={cy + cupTopY + 0.8 * s} width={cupW - 1.2 * s} height={cupH - 1.6 * s} rx={(cupW - 1.2 * s) / 2} ry={(cupW - 1.2 * s) / 2} fill={color} opacity={0.9} />
+    </>
+  )
+}
+
+/** Round reading glasses for the insights / "Dilly read this" surfaces.
+ *  Thin circular frames over the eye area, joined by a bridge. */
+function GlassesAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+  const eyeY = cy - 4 * s
+  const lensR = 4.2 * s
+  const leftCx = cx - 8 * s
+  const rightCx = cx + 8 * s
+  const frameW = 0.7 * s
+  return (
+    <>
+      <Line x1={leftCx + lensR - 0.3 * s} y1={eyeY} x2={rightCx - lensR + 0.3 * s} y2={eyeY} stroke={color} strokeWidth={frameW} strokeLinecap="round" />
+      <Circle cx={leftCx} cy={eyeY} r={lensR} stroke={color} strokeWidth={frameW} fill="none" />
+      <Circle cx={rightCx} cy={eyeY} r={lensR} stroke={color} strokeWidth={frameW} fill="none" />
+      <Line x1={leftCx - lensR + 0.2 * s} y1={eyeY - 0.3 * s} x2={leftCx - lensR - 1.8 * s} y2={eyeY - 1 * s} stroke={color} strokeWidth={frameW} strokeLinecap="round" />
+      <Line x1={rightCx + lensR - 0.2 * s} y1={eyeY - 0.3 * s} x2={rightCx + lensR + 1.8 * s} y2={eyeY - 1 * s} stroke={color} strokeWidth={frameW} strokeLinecap="round" />
+    </>
+  )
+}
+
+/** Gold trophy held up in the bottom-right hand zone. Tapered cup with
+ *  side handles, stem, and base. Same gold family as the crown. */
+function TrophyAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+  const GOLD = '#E5B143'
+  const GOLD_DARK = '#B88A1F'
+  const cupTopY = cy + 8 * s
+  const cupMidY = cy + 12 * s
+  const cupBottomY = cy + 13 * s
+  const stemBottomY = cy + 15 * s
+  const baseTopY = stemBottomY
+  const baseBottomY = cy + 17 * s
+  const cupTopL = cx + 9 * s
+  const cupTopR = cx + 17 * s
+  const cupBotL = cx + 11 * s
+  const cupBotR = cx + 15 * s
+  const stemL = cx + 12 * s
+  const stemR = cx + 14 * s
+  const baseL = cx + 10 * s
+  const baseR = cx + 16 * s
+  const cupPath = `M ${cupTopL} ${cupTopY} L ${cupTopR} ${cupTopY} L ${cupBotR} ${cupBottomY} L ${cupBotL} ${cupBottomY} Z`
+  const handleLPath = `M ${cupTopL} ${cupTopY + 0.5 * s} Q ${cupTopL - 1.8 * s} ${(cupTopY + cupMidY) / 2} ${cupTopL + 0.4 * s} ${cupMidY}`
+  const handleRPath = `M ${cupTopR} ${cupTopY + 0.5 * s} Q ${cupTopR + 1.8 * s} ${(cupTopY + cupMidY) / 2} ${cupTopR - 0.4 * s} ${cupMidY}`
+  return (
+    <>
+      <Path d={handleLPath} stroke={GOLD} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
+      <Path d={handleRPath} stroke={GOLD} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
+      <Path d={cupPath} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.4 * s} strokeLinejoin="round" />
+      <Circle cx={(cupTopL + cupTopR) / 2} cy={(cupTopY + cupBottomY) / 2 - 0.2 * s} r={1 * s} fill={color} />
+      <Rect x={stemL} y={cupBottomY} width={stemR - stemL} height={stemBottomY - cupBottomY} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.3 * s} />
+      <Rect x={baseL} y={baseTopY} width={baseR - baseL} height={baseBottomY - baseTopY} rx={0.3 * s} ry={0.3 * s} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.4 * s} />
+    </>
+  )
+}
+
+/** Open compass for direction-finding surfaces (mode switch, Next
+ *  Role). Brass body, cream face, two-color needle pointing north.
+ *  The north arm uses the theme accent. */
+function CompassAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+  const BRASS = '#B88A1F'
+  const BRASS_DARK = '#7A5A0F'
+  const FACE = '#FFF6D6'
+  const NEEDLE_DOWN = '#FFFFFF'
+  const PIVOT = '#1A1A1A'
+  const ccx = cx + 13 * s
+  const ccy = cy + 13 * s
+  const outerR = 3.6 * s
+  const faceR = 3 * s
+  const needleHalfH = 2.6 * s
+  const needleHalfW = 0.8 * s
+  const needleUpPath = `M ${ccx} ${ccy - needleHalfH} L ${ccx - needleHalfW} ${ccy} L ${ccx + needleHalfW} ${ccy} Z`
+  const needleDownPath = `M ${ccx} ${ccy + needleHalfH} L ${ccx - needleHalfW} ${ccy} L ${ccx + needleHalfW} ${ccy} Z`
+  return (
+    <>
+      <Circle cx={ccx} cy={ccy} r={outerR} fill={BRASS} stroke={BRASS_DARK} strokeWidth={0.4 * s} />
+      <Circle cx={ccx} cy={ccy} r={faceR} fill={FACE} />
+      <Circle cx={ccx} cy={ccy - faceR + 0.4 * s} r={0.3 * s} fill={BRASS_DARK} />
+      <Circle cx={ccx + faceR - 0.4 * s} cy={ccy} r={0.3 * s} fill={BRASS_DARK} />
+      <Circle cx={ccx} cy={ccy + faceR - 0.4 * s} r={0.3 * s} fill={BRASS_DARK} />
+      <Circle cx={ccx - faceR + 0.4 * s} cy={ccy} r={0.3 * s} fill={BRASS_DARK} />
+      <Path d={needleDownPath} fill={NEEDLE_DOWN} stroke={BRASS_DARK} strokeWidth={0.2 * s} strokeLinejoin="round" />
+      <Path d={needleUpPath} fill={color} stroke={BRASS_DARK} strokeWidth={0.2 * s} strokeLinejoin="round" />
+      <Circle cx={ccx} cy={ccy} r={0.5 * s} fill={PIVOT} />
+    </>
+  )
 }
 
 /** Pencil in the hand zone (bottom-right of face). Writing mood makes

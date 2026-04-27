@@ -51,6 +51,7 @@ import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import DillyLoadingState from '../../components/DillyLoadingState';
+import { DillyFace } from '../../components/DillyFace';
 import SkillsVideoCard from '../../components/SkillsVideoCard';
 import { resolvePlaybook } from '../../lib/arena/cohort-playbook';
 
@@ -756,8 +757,8 @@ export default function JobsScreen() {
     return (
       <DillyLoadingState
         insetTop={insets.top}
-        mood="writing"
-        accessory="pencil"
+        mood="confident"
+        accessory="briefcase"
         messages={[
           'Dilly is pulling fresh matches…',
           'Reading new postings…',
@@ -799,12 +800,16 @@ export default function JobsScreen() {
     >
       <View style={styles.headerRow}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.pageTitle, { color: theme.surface.t1 }]}>Jobs</Text>
-            <Text style={[styles.pageSub, { color: theme.surface.t3 }]}>
-              {filteredJobs.length} {filteredJobs.length === 1 ? 'match' : 'matches'}
-              {activeFilterCount > 0 ? ` of ${jobs.length}` : ' today'}
-            </Text>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            {/* Briefcase Dilly. Persistent identity for the Jobs tab. */}
+            <DillyFace size={44} mood="confident" accessory="briefcase" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.pageTitle, { color: theme.surface.t1 }]}>Jobs</Text>
+              <Text style={[styles.pageSub, { color: theme.surface.t3 }]}>
+                {filteredJobs.length} {filteredJobs.length === 1 ? 'match' : 'matches'}
+                {activeFilterCount > 0 ? ` of ${jobs.length}` : ' today'}
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
             activeOpacity={0.85}
@@ -999,12 +1004,15 @@ export default function JobsScreen() {
       </Modal>
 
       {noticedLine ? (
-        <View style={[styles.noticedStrip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-          <View style={styles.noticedTopRow}>
-            <Ionicons name="sparkles" size={13} color={theme.accent} />
-            <Text style={[styles.noticedEyebrow, { color: theme.accent }]}>TODAY'S READ</Text>
+        <View style={[styles.noticedStrip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+          {/* Glasses Dilly. Carries the "I read this for you" semantic. */}
+          <DillyFace size={36} mood="thoughtful" accessory="glasses" />
+          <View style={{ flex: 1 }}>
+            <View style={styles.noticedTopRow}>
+              <Text style={[styles.noticedEyebrow, { color: theme.accent }]}>TODAY'S READ</Text>
+            </View>
+            <Text style={[styles.noticedLine, { color: theme.surface.t1 }]}>{noticedLine}</Text>
           </View>
-          <Text style={[styles.noticedLine, { color: theme.surface.t1 }]}>{noticedLine}</Text>
         </View>
       ) : null}
 

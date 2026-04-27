@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { dilly } from '../../../lib/dilly'
 import { useResolvedTheme } from '../../../hooks/useTheme'
 import ArenaPage from '../../../components/arena/ArenaPage'
+import { DillyFace } from '../../../components/DillyFace'
 import { openDillyOverlay } from '../../../hooks/useDillyOverlay'
 import { resolvePlaybook, type CohortPlaybook } from '../../../lib/arena/cohort-playbook'
 
@@ -68,6 +69,17 @@ export default function NextRoleLab() {
       title={`Three plausible next moves from ${currentRole}.`}
       subtitle="Stress-tested against your cohort. Each has a fit read and a specific thing you would have to prove."
     >
+      {/* Compass Dilly intro. Frames the page as direction-finding. */}
+      <View style={[s.intro, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+        <DillyFace size={48} mood="curious" accessory="compass" />
+        <View style={{ flex: 1 }}>
+          <Text style={[s.introEyebrow, { color: theme.accent }]}>WHERE TO LOOK NEXT</Text>
+          <Text style={[s.introBody, { color: theme.surface.t2 }]}>
+            I read your profile and pointed the needle. These three are
+            the bearings I'd take from where you stand.
+          </Text>
+        </View>
+      </View>
       {roles.map((r, i) => (
         <View key={i} style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
           <View style={s.head}>
@@ -101,6 +113,14 @@ function kindColor(k: 'lateral' | 'step-up' | 'adjacent', theme: ReturnType<type
 }
 
 const s = StyleSheet.create({
+  intro: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    marginHorizontal: 16, marginBottom: 14,
+    paddingVertical: 12, paddingHorizontal: 14,
+    borderRadius: 14, borderWidth: 1,
+  },
+  introEyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 1.4, marginBottom: 4 },
+  introBody: { fontSize: 12, lineHeight: 17 },
   card: { marginHorizontal: 16, marginBottom: 12, padding: 16, borderRadius: 14, borderWidth: 1 },
   head: { flexDirection: 'row' },
   kindPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, marginBottom: 10 },

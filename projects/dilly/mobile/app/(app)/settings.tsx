@@ -28,6 +28,7 @@ import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { CancelGoodbyeModal } from '../../components/CancelGoodbyeModal';
+import { DillyFace } from '../../components/DillyFace';
 import { THEMES, useTheme, setTheme, useResolvedTheme } from '../../hooks/useTheme';
 import { useSubscription } from '../../hooks/useSubscription';
 import { showToast } from '../../lib/globalToast';
@@ -935,35 +936,71 @@ export default function SettingsScreen() {
                 }} />
               )}
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name={plan === 'pro' ? 'diamond' : 'star'} size={13} color={theme.accent} />
-                  <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 2.2, color: theme.accent }}>
-                    {plan === 'pro' ? 'DILLY PRO · MEMBER' : 'DILLY · MEMBER'}
-                  </Text>
+              {/* Pro: crowned Dilly on the left, pride content on the
+                  right. The crown carries the "you ascended" feeling
+                  visually so the copy can stay quiet. Dilly tier keeps
+                  the icon-chip header it had before. */}
+              {plan === 'pro' ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 4 }}>
+                  <DillyFace size={88} mood="proud" accessory="crown" />
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 2.2, color: theme.accent }}>
+                        DILLY PRO · MEMBER
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 24, fontWeight: '900', letterSpacing: -0.5, color: theme.surface.t1, lineHeight: 28 }}>
+                      Dilly Pro is yours.
+                    </Text>
+                    <Text style={{ fontSize: 13, color: theme.surface.t2, marginTop: 6, lineHeight: 18 }}>
+                      The sharpest Dilly there is. No caps. No gates.
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              ) : (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="star" size={13} color={theme.accent} />
+                      <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 2.2, color: theme.accent }}>
+                        DILLY · MEMBER
+                      </Text>
+                    </View>
+                  </View>
 
-              <Text style={{ fontSize: plan === 'pro' ? 28 : 26, fontWeight: '900', letterSpacing: -0.6, color: theme.surface.t1, lineHeight: plan === 'pro' ? 32 : 30 }}>
-                {plan === 'pro' ? 'Dilly Pro is yours.' : 'Dilly is yours.'}
-              </Text>
-              <Text style={{ fontSize: 14, color: theme.surface.t2, marginTop: 8, lineHeight: 20 }}>
-                {plan === 'pro'
-                  ? 'The sharpest Dilly there is. No caps, no ceilings, no gates.'
-                  : 'Unlimited fit reads. Resumes tailored per role. A coach that remembers you.'}
-              </Text>
+                  <Text style={{ fontSize: 26, fontWeight: '900', letterSpacing: -0.6, color: theme.surface.t1, lineHeight: 30 }}>
+                    Dilly is yours.
+                  </Text>
+                  <Text style={{ fontSize: 14, color: theme.surface.t2, marginTop: 8, lineHeight: 20 }}>
+                    Unlimited fit reads. Resumes tailored per role. A coach that remembers you.
+                  </Text>
+                </>
+              )}
 
-              {/* Earned-pride line. Quietly confers status. Not in
-                  the user's face, but there when they scroll past. */}
+              {/* Earned-pride line. Quietly confers status. Pro gets
+                  a richer multi-line treatment with concrete reasons
+                  to stay; Dilly tier gets the single-line version. */}
               <View style={{
                 marginTop: 16, paddingTop: 14,
                 borderTopWidth: 1, borderTopColor: theme.accentBorder,
               }}>
-                <Text style={{ fontSize: 12, color: theme.surface.t2, fontStyle: 'italic', lineHeight: 17 }}>
-                  {plan === 'pro'
-                    ? 'You took it as far as it goes. Very few do.'
-                    : 'You took your career seriously. Most people don\'t.'}
-                </Text>
+                {plan === 'pro' ? (
+                  <View style={{ gap: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1, lineHeight: 18 }}>
+                      You took it as far as it goes.
+                    </Text>
+                    <Text style={{ fontSize: 12, color: theme.surface.t2, lineHeight: 17 }}>
+                      Every interview, every résumé, every fit read, without the meter running. Dilly remembers everything you've ever told it and brings it back when it matters. The version of you that shows up in three months is built right now.
+                    </Text>
+                    <Text style={{ fontSize: 11, color: theme.surface.t3, fontStyle: 'italic', marginTop: 4, lineHeight: 16 }}>
+                      Less than 4% of Dilly members go this far. You're one of them.
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 12, color: theme.surface.t2, fontStyle: 'italic', lineHeight: 17 }}>
+                    You took your career seriously. Most people don't.
+                  </Text>
+                )}
               </View>
 
               {/* Dilly users see a subtle Pro upsell. Pro users get
