@@ -54,6 +54,7 @@ import DillyLoadingState from '../../components/DillyLoadingState';
 import { DillyFace } from '../../components/DillyFace';
 import SkillsVideoCard from '../../components/SkillsVideoCard';
 import { resolvePlaybook } from '../../lib/arena/cohort-playbook';
+import { getCached } from '../../lib/sessionCache';
 
 // -- Types --------------------------------------------------------------------
 
@@ -422,8 +423,24 @@ export default function JobsScreen() {
       // path (failure blocks the screen). Facts + skill pool are
       // additive - we catch their errors and default to empty, so a
       // slow memory endpoint or trending cache miss never blocks jobs.
+      // Path-aware default filter. Each card on choose-situation
+      // PROMISES a specific filter ("No degree required filter as the
+      // first pill", "Filter for H-1B sponsorship", etc.). Without
+      // this, those promises were marketing only — the feed came back
+      // generic regardless of who the user is. We read user_path from
+      // the cached profile (already in memory by the time the user
+      // taps the Jobs tab) and append the matching server-side filter
+      // param. The user can still toggle filters off via the chip row;
+      // this is just the right default for that situation.
+      const _cachedProfile = getCached<any>('profile:full');
+      const _userPath = String(_cachedProfile?.user_path || '').toLowerCase();
+      let _autoFilter = '';
+      if (_userPath === 'dropout') _autoFilter = '&no_degree=true';
+      else if (_userPath === 'international_grad' || _userPath === 'visa') _autoFilter = '&h1b_sponsor=true';
+      else if (_userPath === 'formerly_incarcerated') _autoFilter = '&fair_chance=true';
+      else if (_userPath === 'rural_remote_only') _autoFilter = '&remote=true';
       const [feedRes, profileRes, factsRes, poolRes] = await Promise.all([
-        dilly.get('/v2/internships/feed?tab=all&limit=60&sort=rank').catch(() => null),
+        dilly.get(`/v2/internships/feed?tab=all&limit=60&sort=rank${_autoFilter}`).catch(() => null),
         dilly.get('/profile').catch(() => null),
         dilly.get('/memory').catch(() => null),
         dilly.get('/skill-lab/trending').catch(() => null),

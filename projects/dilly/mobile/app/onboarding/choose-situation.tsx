@@ -175,7 +175,7 @@ const OPTIONS: Situation[] = [
     color: '#ea580c',
     perks: [
       '"Family Leadership" entry fills the gap without apologizing for it',
-      'Filter for flex, remote, and return-to-work programs',
+      'Remote-first jobs filter on by default; return-to-work programs called out in your fit reads',
       'Prior experience treated as not-expired, because it isn\'t',
     ],
     needsEdu: false,
@@ -239,7 +239,7 @@ const OPTIONS: Situation[] = [
     icon: 'accessibility',
     color: '#be185d',
     perks: [
-      'Filter for Disability:IN certified inclusive employers',
+      'Disability inclusion signals surfaced in every fit read (programs, leadership rep, real reviews — not just logos)',
       'Resume never asks you to disclose',
       'Coach on accommodations timing when you want it',
     ],
@@ -252,7 +252,7 @@ const OPTIONS: Situation[] = [
     icon: 'heart',
     color: '#db2777',
     perks: [
-      'Filter for HRC Corporate Equality Index top scorers',
+      'LGBTQ+ inclusion signals called out in every fit read (leadership rep, benefits, geography, public stance — not just HRC theater)',
       'Pronouns in contact info only if YOU want them there',
       'Advocacy work counted as real professional experience',
     ],
