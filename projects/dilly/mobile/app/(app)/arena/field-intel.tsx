@@ -232,6 +232,12 @@ export default function FieldIntelScreen() {
   }, [])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    try {
+      const { donateActivity, ACTIVITY_AI_ARENA } = require('../../../lib/siriDonations');
+      donateActivity?.(ACTIVITY_AI_ARENA);
+    } catch {}
+  }, [])
   const onRefresh = useCallback(() => { setRefreshing(true); load() }, [load])
 
   const playbook = useMemo(

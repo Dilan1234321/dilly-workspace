@@ -176,6 +176,16 @@ export default function InterviewPracticeScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   // Rotate through loader narration stages.
+  // Donate the interview-practice activity once on mount so iOS
+  // surfaces "Practice interview" as a Spotlight + lock-screen
+  // suggestion the evening before scheduled interviews.
+  useEffect(() => {
+    try {
+      const { donateActivity, ACTIVITY_INTERVIEW_PRACTICE } = require('../../lib/siriDonations');
+      donateActivity?.(ACTIVITY_INTERVIEW_PRACTICE);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (phase !== 'loading') { setLoaderStage(0); return; }
     const id = setInterval(() => {

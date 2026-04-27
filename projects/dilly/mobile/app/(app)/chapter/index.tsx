@@ -245,6 +245,10 @@ function ChapterV1() {
   }, [chapter?.id]);
 
   useEffect(() => {
+    try {
+      const { donateActivity, ACTIVITY_CHAPTER } = require('../../../lib/siriDonations');
+      donateActivity?.(ACTIVITY_CHAPTER);
+    } catch {}
     (async () => {
       try {
         const cur = await dilly.get('/chapters/current');

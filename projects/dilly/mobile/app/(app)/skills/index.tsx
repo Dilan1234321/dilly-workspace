@@ -257,6 +257,10 @@ function FeedLanding() {
   const copy = SKILLS_PERSONA_AWARE ? PERSONA_COPY[appMode] : GENERIC_COPY;
 
   useEffect(() => {
+    try {
+      const { donateActivity, ACTIVITY_SKILLS } = require('../../../lib/siriDonations');
+      donateActivity?.(ACTIVITY_SKILLS);
+    } catch {}
     (dilly as any).get('/skill-lab/feed')
       .then((data: FeedData) => setFeed(data))
       .catch(() => setFeed({ hero: null, queue: [], cohort_slug: null, user_cohort: null, cohort_preview: [] }))
