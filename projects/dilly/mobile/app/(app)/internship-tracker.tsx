@@ -351,8 +351,8 @@ function AddAppModal({ visible, onClose, onAdd }: {
   const [jobUrl, setJobUrl]     = useState('');
 
   function handleAdd() {
-    if (!company.trim()) { Alert.alert('Company required'); return; }
-    if (!role.trim()) { Alert.alert('Role required'); return; }
+    if (!company.trim()) { showToast({ message: 'Company required', type: 'error' }); return; }
+    if (!role.trim()) { showToast({ message: 'Role required', type: 'error' }); return; }
     onAdd(
       company.trim(), role.trim(), notes.trim(),
       deadline.trim() || undefined,

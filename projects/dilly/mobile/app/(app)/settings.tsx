@@ -250,6 +250,10 @@ export default function SettingsScreen() {
     visible: boolean;
     previousPlan: 'dilly' | 'pro';
   } | null>(null);
+  // profileLoaded gates conditional rows that depend on profile shape
+  // (web profile on/off, mode, etc.) so we never flash UI computed
+  // from the default values before the real profile lands.
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [deadlineReminders, setDeadlineReminders] = useState(true);
   // Whether the user has subscribed to the Dilly Calendar in iOS.
@@ -320,7 +324,9 @@ export default function SettingsScreen() {
         setWebSlug(slugRes.slug);
         if (slugRes.prefix) setWebPrefix(slugRes.prefix);
       }
-    } catch {}
+    } catch {} finally {
+      setProfileLoaded(true);
+    }
   }, []);
 
   useEffect(() => { fetchProfile(); }, []);
@@ -534,64 +540,56 @@ export default function SettingsScreen() {
       ? 'This will cancel your subscription and permanently delete your account and all data. This cannot be undone.'
       : 'This will permanently delete your account and all data. This cannot be undone.';
 
-    Alert.alert('Delete account', firstMessage, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert('Are you absolutely sure?', 'All your data will be gone forever.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Yes, delete',
-              style: 'destructive',
-              onPress: async () => {
-                // Hit the real endpoint and actually wait for confirmation.
-                // Backend cancels Stripe before deleting data and returns
-                // 503 if Stripe is unreachable - in that case we must NOT
-                // clear local auth, otherwise the user ends up locked out
-                // of an account that still exists and is still billing.
-                let res: Response | null = null;
-                try {
-                  res = await dilly.fetch('/account/delete', { method: 'POST' });
-                } catch (e) {
-                  Alert.alert(
-                    'Could not delete account',
-                    'We could not reach the server. Check your connection and try again.',
-                  );
-                  return;
-                }
-                if (!res.ok) {
-                  // Most likely 503 - Stripe cancel failed. Show the
-                  // server's message if present so the user knows to retry.
-                  let msg = 'Please try again in a minute.';
-                  try {
-                    const body = await res.clone().json();
-                    const detail = body?.detail;
-                    if (typeof detail === 'string') msg = detail;
-                    else if (detail?.message) msg = detail.message;
-                  } catch {}
-                  Alert.alert('Could not delete account', msg);
-                  return;
-                }
-                // Success - wipe local state and route to onboarding.
-                await clearAuth();
-                try {
-                  const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-                  await AsyncStorage.multiRemove([
-                    'dilly_has_onboarded', 'dilly_visited_jobs', 'dilly_visited_arena',
-                    'dilly_done_interview', 'dilly_pending_upload',
-                    'dilly_pending_user_path', 'dilly_pending_plan',
-                    'dilly_tutorial_shown',
-                  ]).catch(() => {});
-                } catch {}
-                router.replace('/onboarding/choose-situation');
-              },
-            },
-          ]);
-        },
-      },
-    ]);
+    const ok1 = await showConfirm({
+      title: 'Delete account',
+      message: firstMessage,
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok1) return;
+    const ok2 = await showConfirm({
+      title: 'Are you absolutely sure?',
+      message: 'All your data will be gone forever.',
+      confirmLabel: 'Yes, delete',
+      destructive: true,
+    });
+    if (!ok2) return;
+    // Hit the real endpoint and wait for confirmation. Backend cancels
+    // Stripe before deleting data; 503 means we must NOT clear local
+    // auth or the user ends up locked out of an account still billing.
+    let res: Response | null = null;
+    try {
+      res = await dilly.fetch('/account/delete', { method: 'POST' });
+    } catch (e) {
+      showToast({
+        message: 'Could not reach the server. Check your connection and try again.',
+        type: 'error',
+        durationMs: 5000,
+      });
+      return;
+    }
+    if (!res.ok) {
+      let msg = 'Please try again in a minute.';
+      try {
+        const body = await res.clone().json();
+        const detail = body?.detail;
+        if (typeof detail === 'string') msg = detail;
+        else if (detail?.message) msg = detail.message;
+      } catch {}
+      showToast({ message: `Could not delete account: ${msg}`, type: 'error', durationMs: 5000 });
+      return;
+    }
+    await clearAuth();
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.multiRemove([
+        'dilly_has_onboarded', 'dilly_visited_jobs', 'dilly_visited_arena',
+        'dilly_done_interview', 'dilly_pending_upload',
+        'dilly_pending_user_path', 'dilly_pending_plan',
+        'dilly_tutorial_shown',
+      ]).catch(() => {});
+    } catch {}
+    router.replace('/onboarding/choose-situation');
   }
 
   const planLabel = plan === 'pro' ? 'Dilly Pro' : plan === 'dilly' ? 'Dilly' : 'Dilly Starter';
@@ -1082,7 +1080,10 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* Web Profile */}
+        {/* Web Profile. Gated on profileLoaded so we never flash the
+            default-state UI (webProfileOn=true, webSlug='') for a
+            10th-of-a-second before /profile lands. */}
+        {profileLoaded ? (
         <FadeInView delay={120}>
           <SectionLabel text="WEB PROFILE" />
           <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
@@ -1136,6 +1137,7 @@ export default function SettingsScreen() {
             })()}
           </View>
         </FadeInView>
+        ) : null}
 
         {/* Dilly Calendar - Reminders toggle is always surfaced so the
             user can opt in before/after subscribing to the feed. The

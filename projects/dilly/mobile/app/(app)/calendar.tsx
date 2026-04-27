@@ -606,7 +606,7 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
                 const r = await remindDeadline(company, role, event.date);
                 created = !!r;
               }
-              if (created) Alert.alert('Reminder set', `Added to your Reminders app.`);
+              if (created) showToast({ message: `Added to your Reminders app.`, type: 'success' });
               else showToast({ message: 'Check Reminders permissions in Settings.', type: 'error' });
             }}
             scaleDown={0.85}
@@ -648,7 +648,7 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
   }, [visible, initialDate]);
 
   function handleAdd() {
-    if (!title.trim()) { Alert.alert('Title required'); return; }
+    if (!title.trim()) { showToast({ message: 'Title required', type: 'error' }); return; }
     if (!dateStr.trim()) { showToast({ message: 'Enter a date like 2026-04-15', type: 'info' }); return; }
     // Validate date
     const parsed = parseDate(dateStr);
@@ -1041,7 +1041,7 @@ export default function CalendarScreen() {
           const kept = prev.filter(e => !ids.has(e.id));
           return [...kept, ...newPrepEvents];
         });
-        Alert.alert('Prep Schedule', `${data.blocks.length} prep blocks added for ${event.company}`);
+        showToast({ message: `${data.blocks.length} prep blocks added for ${event.company}`, type: 'success' });
       }
     } catch {
       showToast({ message: 'Could not generate prep schedule', type: 'error' });

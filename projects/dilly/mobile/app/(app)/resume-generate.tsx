@@ -460,7 +460,7 @@ export default function ResumeGenerateScreen() {
           dialogTitle: filename,
         });
       } else {
-        Alert.alert('Saved', `Saved to ${destPath}`);
+        showToast({ message: `Saved to ${destPath}`, type: 'success' });
       }
     } catch (e: any) {
       Alert.alert('Download failed', e?.message || 'Could not download resume.');
