@@ -410,13 +410,32 @@ def _on_startup() -> None:
         _scheduler.add_job(_run_crawl_internships, CronTrigger(hour=2, minute=0), id="crawl_internships", replace_existing=True)
         _scheduler.add_job(_run_recompute_matches, CronTrigger(hour=3, minute=0), id="recompute_matches", replace_existing=True)
         # Discovery probes ~2000 slugs across 4 vendors (~30 min total).
-        # Sunday 01:00 UTC so newly-discovered boards land in time for
-        # the 02:00 crawl that same day. Once a slug is in the
-        # discovered_boards table it persists across deploys, so weekly
-        # is the right cadence — most companies don't change ATS often.
-        _scheduler.add_job(_run_discover_boards, CronTrigger(day_of_week='sun', hour=1, minute=0), id="discover_boards", replace_existing=True)
+        # Probes are free HTTP calls (no LLM cost). Running daily
+        # 01:00 UTC so the 02:00 crawl always reads the freshest set
+        # of boards — important during App Store launch densification
+        # when we want every new tenant in the feed within 24h. Can
+        # throttle back to weekly post-launch if the API rate-budget
+        # gets tight, but Anthropic isn't called by discovery so the
+        # only ceiling is the vendor APIs (well under their limits).
+        _scheduler.add_job(_run_discover_boards, CronTrigger(hour=1, minute=0), id="discover_boards", replace_existing=True)
         _scheduler.start()
-        print("[CRON] Scheduler started — discover@Sun 01:00, crawl@02:00, matches@03:00 UTC", flush=True)
+        print("[CRON] Scheduler started — discover@01:00, crawl@02:00, matches@03:00 UTC", flush=True)
+
+        # One-shot discovery kick on first startup if the discovered_boards
+        # table is sparse (< 200 hits). Without this, my expanded slug list
+        # would have to wait until tonight's 01:00 UTC to start probing.
+        # Threshold is conservative — once discovery has run, the table
+        # holds 700-1500 boards and this no-ops on every reboot.
+        try:
+            from projects.dilly.api.ingest.slug_discovery import list_discovered as _list_disc
+            current_total = sum(len(_list_disc(v) or []) for v in ("greenhouse", "lever", "ashby", "workday"))
+            if current_total < 200:
+                import threading
+                print(f"[CRON] discovered_boards has {current_total} rows; firing one-shot discovery in background", flush=True)
+                threading.Thread(target=_run_discover_boards, daemon=True).start()
+        except Exception:
+            import traceback
+            traceback.print_exc()
     except Exception:
         import traceback
         print("[CRON] WARNING: scheduler failed to start", flush=True)
