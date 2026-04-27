@@ -39,6 +39,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
+import { showConfirm } from '../../lib/globalConfirm';
 import { colors, spacing } from '../../lib/tokens';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -369,14 +370,14 @@ export default function InterviewPracticeScreen() {
         requestFeedback(finalAnswers, retryCount + 1);
         return;
       }
-      Alert.alert(
-        'Feedback took too long',
-        'Dilly could not generate feedback for this session. This can happen with long interviews. Want to try again?',
-        [
-          { text: 'Try Again', onPress: () => requestFeedback(finalAnswers, 0) },
-          { text: 'Skip Feedback', onPress: () => { setFeedback(null); setPhase('review'); } },
-        ],
-      );
+      const tryAgain = await showConfirm({
+        title: 'Feedback took too long',
+        message: 'Dilly could not generate feedback for this session. This can happen with long interviews. Want to try again?',
+        confirmLabel: 'Try Again',
+        cancelLabel: 'Skip Feedback',
+      });
+      if (tryAgain) requestFeedback(finalAnswers, 0);
+      else { setFeedback(null); setPhase('review'); }
     }
   }
 

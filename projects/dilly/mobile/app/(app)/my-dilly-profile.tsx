@@ -983,28 +983,32 @@ function SeekerProfileScreen() {
 
               {/* Name */}
               <View style={d.editField}>
-                <Text style={d.editFieldLabel}>Name</Text>
-                <TextInput style={d.editFieldInput} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={colors.t3} />
+                <Text style={[d.editFieldLabel, { color: theme.surface.t2 }]}>Name</Text>
+                <TextInput
+                  style={[d.editFieldInput, { backgroundColor: theme.surface.bg, borderColor: theme.surface.border, color: theme.surface.t1 }]}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Your name"
+                  placeholderTextColor={theme.surface.t3}
+                />
               </View>
 
-              {/* Mission Statement - rendered on the public web
-                  profile as the hero block under the CTAs. One or
-                  two sentences on why you do what you do. */}
+              {/* Mission Statement */}
               <View style={d.editField}>
-                <Text style={d.editFieldLabel}>Mission Statement</Text>
-                <Text style={{ fontSize: 11, color: colors.t3, marginBottom: 6, lineHeight: 15 }}>
+                <Text style={[d.editFieldLabel, { color: theme.surface.t2 }]}>Mission Statement</Text>
+                <Text style={{ fontSize: 11, color: theme.surface.t3, marginBottom: 6, lineHeight: 15 }}>
                   One or two lines on why you do what you do. Recruiters read this first.
                 </Text>
                 <TextInput
-                  style={[d.editFieldInput, { minHeight: 90, textAlignVertical: 'top' as const, paddingTop: 10 }]}
+                  style={[d.editFieldInput, { backgroundColor: theme.surface.bg, borderColor: theme.surface.border, color: theme.surface.t1, minHeight: 90, textAlignVertical: 'top' as const, paddingTop: 10 }]}
                   value={editMission}
                   onChangeText={setEditMission}
-                  placeholder="e.g. I help early-stage teams ship things that people actually use. I'm drawn to problems where the hard part is the judgment, not the code."
-                  placeholderTextColor={colors.t3}
+                  placeholder="e.g. I help early-stage teams ship things that people actually use."
+                  placeholderTextColor={theme.surface.t3}
                   multiline
                   maxLength={320}
                 />
-                <Text style={{ fontSize: 10, color: colors.t3, marginTop: 4, textAlign: 'right' }}>
+                <Text style={{ fontSize: 10, color: theme.surface.t3, marginTop: 4, textAlign: 'right' }}>
                   {editMission.length} / 320
                 </Text>
               </View>

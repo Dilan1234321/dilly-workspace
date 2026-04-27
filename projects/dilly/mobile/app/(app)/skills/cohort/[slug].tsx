@@ -218,6 +218,29 @@ export default function CohortScreen() {
         </View>
       </View>
 
+      {/* Skills <-> Jobs cross-link. Closes the loop "I am learning
+          this skill -> here are the jobs in my feed that need it" so
+          the user can swing straight from a video into an apply tap.
+          Same pattern as the JobCard skill-gap pill in reverse. */}
+      <TouchableOpacity
+        activeOpacity={0.86}
+        onPress={() => router.push('/(app)/jobs')}
+        style={[styles.crosslinkCard, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}
+      >
+        <View style={[styles.crosslinkIcon, { backgroundColor: theme.accentSoft }]}>
+          <Ionicons name="briefcase" size={16} color={theme.accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.crosslinkTitle, { color: theme.surface.t1 }]}>
+            Jobs that need these skills
+          </Text>
+          <Text style={[styles.crosslinkSub, { color: theme.surface.t2 }]}>
+            See the openings in your feed that ask for {meta.title} skills.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.accent} />
+      </TouchableOpacity>
+
       {/* Start here - horizontal carousel */}
       {startHere.length > 0 ? (
         <>
@@ -379,6 +402,25 @@ function FilterPill({ label, active, onPress, theme }: {
 // -- Styles -------------------------------------------------------------------
 
 const styles = StyleSheet.create({
+  // Skills <-> Jobs cross-link card
+  crosslinkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  crosslinkIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  crosslinkTitle: { fontSize: 14, fontWeight: '800', lineHeight: 18 },
+  crosslinkSub: { fontSize: 12, fontWeight: '500', lineHeight: 16, marginTop: 2 },
+
   // Hero
   hero: {
     paddingHorizontal: 20,
