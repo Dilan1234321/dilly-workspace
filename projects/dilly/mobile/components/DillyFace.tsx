@@ -705,11 +705,11 @@ function TrophyAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, '
           fade in and out in sequence. Reads as "this just got won." */}
       {pulseAnim && (
         <>
-          <AnimatedCircleX cx={cupTopL - 0.5 * s} cy={cupTopY + 0.5 * s} r={0.5 * s} fill="#FFFFFF"
+          <AnimatedCircle cx={cupTopL - 0.5 * s} cy={cupTopY + 0.5 * s} r={0.5 * s} fill="#FFFFFF"
             opacity={pulseAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0, 1, 0, 0] }) as any} />
-          <AnimatedCircleX cx={cupTopR + 0.3 * s} cy={cupTopY + 1.5 * s} r={0.5 * s} fill="#FFFFFF"
+          <AnimatedCircle cx={cupTopR + 0.3 * s} cy={cupTopY + 1.5 * s} r={0.5 * s} fill="#FFFFFF"
             opacity={pulseAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0, 0, 1, 0] }) as any} />
-          <AnimatedCircleX cx={(cupTopL + cupTopR) / 2} cy={cupTopY - 0.8 * s} r={0.45 * s} fill="#FFFFFF"
+          <AnimatedCircle cx={(cupTopL + cupTopR) / 2} cy={cupTopY - 0.8 * s} r={0.45 * s} fill="#FFFFFF"
             opacity={pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 1, 0.2] }) as any} />
         </>
       )}
