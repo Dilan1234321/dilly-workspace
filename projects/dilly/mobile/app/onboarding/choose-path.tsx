@@ -254,31 +254,9 @@ export default function ChoosePathScreen() {
                   any other social sign-in option, so SIWA is on top.
                   Both flows route through _completeOAuthSignIn which
                   mirrors the email-code post-auth onboarding flow. */}
-              {Platform.OS === 'ios' ? (
-                <>
-                  <TouchableOpacity
-                    style={[s.oauthButtonApple, oauthLoading ? s.buttonDisabled : null]}
-                    onPress={handleAppleSignIn}
-                    disabled={!!oauthLoading}
-                    activeOpacity={0.9}
-                  >
-                    {oauthLoading === 'apple' ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
-                        <Text style={s.oauthAppleText}>Sign in with Apple</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  {oauthError ? <Text style={[s.errorText, { marginTop: 8 }]}>{oauthError}</Text> : null}
-                  <View style={s.divider}>
-                    <View style={s.dividerLine} />
-                    <Text style={s.dividerText}>or use email</Text>
-                    <View style={s.dividerLine} />
-                  </View>
-                </>
-              ) : null}
+              {/* OAuth sign-in removed for build 442 — email-code only.
+                  SIWA + Google can return once the App ID has Sign In
+                  with Apple enabled and Google OAuth is verified. */}
               <Text style={s.sectionLabel}>Your email</Text>
               <View style={s.inputWrapper}>
                 <TextInput
