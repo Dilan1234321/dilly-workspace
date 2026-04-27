@@ -18,3 +18,4 @@ firebase-admin
 apns2
 apscheduler
 python-jose[cryptography]
+cryptography
