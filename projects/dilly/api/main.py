@@ -330,6 +330,41 @@ def _run_recompute_matches() -> None:
         import traceback
         traceback.print_exc()
 
+def _run_discover_boards() -> None:
+    """Probe candidate company slugs against Greenhouse / Lever / Ashby /
+    Workday public APIs and persist live tenants to discovered_boards.
+    Runs weekly (Sunday 01:00 UTC) so the daily 02:00 crawl always reads
+    a fresh board list. Cheap to re-run, most probes 404 in <300ms and
+    successful hits are de-duped via the table's unique index.
+
+    Without this, expanding api/ingest/candidate_slugs.py has no effect
+    because discovery only ran when someone hit /cron/discover-boards
+    manually. Now every new slug added to the candidate file rolls into
+    the feed within a week."""
+    try:
+        print("[CRON] discover-boards starting", flush=True)
+        from projects.dilly.api.ingest.candidate_slugs import CANDIDATE_SLUGS
+        from projects.dilly.api.ingest.slug_discovery import (
+            discover_greenhouse, discover_lever, discover_ashby, discover_workday,
+        )
+        for fn, name in (
+            (discover_greenhouse, "greenhouse"),
+            (discover_lever, "lever"),
+            (discover_ashby, "ashby"),
+            (discover_workday, "workday"),
+        ):
+            try:
+                stats = fn(CANDIDATE_SLUGS)
+                print(f"[CRON] discover-boards {name}: {stats}", flush=True)
+            except Exception as e:
+                print(f"[CRON] discover-boards {name} ERROR: {e}", flush=True)
+        print("[CRON] discover-boards done", flush=True)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
+
 
 def _run_startup_migrations() -> None:
     """Run idempotent ALTER TABLE migrations on every startup.
@@ -374,8 +409,14 @@ def _on_startup() -> None:
         _scheduler = BackgroundScheduler(timezone="UTC")
         _scheduler.add_job(_run_crawl_internships, CronTrigger(hour=2, minute=0), id="crawl_internships", replace_existing=True)
         _scheduler.add_job(_run_recompute_matches, CronTrigger(hour=3, minute=0), id="recompute_matches", replace_existing=True)
+        # Discovery probes ~2000 slugs across 4 vendors (~30 min total).
+        # Sunday 01:00 UTC so newly-discovered boards land in time for
+        # the 02:00 crawl that same day. Once a slug is in the
+        # discovered_boards table it persists across deploys, so weekly
+        # is the right cadence — most companies don't change ATS often.
+        _scheduler.add_job(_run_discover_boards, CronTrigger(day_of_week='sun', hour=1, minute=0), id="discover_boards", replace_existing=True)
         _scheduler.start()
-        print("[CRON] Scheduler started — crawl@02:00 UTC, matches@03:00 UTC", flush=True)
+        print("[CRON] Scheduler started — discover@Sun 01:00, crawl@02:00, matches@03:00 UTC", flush=True)
     except Exception:
         import traceback
         print("[CRON] WARNING: scheduler failed to start", flush=True)
