@@ -1,21 +1,23 @@
-// DillyWidget.swift — Dilly's home-screen widget bundle.
+// DillyWidget.swift — Dilly's home-screen + lock-screen widget bundle.
 //
-// Three widgets. One per size. Each represents a different relationship
-// with Dilly:
+// Three widgets. Each represents a different relationship with Dilly,
+// available on the home screen at one specific size AND on the lock
+// screen as accessory complications (iOS 16+):
 //
-//   SMALL  (2x2)  MomentOfTruthWidget  — HABIT
-//                 Daily question + streak. Tap-to-answer interactive.
-//                 The widget you check every morning.
+//   HABIT   MomentOfTruthWidget
+//           Home: small (2x2)
+//           Lock: accessoryCircular (streak number with flame)
+//                 accessoryInline ("🔥 14 day Dilly streak")
 //
-//   MEDIUM (4x2)  DillyProfileWidget   — MEMORY
-//                 Rotating "Dilly remembers: ___" pulled from the user's
-//                 actual facts. New every iOS refresh. The "living,
-//                 breathing profile" surface.
+//   MEMORY  DillyProfileWidget
+//           Home: medium (4x2)
+//           Lock: accessoryRectangular ("Dilly remembers: <fact>")
+//                 accessoryInline ("Dilly remembers <N> things")
 //
-//   LARGE  (4x4)  DillyTodayWidget     — MISSION
-//                 Today's Question + Your One Move + Tonight's 15 Min in
-//                 one panel, with streak badge in the header. Mission
-//                 control for the day.
+//   MISSION DillyTodayWidget
+//           Home: large (4x4)
+//           Lock: accessoryRectangular ("Today: <one move>")
+//                 accessoryInline ("Today's Dilly move ↗")
 //
 // No multi-size variants. No standalone Today's Question / One Move /
 // Tonight / Summary widgets — that content lives inside Dilly Today
@@ -489,13 +491,47 @@ struct DillyProfileWidget: Widget {
         }
         .configurationDisplayName("Your Dilly Profile")
         .description("What Dilly remembers about you. Updates as your profile grows.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemMedium, .accessoryRectangular, .accessoryInline])
     }
 }
 
 struct DillyProfileView: View {
     @Environment(\.widgetFamily) var family
     let entry: DillyEntry
+
+    @ViewBuilder
+    private var lockRectangular: some View {
+        // Lock-screen rectangular accessory (~160x55pt). Single line
+        // of "Dilly remembers: <fact>" with a tiny header. Truncates.
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 3) {
+                Image(systemName: "book.closed").font(.system(size: 9, weight: .heavy))
+                Text("DILLY REMEMBERS").font(.system(size: 9, weight: .black)).tracking(0.8)
+            }
+            if let fact = surfacedFact {
+                Text(fact)
+                    .font(.system(size: 12, weight: .semibold, design: .serif))
+                    .italic()
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            } else {
+                Text("Tell Dilly more about you.").font(.system(size: 12)).foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .widgetURL(URL(string: "dilly:///(app)/my-dilly-profile"))
+    }
+
+    @ViewBuilder
+    private var lockInline: some View {
+        // Above-the-time text strip (~30 chars max).
+        if let n = entry.data.profileFactCount, n > 0 {
+            Text("Dilly remembers \(n) things about you")
+        } else {
+            Text("Dilly is learning about you")
+        }
+    }
+
 
     private var surfacedFact: String? {
         let facts = entry.data.profileRecentFacts ?? []
@@ -511,6 +547,14 @@ struct DillyProfileView: View {
     }
 
     var body: some View {
+        switch family {
+        case .accessoryRectangular: lockRectangular
+        case .accessoryInline:      lockInline
+        default:                    homeMedium
+        }
+    }
+
+    private var homeMedium: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 DillyFaceView(size: family == .systemSmall ? 32 : 38, mood: .warm, accessory: .none,
@@ -559,13 +603,49 @@ struct MomentOfTruthWidget: Widget {
         }
         .configurationDisplayName("Moment of Truth")
         .description("One question a day. Build the streak.")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryInline])
     }
 }
 
 struct MomentOfTruthView: View {
+    @Environment(\.widgetFamily) var family
     let entry: DillyEntry
+
+    @ViewBuilder
+    private var lockCircular: some View {
+        // Lock-screen circular accessory (~52x52pt). Streak number with
+        // flame — the iOS Fitness-rings of habit. Glanceable from the
+        // lock screen every time the user picks up the phone.
+        ZStack {
+            AccessoryWidgetBackground()
+            VStack(spacing: -1) {
+                Image(systemName: "flame.fill").font(.system(size: 12, weight: .heavy))
+                Text("\(entry.data.truthStreakDays ?? 0)")
+                    .font(.system(size: 18, weight: .black, design: .rounded))
+                    .minimumScaleFactor(0.6)
+            }
+        }
+        .widgetURL(URL(string: "dilly:///(app)"))
+    }
+
+    @ViewBuilder
+    private var lockInline: some View {
+        if let s = entry.data.truthStreakDays, s > 0 {
+            Text("🔥 \(s) day Dilly streak")
+        } else {
+            Text("Start your Dilly streak today")
+        }
+    }
+
     var body: some View {
+        switch family {
+        case .accessoryCircular:    lockCircular
+        case .accessoryInline:      lockInline
+        default:                    homeSmall
+        }
+    }
+
+    private var homeSmall: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 EyebrowLabel(text: "MOMENT OF TRUTH", tint: Color.white.opacity(0.85))
@@ -632,13 +712,52 @@ struct DillyTodayWidget: Widget {
         }
         .configurationDisplayName("Dilly Today")
         .description("Today's Question, your One Move, and Tonight's 15 minutes — all in one.")
-        .supportedFamilies([.systemLarge])
+        .supportedFamilies([.systemLarge, .accessoryRectangular, .accessoryInline])
     }
 }
 
 struct DillyTodayView: View {
+    @Environment(\.widgetFamily) var family
     let entry: DillyEntry
+
+    @ViewBuilder
+    private var lockRectangular: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 3) {
+                Image(systemName: "flag.checkered").font(.system(size: 9, weight: .heavy))
+                Text("TODAY · ONE MOVE").font(.system(size: 9, weight: .black)).tracking(0.8)
+            }
+            if let move = entry.data.oneMoveTitle, !move.isEmpty {
+                Text(move).font(.system(size: 12, weight: .heavy)).lineLimit(2).minimumScaleFactor(0.8)
+            } else if let q = entry.data.todaysQuestion, !q.isEmpty {
+                Text(q).font(.system(size: 12, weight: .semibold, design: .serif)).italic()
+                    .lineLimit(2).minimumScaleFactor(0.8)
+            } else {
+                Text("Open Dilly to load today.").font(.system(size: 12)).foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .widgetURL(URL(string: entry.data.oneMoveDeepLink ?? "dilly:///(app)"))
+    }
+
+    @ViewBuilder
+    private var lockInline: some View {
+        if let move = entry.data.oneMoveTitle, !move.isEmpty {
+            Text("Dilly · \(move)")
+        } else {
+            Text("Open Dilly for today's move")
+        }
+    }
+
     var body: some View {
+        switch family {
+        case .accessoryRectangular: lockRectangular
+        case .accessoryInline:      lockInline
+        default:                    homeLarge
+        }
+    }
+
+    private var homeLarge: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 DillyFaceView(size: 44, mood: .warm, accessory: .none,
