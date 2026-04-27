@@ -29,12 +29,16 @@ public class DillyWalletModule: Module {
             promise.resolve(exists)
         }
 
-        AsyncFunction("addPass") { (urlString: String, promise: Promise) in
+        AsyncFunction("addPass") { (urlString: String, headers: [String: String]?, promise: Promise) in
             guard let url = URL(string: urlString) else {
                 promise.reject("INVALID_URL", "Pass URL is not a valid URL.")
                 return
             }
-            URLSession.shared.dataTask(with: url) { data, _, error in
+            var req = URLRequest(url: url)
+            if let headers = headers {
+                for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
+            }
+            URLSession.shared.dataTask(with: req) { data, _, error in
                 guard error == nil, let data = data else {
                     promise.reject("DOWNLOAD_FAILED", error?.localizedDescription ?? "Could not download pass.")
                     return

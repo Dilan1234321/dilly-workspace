@@ -194,7 +194,7 @@ def _build_pkpass(pass_json: Dict[str, Any]) -> bytes:
     files: Dict[str, bytes] = {"pass.json": json.dumps(pass_json, separators=(",", ":")).encode()}
 
     # Required: icon.png + icon@2x.png. Recommended: logo + logo@2x.
-    for asset in ("icon.png", "icon@2x.png", "logo.png", "logo@2x.png"):
+    for asset in ("icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png", "logo@3x.png"):
         data = _load_asset(asset)
         if data:
             files[asset] = data

@@ -48,6 +48,7 @@ import WinsCard from '../../components/WinsCard';
 import DillyFooter from '../../components/DillyFooter';
 import DillyCardEditor, { type CardData } from '../../components/DillyCard';
 import { DillyFace } from '../../components/DillyFace';
+import AddToWalletButton from '../../components/AddToWalletButton';
 import InlinePopup, { type PopupAction } from '../../components/InlinePopup';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 
@@ -1741,6 +1742,7 @@ function SeekerProfileScreen() {
                       <Text style={{ fontSize: 13, fontWeight: '700', color: theme.accent }}>Share</Text>
                     </AnimatedPressable>
                   </View>
+                  <AddToWalletButton />
                 </View>
               ) : (
                 <Text style={{ fontSize: 12, color: colors.t3, fontStyle: 'italic' }}>Setting up your profile link...</Text>

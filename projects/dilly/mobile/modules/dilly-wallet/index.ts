@@ -54,12 +54,14 @@ export async function hasPass(passTypeId: string, serial: string): Promise<boole
 }
 
 /** Download the .pkpass at `url` and present the system "Add to
- *  Wallet" sheet. Resolves true on add, false on cancel. */
-export async function addPass(url: string): Promise<boolean> {
+ *  Wallet" sheet. Optional headers are sent on the GET (use this to
+ *  carry an Authorization header for protected pass endpoints).
+ *  Resolves true on add, false on cancel. */
+export async function addPass(url: string, headers?: Record<string, string>): Promise<boolean> {
   const m = _mod();
   if (!m?.addPass) return false;
   try {
-    return Boolean(await m.addPass(url));
+    return Boolean(await m.addPass(url, headers || null));
   } catch {
     return false;
   }
