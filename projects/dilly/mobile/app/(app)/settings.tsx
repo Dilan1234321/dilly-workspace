@@ -21,6 +21,7 @@ import { isCalendarSubscribed, unsubscribeFromDillyCalendar } from '../../lib/ca
 import {
   isRemindersSyncEnabled, setRemindersSyncEnabled,
   requestRemindersPermission, getRemindersPermission,
+  ensureWeeklyBriefReminder,
 } from '../../lib/reminders';
 import { triggerCelebration } from '../../hooks/useCelebration';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
@@ -1165,6 +1166,11 @@ export default function SettingsScreen() {
                   }
                   await setRemindersSyncEnabled(true);
                   setRemindersSync(true);
+                  // Set up the recurring weekly brief reminder so the
+                  // user gets a Monday morning nudge in their Reminders
+                  // app to read their Dilly brief. No-ops if it already
+                  // exists.
+                  ensureWeeklyBriefReminder().catch(() => {});
                 } else {
                   await setRemindersSyncEnabled(false);
                   setRemindersSync(false);
@@ -1183,6 +1189,44 @@ export default function SettingsScreen() {
                 />
               </>
             )}
+          </View>
+        </FadeInView>
+
+        {/* Career Focus Mode card - we don't build a Focus mode (that's
+            iOS), we just nudge the user to set one up so Dilly notif-
+            ications come through and social media gets silenced during
+            a fixed daily slot. The deep link drops them into the right
+            iOS Settings page; the four-line copy is the entire pitch. */}
+        <FadeInView delay={165}>
+          <SectionLabel text="CAREER FOCUS MODE" />
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, padding: 16, gap: 8 }]}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: theme.surface.t1, letterSpacing: -0.2 }}>
+              Reserve a daily slot for your career.
+            </Text>
+            <Text style={{ fontSize: 12, lineHeight: 17, color: theme.surface.t2 }}>
+              Set up an iOS Focus called "Career". When it's on, Dilly notifications come through and social media is silenced. We suggest weekday mornings 9-11 AM. Once it's set up, Dilly is your only notification during that window.
+            </Text>
+            <View style={{ marginTop: 6, gap: 4 }}>
+              <Text style={{ fontSize: 11, color: theme.surface.t3, lineHeight: 16 }}>1. Open iOS Settings → Focus</Text>
+              <Text style={{ fontSize: 11, color: theme.surface.t3, lineHeight: 16 }}>2. Tap + → "Custom" → name it "Career"</Text>
+              <Text style={{ fontSize: 11, color: theme.surface.t3, lineHeight: 16 }}>3. Allow Notifications: pick Dilly</Text>
+              <Text style={{ fontSize: 11, color: theme.surface.t3, lineHeight: 16 }}>4. Set a Schedule: weekdays 9-11 AM</Text>
+            </View>
+            <AnimatedPressable
+              style={{
+                marginTop: 12, alignSelf: 'flex-start',
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
+                backgroundColor: theme.accent,
+              }}
+              onPress={() => Linking.openURL('App-Prefs:Focus').catch(() => Linking.openURL('app-settings:'))}
+              scaleDown={0.97}
+            >
+              <Ionicons name="moon" size={13} color="#FFF" />
+              <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800', letterSpacing: -0.1 }}>
+                Open Focus settings
+              </Text>
+            </AnimatedPressable>
           </View>
         </FadeInView>
 

@@ -139,7 +139,8 @@ export async function syncReminderForEvent(
     const [y, m, d] = date.split('-').map(Number);
     const dueDate = new Date(y, m - 1, d, 9, 0, 0);
 
-    const id = await C.createReminderAsync(null, {
+    const listId = await getOrCreateDillyReminderList();
+    const id = await C.createReminderAsync(listId, {
       title: `Dilly: ${title}`,
       dueDate,
       alarms: [{ relativeOffset: -60 * 24 }], // 24 h before
@@ -148,6 +149,71 @@ export async function syncReminderForEvent(
     map[key] = id;
     await saveIdMap(map);
     return id;
+  } catch {
+    return null;
+  }
+}
+
+/** Stable AsyncStorage key for the dedicated "Dilly" iOS Reminders
+ *  calendar id. We create one once via expo-calendar and reuse the
+ *  same id for every subsequent createReminderAsync so all career
+ *  reminders cluster under one heading in the Reminders app instead
+ *  of bleeding into the user's default list. */
+const DILLY_REMINDER_LIST_KEY = 'dilly_reminder_list_id_v1';
+
+/** Find an existing "Dilly" reminders list, or create one. Returns the
+ *  list id, or null if permission is missing / native module is not
+ *  available. The caller passes this id to createReminderAsync as the
+ *  first argument so the reminder lands in the Dilly list. */
+export async function getOrCreateDillyReminderList(): Promise<string | null> {
+  if (Platform.OS !== 'ios') return null;
+  try {
+    const cached = await AsyncStorage.getItem(DILLY_REMINDER_LIST_KEY);
+    if (cached) {
+      // Verify the cached id still exists - the user may have deleted
+      // the list manually. If gone, fall through and recreate.
+      const C = await Cal();
+      if (C) {
+        try {
+          const cals: any[] = await C.getCalendarsAsync(C.EntityTypes?.REMINDER || 'reminder');
+          if ((cals || []).some(c => c?.id === cached)) return cached;
+        } catch {}
+      }
+    }
+    const C = await Cal();
+    if (!C) return null;
+    const perm = await C.getRemindersPermissionsAsync();
+    if (perm?.status !== 'granted') return null;
+
+    // First, see if a Dilly list already exists by title (e.g. user
+    // reinstalled and we lost the AsyncStorage key but the list is
+    // still on the device).
+    const existing: any[] = await C.getCalendarsAsync(C.EntityTypes?.REMINDER || 'reminder');
+    const found = (existing || []).find(c => String(c?.title || '').toLowerCase() === 'dilly');
+    if (found?.id) {
+      await AsyncStorage.setItem(DILLY_REMINDER_LIST_KEY, found.id);
+      return found.id;
+    }
+
+    // Create a fresh Dilly list. Source must be writable - on iOS the
+    // default writable source is "Local". Pass null to let the system
+    // pick the default if available.
+    const sources: any[] = (await C.getSourcesAsync?.()) || [];
+    const localSource = sources.find(s => String(s?.type || '').toLowerCase() === 'local')
+      || sources.find(s => /icloud/i.test(String(s?.name || '')))
+      || sources[0];
+    const id = await C.createCalendarAsync({
+      title: 'Dilly',
+      color: '#3B82F6',
+      entityType: C.EntityTypes?.REMINDER || 'reminder',
+      sourceId: localSource?.id,
+      source: localSource ? undefined : { isLocalAccount: true, name: 'Dilly', type: 'LOCAL' },
+      name: 'Dilly',
+      ownerAccount: 'Dilly',
+      accessLevel: C.CalendarAccessLevel?.OWNER || 'owner',
+    });
+    if (id) await AsyncStorage.setItem(DILLY_REMINDER_LIST_KEY, id);
+    return id || null;
   } catch {
     return null;
   }
@@ -253,12 +319,117 @@ export async function maybeSilentlyAddCareerReminder(
     if (perm?.status !== 'granted') return null;
 
     const due = new Date(Date.now() + hoursOut * 60 * 60 * 1000);
-    const id = await C.createReminderAsync(null, {
+    const listId = await getOrCreateDillyReminderList();
+    const id = await C.createReminderAsync(listId, {
       title,
       dueDate: due,
       notes: 'Added by Dilly from your conversation.',
     });
     await AsyncStorage.setItem(SILENT_LAST_KEY, String(Date.now()));
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Weekly recurring "Check your Dilly brief" reminder. Fires every
+ *  Monday at 9am in the user's local time so they read their brief
+ *  with their morning coffee. Uses recurrence rules so we set it once;
+ *  iOS handles the weekly repeat. */
+export async function ensureWeeklyBriefReminder(): Promise<string | null> {
+  if (Platform.OS !== 'ios') return null;
+  try {
+    const C = await Cal();
+    if (!C) return null;
+    const perm = await C.getRemindersPermissionsAsync();
+    if (perm?.status !== 'granted') return null;
+    const existingId = await AsyncStorage.getItem('dilly_weekly_brief_reminder_id_v1');
+    if (existingId) return existingId;
+    const listId = await getOrCreateDillyReminderList();
+    // Compute next Monday at 9am local.
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(9, 0, 0, 0);
+    let diff = (1 - now.getDay() + 7) % 7;
+    if (diff === 0 && target.getTime() <= now.getTime()) diff = 7;
+    target.setDate(target.getDate() + diff);
+    const id = await C.createReminderAsync(listId, {
+      title: 'Check your Dilly brief',
+      dueDate: target,
+      recurrenceRule: { frequency: C.Frequency?.WEEKLY || 'weekly', interval: 1 },
+      notes: 'Three new things this week, every Monday morning.',
+    });
+    if (id) await AsyncStorage.setItem('dilly_weekly_brief_reminder_id_v1', id);
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Two-week silent application follow-up reminder. Called from the
+ *  internship tracker when a user logs an application. The reminder
+ *  fires 14 days later asking them to nudge the recruiter. */
+export async function scheduleApplicationFollowupReminder(args: {
+  applicationKey: string;
+  company: string;
+  role?: string;
+  appliedAt?: Date;
+}): Promise<string | null> {
+  if (Platform.OS !== 'ios') return null;
+  try {
+    const C = await Cal();
+    if (!C) return null;
+    const perm = await C.getRemindersPermissionsAsync();
+    if (perm?.status !== 'granted') return null;
+    const listId = await getOrCreateDillyReminderList();
+    const base = args.appliedAt || new Date();
+    const dueDate = new Date(base.getTime() + 14 * 24 * 60 * 60 * 1000);
+    dueDate.setHours(10, 0, 0, 0);
+    const where = args.role ? `${args.role} at ${args.company}` : args.company;
+    const id = await C.createReminderAsync(listId, {
+      title: `Follow up: ${args.company}`,
+      dueDate,
+      notes: `It's been 2 weeks since you applied to ${where}. A short follow-up email keeps you visible.`,
+    });
+    if (id) {
+      const map = await loadIdMap();
+      map[`appfollow::${args.applicationKey}`] = id;
+      await saveIdMap(map);
+    }
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Interview prep reminder fires 3 days before an interview so the
+ *  user has runway to actually prepare instead of cramming. */
+export async function scheduleInterviewPrepReminder(args: {
+  interviewKey: string;
+  interviewAt: Date;
+  company: string;
+  role?: string;
+}): Promise<string | null> {
+  if (Platform.OS !== 'ios') return null;
+  try {
+    const C = await Cal();
+    if (!C) return null;
+    const perm = await C.getRemindersPermissionsAsync();
+    if (perm?.status !== 'granted') return null;
+    const listId = await getOrCreateDillyReminderList();
+    const dueDate = new Date(args.interviewAt.getTime() - 3 * 24 * 60 * 60 * 1000);
+    dueDate.setHours(19, 0, 0, 0); // 7pm three days before
+    const where = args.role ? `${args.role} at ${args.company}` : args.company;
+    const id = await C.createReminderAsync(listId, {
+      title: `Interview in 3 days: ${args.company}`,
+      dueDate,
+      notes: `${where}. Open Dilly for prep - she has your gap areas mapped to predicted questions.`,
+    });
+    if (id) {
+      const map = await loadIdMap();
+      map[`intprep::${args.interviewKey}`] = id;
+      await saveIdMap(map);
+    }
     return id || null;
   } catch {
     return null;

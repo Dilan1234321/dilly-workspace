@@ -10,6 +10,7 @@ import { CERTIFICATIONS, type Certification } from '../../data/certifications';
 import type { AppMode } from '../../lib/appMode';
 import { dilly } from '../../lib/dilly';
 import { showToast } from '../../lib/globalToast';
+import { celebrationHaptic, lightHaptic } from '../../lib/haptics';
 
 const SAVED_KEY = 'cert_saved_ids_v1';
 const COMPLETED_KEY = 'cert_completed_ids_v1';
@@ -136,6 +137,7 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
   const toggleCompleted = useCallback(async (cert: Certification) => {
     const isCompleted = completedIds.has(cert.id);
     if (isCompleted) {
+      lightHaptic();
       // Optimistic local removal first so the button flips immediately.
       setCompletedIds(prev => {
         const next = new Set(prev);
@@ -163,7 +165,9 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
       showToast({ message: `Removed ${cert.name} from your profile.`, type: 'info' });
       return;
     }
-    // Optimistic add.
+    // Optimistic add - fire celebration haptic immediately so the
+    // moment lands at tap, not when the network roundtrip finishes.
+    celebrationHaptic();
     setCompletedIds(prev => {
       const next = new Set(prev);
       next.add(cert.id);

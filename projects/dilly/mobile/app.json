@@ -15,12 +15,17 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.dilly.app",
-      "buildNumber": "427",
+      "buildNumber": "428",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSContactsUsageDescription": "Dilly saves networking contacts you meet (with a 'Met through Dilly' note) and helps you find warm intros to companies in your phone before applying.",
+        "NSCalendarsUsageDescription": "Dilly syncs your application deadlines, interviews, and Chapter sessions to your calendar so they live alongside the rest of your week.",
+        "NSRemindersUsageDescription": "Dilly creates Reminders for application deadlines, interview prep, and weekly career check-ins in a dedicated 'Dilly' list.",
+        "UIBackgroundModes": ["fetch", "processing"],
+        "BGTaskSchedulerPermittedIdentifiers": ["dilly-warm-cache"]
       }
     },
     "android": {
@@ -37,7 +42,16 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-mail-composer",
+      "expo-background-fetch",
+      "expo-task-manager",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Dilly saves networking contacts you meet (with a 'Met through Dilly' note) and finds warm intros to companies in your phone before applying."
+        }
+      ]
     ],
     "extra": {
       "router": {},

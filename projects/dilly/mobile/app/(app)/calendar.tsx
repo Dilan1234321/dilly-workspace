@@ -19,7 +19,8 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { openAddToCalendar, openSubscribeToDillyCalendar, isCalendarSubscribed } from '../../lib/calendar';
-import { syncReminderForEvent, deleteReminderForEvent } from '../../lib/reminders';
+import { syncReminderForEvent, deleteReminderForEvent, scheduleInterviewPrepReminder } from '../../lib/reminders';
+import { scheduleInterviewReminders, scheduleDeadlineWarnings } from '../../lib/notifications';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { DillyFace } from '../../components/DillyFace';
@@ -984,6 +985,35 @@ export default function CalendarScreen() {
     // turned on Sync to Reminders in Settings. Silently no-ops when
     // the toggle is off or permission was revoked.
     syncReminderForEvent(event.title, event.date).catch(() => {});
+    // For interview events, schedule the T-24h/T-3h/T-1h push reminders
+    // and the T-3-day prep reminder so the user gets the runway nudge
+    // automatically. For deadline events, schedule the T-7/T-3/T-1
+    // push reminders. All silently no-op without permissions.
+    try {
+      const eventAt = new Date(event.date + 'T09:00:00');
+      const company = (event as any).company || event.title;
+      const role = (event as any).role || undefined;
+      if (event.type === 'interview' && !isNaN(eventAt.getTime())) {
+        scheduleInterviewReminders({
+          interviewKey: event.id,
+          interviewAt: eventAt,
+          company,
+          role,
+        }).catch(() => {});
+        scheduleInterviewPrepReminder({
+          interviewKey: event.id,
+          interviewAt: eventAt,
+          company,
+          role,
+        }).catch(() => {});
+      } else if (event.type === 'deadline' && !isNaN(eventAt.getTime())) {
+        scheduleDeadlineWarnings({
+          deadlineKey: event.id,
+          deadlineAt: eventAt,
+          label: event.title,
+        }).catch(() => {});
+      }
+    } catch {}
   }
 
   function handleComplete(id: string) {

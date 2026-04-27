@@ -1111,6 +1111,13 @@ function SeekerHome() {
       dilly.get('/chapters/current').then((data: ChapterCardState | null) => {
         if (data) setChapterState(data);
       }).catch(() => {});
+      // Donate the brief activity so iOS learns the user opens Dilly's
+      // home and starts surfacing it as a Spotlight + lock-screen
+      // suggestion at the times they typically check in.
+      try {
+        const { donateActivity, ACTIVITY_BRIEF } = require('../../lib/siriDonations');
+        donateActivity?.(ACTIVITY_BRIEF);
+      } catch {}
       return () => {};
     }, [])
   );

@@ -19,6 +19,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../lib/tokens';
 import SplashScreen from '../components/SplashScreen';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { registerNotificationCategories } from '../lib/notifications';
+import { registerBackgroundRefresh } from '../lib/backgroundRefresh';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useResolvedTheme } from '../hooks/useTheme';
 
@@ -166,6 +168,15 @@ export default function RootLayout() {
   });
 
   const { expoPushToken } = usePushNotifications();
+  // One-time registration of notification action-button categories so
+  // every Dilly notification (job match, interview, deadline, brief)
+  // renders with the right "View / Save / Snooze / Prep now" buttons
+  // when long-pressed. Idempotent within a process.
+  useEffect(() => { registerNotificationCategories().catch(() => {}); }, []);
+  // Register background fetch so iOS keeps Dilly's caches warm without
+  // the user needing to open the app. Fires every ~4-6h when iOS feels
+  // like it. Result: no loading spinner on next cold start.
+  useEffect(() => { registerBackgroundRefresh().catch(() => {}); }, []);
   // Used as ErrorBoundary resetKey so the boundary auto-clears on
   // route change. Otherwise a single render crash leaves a permanent
   // sad-Dilly screen even after the user navigates elsewhere.

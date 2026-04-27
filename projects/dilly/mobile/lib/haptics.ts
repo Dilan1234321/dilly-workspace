@@ -41,3 +41,51 @@ export function warningHaptic() {
 export function selectionHaptic() {
   try { _haptics?.selectionAsync?.(); } catch {}
 }
+
+// ── Higher-level patterns ───────────────────────────────────────────
+// Patterns chained from the primitives above. They map to specific
+// product moments so the call site reads as intent ("a job match
+// arrived") rather than physics ("medium impact then warning"). Match
+// the intensity to the significance of the action.
+
+/** Single quick tick - for the readiness score updating in place. */
+export function readinessTickHaptic() {
+  lightHaptic();
+}
+
+/** Apple Watch ring-close pattern - escalating taps + success bell.
+ *  For finishing a Skills path, completing onboarding, hitting a
+ *  milestone. Stretched over ~500ms so the moment feels earned. */
+export function celebrationHaptic() {
+  try {
+    lightHaptic();
+    setTimeout(() => mediumHaptic(), 110);
+    setTimeout(() => heavyHaptic(), 230);
+    setTimeout(() => successHaptic(), 380);
+  } catch {}
+}
+
+/** Subtle two-tap for "a new job match just arrived" - noticeable but
+ *  not interruptive. */
+export function newMatchHaptic() {
+  try {
+    lightHaptic();
+    setTimeout(() => lightHaptic(), 90);
+  } catch {}
+}
+
+/** Pulsing pattern intended to be called on a setInterval while a
+ *  long-running generation (resume, audit, prep deck) is running.
+ *  Caller is responsible for stopping the interval on completion. */
+export function generationPulseHaptic() {
+  selectionHaptic();
+}
+
+/** Soft confirmation tap for "shared" actions - airdrop sent, copied,
+ *  email sent. Reads as "done" without being heavy. */
+export function shareSentHaptic() {
+  try {
+    selectionHaptic();
+    setTimeout(() => lightHaptic(), 60);
+  } catch {}
+}

@@ -62,6 +62,8 @@ import { DillyFeatureBanner } from '../../components/DillyFeatureBanner';
 import { useSubscription } from '../../hooks/useSubscription';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { showToast } from '../../lib/globalToast';
+import { emailResume } from '../../lib/mail';
+import { findContactsAtCompany, saveContact } from '../../lib/contacts';
 
 const W = Dimensions.get('window').width;
 const INDIGO = colors.indigo;
@@ -751,6 +753,7 @@ export default function ResumeGenerateScreen() {
             onDownload={handleDownload}
             onReset={handleReset}
             onEdit={handleFieldEdit}
+            profileName={profileName}
           />
         )}
 
@@ -1061,9 +1064,19 @@ function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, p
 function DonePhase({
   sections, atsInfo, jobTitle, company, jd,
   matchedKeywords, totalKeywords, weakestBullet,
-  saved, onDownload, onReset, onEdit,
+  saved, onDownload, onReset, onEdit, profileName,
 }: any) {
   const theme = useResolvedTheme();
+  // Reverse-lookup: who do you already know at this company? Read-only
+  // pull from iOS Contacts. Empty array if permission not granted -
+  // we never prompt during reverse lookup. The whole card hides if
+  // there are no matches, so it doesn't add visual noise for users
+  // who have nothing in their contacts at this company.
+  const [warmIntros, setWarmIntros] = useState<Array<{ id: string; name: string; email?: string; jobTitle?: string }>>([]);
+  useEffect(() => {
+    if (!company) return;
+    findContactsAtCompany(company).then(setWarmIntros).catch(() => {});
+  }, [company]);
   // Derived scorecard values. Prefer server-provided signals when
   // present; fall back to local heuristics so the panel never feels
   // empty. 4 axes:
@@ -1225,10 +1238,59 @@ function DonePhase({
         <Text style={styles.actionBtnText}>Export · PDF or DOCX</Text>
       </AnimatedPressable>
 
+      <AnimatedPressable
+        style={[styles.actionBtn, styles.actionBtnSecondary, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+        onPress={async () => {
+          const result = await emailResume({
+            company: company || 'this role',
+            role: jobTitle,
+            userName: profileName,
+          });
+          if (result === 'sent') showToast({ message: 'Draft opened in Mail. Attach the PDF if needed.', type: 'success' });
+          else if (result === 'unavailable') showToast({ message: 'No mail account configured on this device.', type: 'info' });
+        }}
+      >
+        <Ionicons name="mail" size={17} color={theme.accent} />
+        <Text style={[styles.actionBtnText, { color: theme.accent }]}>Email this resume</Text>
+      </AnimatedPressable>
+
       <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]} onPress={onReset}>
         <Ionicons name="flame" size={17} color={theme.accent} />
         <Text style={[styles.actionBtnText, { color: theme.accent }]}>Forge another</Text>
       </AnimatedPressable>
+
+      {/* Warm-intros card - reverse contacts lookup. Shows up only when
+          the user actually has someone in their phone at this company,
+          turning the resume page into a "do you already know someone
+          here?" prompt before the cold-apply flow. */}
+      {warmIntros.length > 0 && (
+        <View style={[styles.actionBtn, {
+          flexDirection: 'column', alignItems: 'flex-start', gap: 10,
+          backgroundColor: theme.surface.s1, borderColor: theme.accent, borderWidth: 1.5,
+          padding: 14, marginTop: 8,
+        }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+            <Ionicons name="people" size={15} color={theme.accent} />
+            <Text style={{ fontSize: 11, fontWeight: '900', color: theme.accent, letterSpacing: 1.2 }}>
+              {warmIntros.length === 1 ? 'YOU KNOW SOMEONE HERE' : `${warmIntros.length} CONTACTS AT ${(company || '').toUpperCase()}`}
+            </Text>
+          </View>
+          {warmIntros.slice(0, 3).map(c => (
+            <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: theme.accent, fontSize: 11, fontWeight: '900' }}>{c.name.slice(0, 2).toUpperCase()}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>{c.name}</Text>
+                {c.jobTitle ? <Text style={{ fontSize: 11, color: theme.surface.t3 }}>{c.jobTitle}</Text> : null}
+              </View>
+            </View>
+          ))}
+          <Text style={{ fontSize: 11, color: theme.surface.t3, lineHeight: 16 }}>
+            A short note before you apply usually beats a cold submission. Worth a 60-second message.
+          </Text>
+        </View>
+      )}
     </FadeInView>
   );
 }

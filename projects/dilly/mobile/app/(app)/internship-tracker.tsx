@@ -26,6 +26,7 @@ import { openAddToCalendar } from '../../lib/calendar';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { showToast } from '../../lib/globalToast';
 import { showConfirm } from '../../lib/globalConfirm';
+import { scheduleApplicationFollowupReminder, scheduleInterviewPrepReminder } from '../../lib/reminders';
 
 const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
@@ -455,6 +456,14 @@ export default function InternshipTrackerScreen() {
       const data = await res.json();
       if (data?.application) {
         setApps(prev => [data.application, ...prev]);
+        // Drop a 14-day silent follow-up reminder into the user's
+        // dedicated Dilly reminders list. No-ops if Reminders perm is
+        // not granted.
+        scheduleApplicationFollowupReminder({
+          applicationKey: data.application.id,
+          company,
+          role,
+        }).catch(() => {});
       }
     } catch {
       showToast({ message: 'Could not save this application. Check your connection and try again.', type: 'error' });
