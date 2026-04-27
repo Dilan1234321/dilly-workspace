@@ -33,6 +33,7 @@ import { router } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import DillyLoadingState from '../../../components/DillyLoadingState';
+import { showToast } from '../../../lib/globalToast';
 
 interface SavedVideo {
   id: string;
@@ -309,7 +310,7 @@ export default function LearningProfileSettingsScreen() {
               activeOpacity={0.85}
               onPress={() => {
                 if (!profileUrl) return;
-                Alert.alert('Share link', profileUrl);
+                showToast({ message: profileUrl, type: 'info' });
               }}
               style={[styles.ctaGhost, { borderColor: theme.accentBorder }]}
             >

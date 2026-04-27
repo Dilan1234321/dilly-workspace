@@ -21,6 +21,7 @@ import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { authHeaders } from '../../lib/auth';
 import { APPROVED_MAJORS } from '../../constants/majors';
 import { detectCohorts, COHORT_META } from '../../lib/cohorts';
+import { showToast } from '../../lib/globalToast';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -272,7 +273,7 @@ export default function ProfileScreen() {
 
   async function handleContinue() {
     const missing = getMissing();
-    if (missing) { Alert.alert('Almost there', missing); return; }
+    if (missing) { showToast({ message: missing, type: 'info' }); return; }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');

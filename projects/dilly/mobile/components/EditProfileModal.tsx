@@ -22,6 +22,7 @@ import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
 import * as ImagePicker from 'expo-image-picker';
 import { showToast } from '../lib/globalToast';
+import { showConfirm } from '../lib/globalConfirm';
 
 const GOLD = '#2B3A8E';
 
@@ -210,33 +211,31 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
         // Refresh profile page so photoUri updates to the new photo
         onSaved();
       } catch (e: any) {
-        Alert.alert('Upload failed', e.message || 'Could not upload photo.');
+        showToast({ message: e.message || 'Could not upload photo.', type: 'error' });
         setLocalPhoto(null);
       } finally {
         setUploading(false);
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Could not open photo picker.');
+      showToast({ message: e.message || 'Could not open photo picker.', type: 'error' });
     }
   }
 
   async function removePhoto() {
-    Alert.alert('Remove photo?', 'Your profile picture will be removed.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await dilly.delete('/profile/photo');
-            setLocalPhoto(null);
-            onSaved();
-          } catch {
-            showToast({ message: 'Could not remove photo.', type: 'error' });
-          }
-        },
-      },
-    ]);
+    const ok = await showConfirm({
+      title: 'Remove photo?',
+      message: 'Your profile picture will be removed.',
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await dilly.delete('/profile/photo');
+      setLocalPhoto(null);
+      onSaved();
+    } catch {
+      showToast({ message: 'Could not remove photo.', type: 'error' });
+    }
   }
 
   // \u2500\u2500 Save \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -278,7 +277,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
       onSaved();
       onClose();
     } catch (e: any) {
-      Alert.alert('Save failed', e.message || 'Could not update profile.');
+      showToast({ message: e.message || 'Could not update profile.', type: 'error' });
     } finally {
       setSaving(false);
     }

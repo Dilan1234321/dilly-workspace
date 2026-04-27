@@ -19,6 +19,7 @@ import { authHeaders } from '../../lib/auth';
 import { CAREER_FIELDS, fieldToCohorts, COHORT_META } from '../../lib/cohorts';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { showToast } from '../../lib/globalToast';
 
 // apiValue must be one of the canonical application_target values the
 // backend accepts: internship | full_time | exploring. The older keys
@@ -90,7 +91,7 @@ export default function ProfileProScreen() {
 
   async function handleContinue() {
     const missing = getMissing();
-    if (missing) { Alert.alert('Almost there', missing); return; }
+    if (missing) { showToast({ message: missing, type: 'info' }); return; }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');
