@@ -528,16 +528,16 @@ export default function JobsScreen() {
   // was never populated.
   const jobMatchesType = useCallback((j: Listing, type: TypeFilter): boolean => {
     if (type === 'all') return true;
-    const t = (j.job_type || '').toLowerCase();
-    if (t === type) return true;
     const title = (j.title || '').toLowerCase();
     const desc = ((j.description || j.description_preview || '') + '').toLowerCase().slice(0, 500);
     const intern = /\b(intern|internship|co-?op)\b/.test(title) || /\b(intern|internship|co-?op)\b/.test(desc);
-    const entry = /\b(new\s*grad|entry\s*level|junior|associate|graduate\s+engineer)\b/.test(title);
-    const senior = /\b(senior|staff|principal|lead|head\s+of|director)\b/.test(title);
-    if (type === 'internship') return intern;
-    if (type === 'entry_level') return entry || (!intern && !senior);
-    if (type === 'full_time') return !intern;
+    const entry = /\b(new\s*grad|entry\s*level|junior|associate|graduate\s+engineer|early\s+career)\b/.test(title);
+    // Strict senior exclusion - if the title carries any of these, the
+    // role is NOT entry-level or internship even if job_type says so.
+    const senior = /\b(senior|sr\.?|staff|principal|lead|head\s+of|director|vp\b|chief|manager|mgr\b|architect)\b/.test(title);
+    if (type === 'internship') return intern && !senior;
+    if (type === 'entry_level') return !senior && !intern && (entry || (j.job_type || '').toLowerCase() === 'entry_level');
+    if (type === 'full_time') return !intern && !senior;
     if (type === 'part_time') return /\bpart\s*time\b/.test(title + ' ' + desc);
     return false;
   }, []);

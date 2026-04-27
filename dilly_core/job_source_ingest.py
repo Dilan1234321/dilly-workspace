@@ -29,6 +29,7 @@ No LLM. No external dependencies beyond psycopg2 and stdlib urllib.
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -83,6 +84,49 @@ def _cohort_requirements_from_cohorts(cohort_ids: List[str]) -> List[Dict[str, A
     return out
 
 
+_INTERN_RE = re.compile(r"\b(intern(ship)?|co-?op|reu)\b", re.IGNORECASE)
+_NEW_GRAD_RE = re.compile(
+    r"\b(new\s*grad|entry\s*level|junior|associate|graduate\s+engineer|early\s+career)\b",
+    re.IGNORECASE,
+)
+_SENIOR_RE = re.compile(
+    r"\b(senior|sr\.?|staff|principal|lead|head\s+of|director|vp\b|chief|manager|mgr\b|architect)\b",
+    re.IGNORECASE,
+)
+_PART_TIME_RE = re.compile(r"\bpart[-\s]?time\b", re.IGNORECASE)
+
+
+def _classify_job_type(listing: Dict[str, Any]) -> str:
+    """Best-effort job_type classification from title + explicit hint.
+
+    Old behavior: defaulted to "internship" when source omitted job_type,
+    which let general full-time / senior listings flood the Internship
+    tab. Now we only return "internship" when the title actually says so;
+    otherwise we route by title heuristics, falling back to "other".
+    """
+    explicit = (listing.get("job_type") or "").strip().lower()
+    title = (listing.get("title") or "").strip()
+    valid = {"internship", "research_internship", "entry_level",
+             "full_time", "part_time", "senior", "other"}
+    if explicit in valid and explicit != "":
+        # Even when source supplied a job_type, override to "senior" if
+        # the title screams senior - we have seen ATS exports tag
+        # "Senior Software Engineer" as job_type=internship.
+        if explicit in ("internship", "research_internship", "entry_level"):
+            if _SENIOR_RE.search(title):
+                return "senior"
+        return explicit
+    if _INTERN_RE.search(title):
+        return "internship"
+    if _SENIOR_RE.search(title):
+        return "senior"
+    if _NEW_GRAD_RE.search(title):
+        return "entry_level"
+    if _PART_TIME_RE.search(title):
+        return "part_time"
+    return "other"
+
+
 def _upsert_listing(cur, listing: Dict[str, Any]) -> bool:
     """Insert one listing. Returns True if a new row landed, False on update/skip."""
     external_id = listing.get("external_id") or ""
@@ -131,7 +175,7 @@ def _upsert_listing(cur, listing: Dict[str, Any]) -> bool:
                 listing.get("team", "")[:100],
                 bool(listing.get("remote", False)),
                 listing.get("posted_date"),
-                listing.get("job_type", "internship"),
+                _classify_job_type(listing),
                 cohort_reqs_json,
             ),
         )
@@ -181,12 +225,15 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
 
 def ensure_niche_sources_populated(conn, cohort_ids: Optional[Iterable[str]] = None) -> bool:
     """
-    If the internships table has zero listings from nsf_reu/usajobs, run
-    ingestion inline. Used as a cold-start fallback by the feed handler
-    so newly-deployed instances don't show an empty pre_health/pre_law feed
-    until the nightly cron runs.
+    Cold-start fallback: trigger inline ingestion when the internships
+    table is sparse. Originally only checked nsf_reu/usajobs; that left
+    students seeing empty internship feeds whenever those two sources
+    had rows but the rest hadn't backfilled. Now we also fire ingestion
+    when total active internships are below a comfortable floor, so any
+    fresh deploy or DB wipe rehydrates fast without waiting on cron.
 
-    Returns True if ingestion ran, False if the table was already populated.
+    Returns True if ingestion ran, False if the table was already
+    well-populated.
     """
     cur = conn.cursor()
     cur.execute(
@@ -195,11 +242,23 @@ def ensure_niche_sources_populated(conn, cohort_ids: Optional[Iterable[str]] = N
     )
     row = cur.fetchone()
     try:
-        count = int(row[0] if not isinstance(row, dict) else row.get("count", 0))
+        niche_count = int(row[0] if not isinstance(row, dict) else row.get("count", 0))
     except (TypeError, ValueError):
-        count = 0
+        niche_count = 0
 
-    if count > 0:
+    cur.execute(
+        "SELECT COUNT(*) FROM internships "
+        "WHERE status = 'active' AND job_type IN ('internship', 'research_internship')"
+    )
+    row = cur.fetchone()
+    try:
+        intern_count = int(row[0] if not isinstance(row, dict) else row.get("count", 0))
+    except (TypeError, ValueError):
+        intern_count = 0
+
+    # <500 active internships across all sources is "sparse". The
+    # cron-fed steady state should sit in the thousands.
+    if niche_count > 0 and intern_count >= 500:
         return False
 
     ingest_niche_sources(conn)

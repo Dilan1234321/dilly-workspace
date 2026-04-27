@@ -657,11 +657,30 @@ def _fallback_feed(
         where.append(f"({_intl_clauses})")
         params.extend([f"%{c}%" for c in _intl_exclude])
 
-    # tab filtering: 'opportunities' and 'internship' both include entry_level + research_internship
-    if tab == "opportunities" or tab == "internship":
+    # Tab filtering. Strict partitioning (build 418): when the user
+    # picks Internship, they want internships - not entry-level
+    # full-time roles. The previous loose IN(...) clause was the root
+    # cause of "I see full-time jobs in the internship tab".
+    # The 'opportunities' umbrella stays inclusive on purpose - it is
+    # the catch-all for everything early-career.
+    # Senior/management titles are excluded from internship + entry_level
+    # tabs via title regex so a misclassified row at the source can't
+    # surface a Director or Senior Manager in the wrong tab.
+    _SENIOR_TITLE_PATTERN = (
+        r'\m(senior|sr\.?|staff|principal|lead|head\s+of|director|vp|chief|manager|mgr|architect)\M'
+    )
+    if tab == "opportunities":
         where.append("i.job_type IN ('internship', 'entry_level', 'research_internship', 'part_time')")
+        where.append("LOWER(i.title) !~* %s")
+        params.append(_SENIOR_TITLE_PATTERN)
+    elif tab == "internship":
+        where.append("i.job_type IN ('internship', 'research_internship')")
+        where.append("LOWER(i.title) !~* %s")
+        params.append(_SENIOR_TITLE_PATTERN)
     elif tab == "entry_level":
-        where.append("i.job_type IN ('entry_level', 'internship', 'research_internship')")
+        where.append("i.job_type = 'entry_level'")
+        where.append("LOWER(i.title) !~* %s")
+        params.append(_SENIOR_TITLE_PATTERN)
     elif tab == "part_time":
         where.append("i.job_type = 'part_time'")
     elif tab != "all":
@@ -1079,11 +1098,25 @@ async def get_internship_feed(
         where.append(f"({_intl_clauses})")
         params.extend([f"%{c}%" for c in _intl_exclude])
 
-    # tab filtering: 'opportunities' and 'internship' both include entry_level + research_internship
-    if tab == "opportunities" or tab == "internship":
+    # Tab filtering. Strict partitioning (build 418): see same block in
+    # _fallback_feed for the rationale. Senior/management titles are
+    # excluded from internship + entry_level tabs via title regex so
+    # misclassified rows can't surface in the wrong tab.
+    _SENIOR_TITLE_PATTERN = (
+        r'\m(senior|sr\.?|staff|principal|lead|head\s+of|director|vp|chief|manager|mgr|architect)\M'
+    )
+    if tab == "opportunities":
         where.append("i.job_type IN ('internship', 'entry_level', 'research_internship', 'part_time')")
+        where.append("LOWER(i.title) !~* %s")
+        params.append(_SENIOR_TITLE_PATTERN)
+    elif tab == "internship":
+        where.append("i.job_type IN ('internship', 'research_internship')")
+        where.append("LOWER(i.title) !~* %s")
+        params.append(_SENIOR_TITLE_PATTERN)
     elif tab == "entry_level":
-        where.append("i.job_type IN ('entry_level', 'internship', 'research_internship')")
+        where.append("i.job_type = 'entry_level'")
+        where.append("LOWER(i.title) !~* %s")
+        params.append(_SENIOR_TITLE_PATTERN)
     elif tab == "part_time":
         where.append("i.job_type = 'part_time'")
     elif tab != "all":
