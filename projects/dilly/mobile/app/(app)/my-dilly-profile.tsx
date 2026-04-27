@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { showToast } from '../../lib/globalToast';
+import { showConfirm } from '../../lib/globalConfirm';
 import { authHeaders } from '../../lib/auth';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { CAREER_FIELDS as CAREER_FIELD_OPTIONS, ALL_COHORTS, MAJOR_TO_COHORTS, detectCohorts } from '../../lib/cohorts';
@@ -2208,18 +2209,16 @@ function SeekerProfileScreen() {
           {
             label: 'Delete',
             destructive: true,
-            onPress: () => {
+            onPress: async () => {
               if (!popup.fact) return;
               const factId = popup.fact.id;
-              Alert.alert(
-                'Dilly will forget this',
-                'This information will be permanently removed from your Dilly Profile. Dilly will no longer know this about you.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
+              const ok = await showConfirm({
+                title: 'Dilly will forget this',
+                message: 'This information will be permanently removed from your Dilly Profile.',
+                confirmLabel: 'Delete',
+                destructive: true,
+              });
+              if (!ok) return;
               try {
                 await dilly.fetch(`/memory/items/${factId}`, { method: 'DELETE' });
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -2234,10 +2233,6 @@ function SeekerProfileScreen() {
                   return { ...prev, items, grouped };
                 });
               } catch {}
-                    },
-                  },
-                ],
-              );
             },
           },
         ]}

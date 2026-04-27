@@ -30,6 +30,7 @@ import { CancelGoodbyeModal } from '../../components/CancelGoodbyeModal';
 import { THEMES, useTheme, setTheme, useResolvedTheme } from '../../hooks/useTheme';
 import { useSubscription } from '../../hooks/useSubscription';
 import { showToast } from '../../lib/globalToast';
+import { showConfirm } from '../../lib/globalConfirm';
 
 const INDIGO = colors.indigo;
 const APP_VERSION = '1.0.0';
@@ -427,40 +428,33 @@ export default function SettingsScreen() {
   }
 
   async function handleSignOut() {
-    Alert.alert('Sign out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          await clearAuth();
-          // Clear cached mode + session data so the next user doesn't
-          // inherit this user's mode, dashboard, or market radar.
-          await clearAppModeCache();
-          // Theme is now server-backed and tied to account - clear the
-          // local cache so the next sign-in hydrates from THEIR profile,
-          // not the prior user's accent/surface choices.
-          await clearThemeCache();
-          clearSessionCache();
-          // Clear onboarding state so they see the situation options again.
-          // IMPORTANT: dilly_tutorial_shown MUST be cleared here so the
-          // next account that signs in on this device sees the tutorial.
-          // Without it a fresh signup inherits the previous user's flag
-          // and gets routed straight to /(app), skipping the 5-card
-          // intro. That was a real bug users hit. never ship signout
-          // without wiping this key.
-          try {
-            const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-            await AsyncStorage.multiRemove([
-              'dilly_has_onboarded', 'dilly_pending_user_path', 'dilly_pending_plan',
-              'dilly_visited_jobs', 'dilly_visited_arena', 'dilly_done_interview',
-              'dilly_tutorial_shown',
-            ]).catch(() => {});
-          } catch {}
-          router.replace('/onboarding/choose-situation');
-        },
-      },
-    ]);
+    const confirmed = await showConfirm({
+      title: 'Sign out',
+      message: 'Are you sure?',
+      confirmLabel: 'Sign out',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await clearAuth();
+    // Clear cached mode + session data so the next user doesn't
+    // inherit this user's mode, dashboard, or market radar.
+    await clearAppModeCache();
+    // Theme is now server-backed and tied to account - clear the
+    // local cache so the next sign-in hydrates from THEIR profile.
+    await clearThemeCache();
+    clearSessionCache();
+    // Clear onboarding state so they see the situation options again.
+    // dilly_tutorial_shown MUST be cleared so the next account on
+    // this device sees the tutorial.
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.multiRemove([
+        'dilly_has_onboarded', 'dilly_pending_user_path', 'dilly_pending_plan',
+        'dilly_visited_jobs', 'dilly_visited_arena', 'dilly_done_interview',
+        'dilly_tutorial_shown',
+      ]).catch(() => {});
+    } catch {}
+    router.replace('/onboarding/choose-situation');
   }
 
   async function handleCancelSubscription() {

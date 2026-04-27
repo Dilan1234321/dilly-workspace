@@ -1007,6 +1007,7 @@ export default function JobsScreen() {
           jobs={stretch} opacity={0.88}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
+          horizontal
         />
       ) : null}
 
@@ -1015,6 +1016,7 @@ export default function JobsScreen() {
           jobs={known.slice(0, 12)} opacity={0.72}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
+          horizontal
         />
       ) : null}
 
@@ -1126,7 +1128,7 @@ function HeroCard(props: CardCommonProps) {
 
 // -- Band ---------------------------------------------------------------------
 
-function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedId, narratives, gapVideoByJob, actions }: {
+function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedId, narratives, gapVideoByJob, actions, horizontal }: {
   label: string;
   subtitle: string;
   jobs: Listing[];
@@ -1137,6 +1139,9 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
   narratives: Record<string, FitNarrative | { __loading: true } | { __error: string }>;
   gapVideoByJob: Record<string, string>;
   actions: CardActions;
+  /** Horizontal carousel - breaks the all-list feel of the page so
+   *  WORTH A SHOT and ON THE RADAR don't feel like infinite scroll. */
+  horizontal?: boolean;
 }) {
   return (
     <View style={{ marginTop: 28, opacity }}>
@@ -1144,18 +1149,40 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
         <Text style={[styles.bandLabel, { color: theme.accent }]}>{label}</Text>
         <Text style={[styles.bandSub, { color: theme.surface.t3 }]}>{subtitle}</Text>
       </View>
-      {jobs.map(j => (
-        <JobCard
-          key={j.id}
-          job={j}
-          profile={profile}
-          theme={theme}
-          expanded={expandedId === j.id}
-          narrative={narratives[j.id]}
-          gapVideoId={gapVideoByJob[j.id]}
-          {...actions}
-        />
-      ))}
+      {horizontal ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4, gap: 12 }}
+        >
+          {jobs.map(j => (
+            <View key={j.id} style={{ width: Dimensions.get('window').width * 0.78 }}>
+              <JobCard
+                job={j}
+                profile={profile}
+                theme={theme}
+                expanded={false /* never expand inside a horizontal carousel */}
+                narrative={narratives[j.id]}
+                gapVideoId={gapVideoByJob[j.id]}
+                {...actions}
+              />
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        jobs.map(j => (
+          <JobCard
+            key={j.id}
+            job={j}
+            profile={profile}
+            theme={theme}
+            expanded={expandedId === j.id}
+            narrative={narratives[j.id]}
+            gapVideoId={gapVideoByJob[j.id]}
+            {...actions}
+          />
+        ))
+      )}
     </View>
   );
 }

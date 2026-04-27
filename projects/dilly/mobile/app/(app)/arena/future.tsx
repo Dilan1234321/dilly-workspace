@@ -1,13 +1,18 @@
 /**
- * Future Pulse - the student centerpiece.
+ * Future Trajectory - rebuilt ground up (build 421).
  *
- * A simulated day-in-the-life in the user's cohort three years out.
- * Four scenes (morning, midday, late afternoon, ceiling). Each scene
- * is a paragraph the user can sit with - specific, lived-in, not
- * generic. Below: the comp range at that future point, plus three
- * Dilly Skills videos to make it real this week.
+ * The previous version was four "Tuesday in 2031" vignettes + a comp
+ * card + three skills videos. Testers said it read like a fun fact /
+ * childish prediction - a part of the app that was there for no
+ * reason because nothing about it tied back to the rest of Dilly.
  *
- * Zero LLM. Scenes come from the cohort playbook's `vignette`.
+ * The rewrite frames it as a TRAJECTORY, not a prediction. One
+ * concrete future moment, then a ladder of present-day moves the user
+ * can take RIGHT NOW in the rest of the app to actually walk toward
+ * it. Every step is a tap that lands on the Dilly surface where
+ * that step happens (Skills video, Jobs filter, AI Arena play, talk
+ * with Dilly). The page exists to send the user somewhere useful in
+ * their own app, not to entertain them with a vignette.
  */
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
@@ -20,7 +25,6 @@ import { router } from 'expo-router'
 import { dilly } from '../../../lib/dilly'
 import { useResolvedTheme } from '../../../hooks/useTheme'
 import DillyLoadingState from '../../../components/DillyLoadingState'
-import SkillsVideoCard from '../../../components/SkillsVideoCard'
 import { openDillyOverlay } from '../../../hooks/useDillyOverlay'
 import { resolvePlaybook, type CohortPlaybook } from '../../../lib/arena/cohort-playbook'
 import { compactUsd } from '../../../lib/arena/value'
@@ -31,14 +35,22 @@ interface Profile {
   graduation_year?: number
 }
 
-interface SkillsVideo { id: string }
+interface SkillsVideo { id: string; title?: string }
 
-export default function FuturePulse() {
+interface Step {
+  rung: string
+  move: string
+  detail: string
+  ctaLabel: string
+  onPress: () => void
+}
+
+export default function FutureTrajectory() {
   const theme = useResolvedTheme()
   const insets = useSafeAreaInsets()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [videoIds, setVideoIds] = useState<string[]>([])
+  const [topVideo, setTopVideo] = useState<SkillsVideo | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -47,9 +59,9 @@ export default function FuturePulse() {
       setProfile(p)
       const slug = cohortToSlug(p.cohorts?.[0])
       if (slug) {
-        const vids = await dilly.get(`/skill-lab/videos?cohort=${slug}&sort=best&limit=3`).catch(() => null)
+        const vids = await dilly.get(`/skill-lab/videos?cohort=${slug}&sort=best&limit=1`).catch(() => null)
         const list: SkillsVideo[] = Array.isArray((vids as any)?.videos) ? (vids as any).videos : []
-        setVideoIds(list.map(v => v.id).slice(0, 3))
+        if (list[0]) setTopVideo(list[0])
       }
     } finally {
       setLoading(false)
@@ -64,137 +76,144 @@ export default function FuturePulse() {
   const futureYear = useMemo(() => {
     const gradYr = Number(profile?.graduation_year || 0)
     if (gradYr > 2026) return gradYr + 3
-    const yr = new Date().getFullYear()
-    return yr + 3
+    return new Date().getFullYear() + 3
   }, [profile])
 
   if (loading) {
-    return <DillyLoadingState insetTop={insets.top} mood="thinking" messages={['Imagining your Tuesday…', `Putting you in your ${playbook?.shortName || 'field'} seat…`]} />
+    return (
+      <DillyLoadingState
+        insetTop={insets.top}
+        mood="thinking"
+        messages={[`Mapping the path to ${playbook?.shortName || 'your field'}…`, 'Picking the next move from your profile…']}
+      />
+    )
   }
 
-  // When we have a name, use it in both greeting form ("Hey Dilan") and
-  // possessive ("Dilan's Tuesday"). Without a name we must NOT fall
-  // back to 'you' - that produces "you's Tuesday". Use "there" for
-  // greetings ("Hey there") and "Your" for titles.
   const hasName = !!profile?.first_name
-  const fname = hasName ? (profile!.first_name as string) : 'there'
+  const fname = hasName ? (profile!.first_name as string) : 'you'
   const possessive = hasName ? `${profile!.first_name}'s` : 'Your'
+
+  // Pick the destination moment - the most concrete vignette line.
+  // Falls back to a generic line so the page never crashes when the
+  // playbook lacks data.
+  const destination = playbook.vignette.morning
+    ? `${playbook.vignette.morning.split('.')[0]}.`
+    : `Owning a real piece of work in ${playbook.shortName}.`
+
+  // The four ladder rungs. Each one IS a tap to a specific Dilly
+  // surface so the user leaves this page with momentum, not just
+  // a feeling. Order matters: closest move first.
+  const steps: Step[] = [
+    {
+      rung: 'THIS WEEK',
+      move: 'Plan one move with Dilly.',
+      detail: `Talk through the gap between today and a ${playbook.shortName} seat. Dilly will frame the next 90 days.`,
+      ctaLabel: 'Open chat',
+      onPress: () => openDillyOverlay({
+        initialMessage: `I just saw my Future Trajectory. By ${futureYear} I want to be in a ${playbook.shortName} seat where "${destination}" is my normal Tuesday. Walk me through the next 90 days - what is the ONE thing I should do this week?`,
+      }),
+    },
+    {
+      rung: 'THIS MONTH',
+      move: topVideo?.title
+        ? `Watch "${topVideo.title}" in Dilly Skills.`
+        : `Build one ${playbook.shortName} skill in Dilly Skills.`,
+      detail: 'Curated for your cohort, delivered in-app. No tabs, no YouTube rabbit hole.',
+      ctaLabel: 'Open Skills',
+      onPress: () => {
+        if (topVideo?.id) router.push(`/skills/video/${topVideo.id}`)
+        else router.push('/skills')
+      },
+    },
+    {
+      rung: 'THIS QUARTER',
+      move: `Apply to roles that put you on this trajectory.`,
+      detail: `Your Jobs feed is already filtered to ${playbook.shortName}. Pick three this week.`,
+      ctaLabel: 'Open Jobs',
+      onPress: () => router.push('/(app)/jobs'),
+    },
+    {
+      rung: 'STAYING AHEAD',
+      move: 'Read your AI Arena.',
+      detail: `Where AI is reshaping ${playbook.shortName} - and the human edge that keeps your seat in ${futureYear}.`,
+      ctaLabel: 'Open AI Arena',
+      onPress: () => router.push('/(app)/arena/field-intel' as any),
+    },
+  ]
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
       contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 80 }}
     >
+      {/* Header. No back button - tab destination, not a drill-down. */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(app)/ai-arena' as any); }} hitSlop={12}>
-          <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
+        <Text style={[s.eyebrow, { color: theme.accent }]}>FUTURE · TRAJECTORY</Text>
+        <Text style={[s.title, { color: theme.surface.t1 }]}>
+          {possessive} ladder to {playbook.shortName}.
+        </Text>
+        <Text style={[s.sub, { color: theme.surface.t2 }]}>
+          A measured path to {futureYear}, not a prediction. Every rung tied to one move you can make in Dilly today.
+        </Text>
+      </View>
+
+      {/* The destination. ONE line - not a vignette. */}
+      <View style={[s.destCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '50' }]}>
+        <View style={[s.destAccent, { backgroundColor: theme.accent }]} />
+        <Text style={[s.destEyebrow, { color: theme.accent }]}>WHERE THIS LANDS · {futureYear}</Text>
+        <Text style={[s.destBody, { color: theme.surface.t1 }]}>{destination}</Text>
+        <Text style={[s.destFootnote, { color: theme.surface.t3 }]}>
+          Comp at this rung lands around {compactUsd(Math.round(playbook.comp.earlyBase * 1.15))} base.{' '}
+          Strong performers clear {compactUsd(playbook.comp.midBase)}+ by year five.
+        </Text>
+      </View>
+
+      {/* The ladder. Four rungs, each tappable, each goes somewhere
+          useful in the app. This is the "tied to the rest of Dilly"
+          part the old Tuesday vignettes lacked. */}
+      <Text style={[s.sectionTitle, { color: theme.surface.t3 }]}>
+        FOUR RUNGS BETWEEN TODAY AND {futureYear}
+      </Text>
+      {steps.map((step, i) => (
+        <TouchableOpacity
+          key={i}
+          activeOpacity={0.86}
+          onPress={step.onPress}
+          style={[s.rungCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+        >
+          <View style={s.rungHeader}>
+            <View style={[s.rungBadge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+              <Text style={[s.rungBadgeText, { color: theme.accent }]}>{step.rung}</Text>
+            </View>
+            <View style={[s.rungNum, { backgroundColor: theme.accent }]}>
+              <Text style={s.rungNumText}>{i + 1}</Text>
+            </View>
+          </View>
+          <Text style={[s.rungMove, { color: theme.surface.t1 }]}>{step.move}</Text>
+          <Text style={[s.rungDetail, { color: theme.surface.t2 }]}>{step.detail}</Text>
+          <View style={s.rungCta}>
+            <Text style={[s.rungCtaText, { color: theme.accent }]}>{step.ctaLabel}</Text>
+            <Ionicons name="arrow-forward" size={13} color={theme.accent} />
+          </View>
         </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={[s.eyebrow, { color: theme.accent }]}>FUTURE · PULSE</Text>
-          <Text style={[s.title, { color: theme.surface.t1 }]}>{possessive} Tuesday in {futureYear}.</Text>
-          <Text style={[s.sub, { color: theme.surface.t2 }]}>
-            If you land in {playbook.shortName}, here is the shape of your day.
-          </Text>
-        </View>
-      </View>
+      ))}
 
-      {/* Four scenes */}
-      <Scene
-        theme={theme}
-        time="8:15 AM"
-        label="MORNING"
-        body={`Hey ${fname}. ${playbook.vignette.morning}`}
-      />
-      <Scene
-        theme={theme}
-        time="12:40 PM"
-        label="MIDDAY"
-        body={playbook.vignette.midday}
-      />
-      <Scene
-        theme={theme}
-        time="5:20 PM"
-        label="LATE AFTERNOON"
-        body={playbook.vignette.lateafternoon}
-      />
-
-      {/* Comp card */}
-      <View style={[s.compCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-        <Text style={[s.compLabel, { color: theme.accent }]}>COMP AT {futureYear}</Text>
-        <Text style={[s.compBig, { color: theme.surface.t1 }]}>
-          {compactUsd(Math.round(playbook.comp.earlyBase * 1.15))}{' '}
-          <Text style={{ color: theme.surface.t3, fontSize: 18 }}>base</Text>
-        </Text>
-        <Text style={[s.compSub, { color: theme.surface.t2 }]}>
-          For a three-year-out {playbook.shortName} IC at a reputable firm. Strong performers clear{' '}
-          <Text style={{ color: theme.accent, fontWeight: '800' }}>{compactUsd(playbook.comp.midBase)}+</Text> by year five.
-        </Text>
-      </View>
-
-      {/* Ceiling scene */}
-      <Text style={[s.sectionTitle, { color: theme.surface.t3 }]}>THE CEILING</Text>
-      <Text style={[s.sectionSub, { color: theme.surface.t2 }]}>
-        What the top of this track looks like. A decade out, if you aim at it.
-      </Text>
-      <View style={[s.ceilingCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-        <Text style={[s.ceilingBody, { color: theme.surface.t1 }]}>{playbook.vignette.ceiling}</Text>
-      </View>
-
-      {/* Make it real */}
-      <Text style={[s.sectionTitle, { color: theme.surface.t3 }]}>MAKE IT REAL THIS WEEK</Text>
-      <Text style={[s.sectionSub, { color: theme.surface.t2 }]}>
-        Three curated videos Dilly pulled for {playbook.shortName}. Each one is a step toward the{' '}
-        {futureYear} Tuesday above.
-      </Text>
-
-      {videoIds.length > 0 ? (
-        <View style={{ paddingHorizontal: 16 }}>
-          {videoIds.map(id => (
-            <SkillsVideoCard key={id} videoId={id} />
-          ))}
-        </View>
-      ) : (
-        <View style={[s.ceilingCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-          <Text style={[s.ceilingBody, { color: theme.surface.t2 }]}>
-            Dilly is still indexing videos for your cohort. Check the Skills tab in a minute.
-          </Text>
-        </View>
-      )}
-
-      {/* CTA */}
+      {/* Closing - one tap to put the WHOLE plan into Dilly chat. */}
       <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => openDillyOverlay({
-            initialMessage: `I just read my Tuesday in ${futureYear}. Let's talk about what I would actually have to do in the next 12 months to land in ${playbook.shortName}.`,
+            initialMessage: `I want to walk the trajectory my Future page laid out for ${playbook.shortName} by ${futureYear}. Help me build a single 12-month plan that hits all four rungs - this week, this month, this quarter, and the AI-staying-ahead piece.`,
           })}
-          style={[s.chatCta, { backgroundColor: theme.accent }]}
+          style={[s.allInCta, { backgroundColor: theme.accent }]}
         >
-          <Ionicons name="chatbubbles" size={15} color="#FFF" />
-          <Text style={s.chatCtaText}>Talk through the path with Dilly</Text>
+          <Ionicons name="sparkles" size={15} color="#FFF" />
+          <Text style={s.allInCtaText}>
+            {hasName ? `Build the 12-month plan, ${fname}` : 'Build the 12-month plan'}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
-  )
-}
-
-function Scene({
-  theme, time, label, body,
-}: {
-  theme: ReturnType<typeof useResolvedTheme>
-  time: string
-  label: string
-  body: string
-}) {
-  return (
-    <View style={[s.sceneCard, { borderColor: theme.surface.border, backgroundColor: theme.surface.s1 }]}>
-      <View style={s.sceneHeader}>
-        <Text style={[s.sceneTime, { color: theme.accent }]}>{time}</Text>
-        <View style={[s.sceneDot, { backgroundColor: theme.accent }]} />
-        <Text style={[s.sceneLabel, { color: theme.surface.t3 }]}>{label}</Text>
-      </View>
-      <Text style={[s.sceneBody, { color: theme.surface.t1 }]}>{body}</Text>
-    </View>
   )
 }
 
@@ -228,56 +247,59 @@ function cohortToSlug(cohort: string | undefined): string | null {
 }
 
 const s = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingBottom: 16 },
+  header: { paddingHorizontal: 20, paddingBottom: 16 },
   eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
-  title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.3, marginTop: 2 },
-  sub: { fontSize: 13, lineHeight: 18, marginTop: 6 },
+  title: { fontSize: 24, fontWeight: '800', letterSpacing: -0.4, marginTop: 2 },
+  sub: { fontSize: 13, lineHeight: 19, marginTop: 8 },
 
-  sceneCard: {
+  destCard: {
     marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 10,
+    paddingTop: 22,
+    paddingBottom: 18,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
-  sceneHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  sceneTime: { fontSize: 11, fontWeight: '900', letterSpacing: 0.6 },
-  sceneDot: { width: 4, height: 4, borderRadius: 2 },
-  sceneLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.4 },
-  sceneBody: { fontSize: 14, lineHeight: 21, fontStyle: 'italic' },
-
-  compCard: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 18,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  compLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
-  compBig: { fontSize: 28, fontWeight: '800', letterSpacing: -0.6, marginTop: 4 },
-  compSub: { fontSize: 13, lineHeight: 19, marginTop: 10 },
+  destAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 4 },
+  destEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6, marginBottom: 10 },
+  destBody: { fontSize: 19, fontWeight: '700', lineHeight: 26, fontStyle: 'italic' },
+  destFootnote: { fontSize: 12, lineHeight: 17, marginTop: 14, fontWeight: '500' },
 
   sectionTitle: {
     fontSize: 10, fontWeight: '900', letterSpacing: 1.6,
-    paddingHorizontal: 20, marginTop: 24, marginBottom: 6,
+    paddingHorizontal: 20, marginTop: 26, marginBottom: 10,
   },
-  sectionSub: { fontSize: 12, paddingHorizontal: 20, lineHeight: 17, marginBottom: 10 },
 
-  ceilingCard: {
+  rungCard: {
     marginHorizontal: 16,
+    marginBottom: 10,
     padding: 16,
     borderRadius: 14,
     borderWidth: 1,
   },
-  ceilingBody: { fontSize: 14, lineHeight: 21 },
+  rungHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  rungBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  rungBadgeText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  rungNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  rungNumText: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  rungMove: { fontSize: 16, fontWeight: '800', lineHeight: 21, marginBottom: 6 },
+  rungDetail: { fontSize: 13, fontWeight: '500', lineHeight: 18, marginBottom: 10 },
+  rungCta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  rungCtaText: { fontSize: 12, fontWeight: '800' },
 
-  chatCta: {
+  allInCta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 14,
-    borderRadius: 13,
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
   },
-  chatCtaText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
+  allInCtaText: { color: '#FFF', fontWeight: '900', fontSize: 14 },
 })

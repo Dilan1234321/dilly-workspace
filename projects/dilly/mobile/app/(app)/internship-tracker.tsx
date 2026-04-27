@@ -25,6 +25,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { openAddToCalendar } from '../../lib/calendar';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { showToast } from '../../lib/globalToast';
+import { showConfirm } from '../../lib/globalConfirm';
 
 const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
@@ -475,16 +476,15 @@ export default function InternshipTrackerScreen() {
   }
 
   async function handleDelete(id: string) {
-    Alert.alert('Remove application?', 'This will remove it from your pipeline.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove', style: 'destructive',
-        onPress: async () => {
-          setApps(prev => prev.filter(a => a.id !== id));
-          try { await dilly.delete(`/applications/${id}`); } catch {}
-        },
-      },
-    ]);
+    const ok = await showConfirm({
+      title: 'Remove application?',
+      message: 'This will remove it from your pipeline.',
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!ok) return;
+    setApps(prev => prev.filter(a => a.id !== id));
+    try { await dilly.delete(`/applications/${id}`); } catch {}
   }
 
   function handleTailor(app: Application) {

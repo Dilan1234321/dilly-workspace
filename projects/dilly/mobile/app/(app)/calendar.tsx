@@ -24,6 +24,7 @@ import FadeInView from '../../components/FadeInView';
 import { DillyFace } from '../../components/DillyFace';
 import { TouchableOpacity } from 'react-native';
 import { showToast } from '../../lib/globalToast';
+import { showConfirm } from '../../lib/globalConfirm';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -982,11 +983,14 @@ export default function CalendarScreen() {
     saveEvents(events.map(e => e.id === id ? { ...e, completedAt: new Date().toISOString() } : e));
   }
 
-  function handleDelete(id: string) {
-    Alert.alert('Delete event?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => saveEvents(events.filter(e => e.id !== id)) },
-    ]);
+  async function handleDelete(id: string) {
+    const ok = await showConfirm({
+      title: 'Delete event?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) saveEvents(events.filter(e => e.id !== id));
   }
 
   // Update reminders
