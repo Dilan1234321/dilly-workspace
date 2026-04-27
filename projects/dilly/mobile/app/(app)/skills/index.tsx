@@ -262,7 +262,19 @@ function FeedLanding() {
       donateActivity?.(ACTIVITY_SKILLS);
     } catch {}
     (dilly as any).get('/skill-lab/feed')
-      .then((data: FeedData) => setFeed(data))
+      .then((data: FeedData) => {
+        setFeed(data);
+        // Index the user's queue + hero into Spotlight so a search
+        // for "Python" or "SQL" surfaces the actual videos Dilly is
+        // surfacing for them, not just the generic Skills section.
+        try {
+          const { indexSkills } = require('../../../lib/spotlight');
+          const items: any[] = [];
+          if (data?.hero) items.push({ id: String(data.hero.id), title: data.hero.title || 'Skill' });
+          (data?.queue || []).forEach((v: any) => items.push({ id: String(v.id), title: v.title || 'Skill' }));
+          if (items.length) indexSkills?.(items);
+        } catch {}
+      })
       .catch(() => setFeed({ hero: null, queue: [], cohort_slug: null, user_cohort: null, cohort_preview: [] }))
       .finally(() => setLoading(false));
 
