@@ -153,6 +153,118 @@ export async function syncReminderForEvent(
   }
 }
 
+/** AsyncStorage cooldown so the silent auto-extractor only adds one
+ *  reminder every COOLDOWN_MS, even if the user fires off a chat
+ *  storm. Founder direction: "wow this is good" not "why so many?". */
+const SILENT_LAST_KEY = 'dilly_silent_reminder_last_at_v1';
+const SILENT_COOLDOWN_MS = 1000 * 60 * 60 * 3; // 3 hours
+
+/** Words that mean "this came from a Chapter/session" - we never put
+ *  Chapter content into Reminders. Reasoning per founder: chapters are
+ *  the in-app ritual; bleeding them out to system Reminders erodes the
+ *  feeling that opening Dilly is its own moment. */
+const CHAPTER_BLOCK_PATTERNS = [
+  /\bchapter\b/i,
+  /\bweekly session\b/i,
+  /\brecap\b/i,
+  /\bsit down with dilly\b/i,
+];
+
+/** Phrases that suggest an actionable career task with a near-term
+ *  trigger. The presence of one of these (plus a verb-led action
+ *  clause) is what turns assistant text into a reminder candidate. */
+const ACTION_PATTERNS = [
+  /\b(apply|submit|send|email|reach out to|message|follow up with|follow up on|prepare for|practice|finish|complete|review|update|polish|refresh)\b/i,
+];
+
+const TIME_HINT_PATTERNS = [
+  /\b(today|tomorrow|tonight|this week|next week|by (mon|tue|wed|thu|fri|sat|sun)\w*|by friday|by monday|in \d+ days?)\b/i,
+];
+
+/**
+ * Pull at most one short, action-oriented reminder candidate from a
+ * line of assistant text. Returns null when nothing reads as a
+ * concrete career to-do, when the line is chapter-flavored, or when
+ * the candidate is too vague / too long.
+ *
+ * This intentionally errs toward returning null. The product brief is
+ * "add stuff here and there, enough for the user to say wow" - not
+ * "harvest every action verb". Quiet beats loud.
+ */
+export function extractReminderFromAssistantText(text: string): string | null {
+  if (!text || text.length < 20) return null;
+  if (CHAPTER_BLOCK_PATTERNS.some(rx => rx.test(text))) return null;
+
+  // Split into sentences and look for the first one that has both an
+  // action verb and a time hint. This filters out general advice
+  // like "you should think about your strengths" and only catches
+  // things the user is supposed to actually do soon.
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length >= 12 && s.length <= 140);
+
+  for (const s of sentences) {
+    if (CHAPTER_BLOCK_PATTERNS.some(rx => rx.test(s))) continue;
+    if (!ACTION_PATTERNS.some(rx => rx.test(s))) continue;
+    if (!TIME_HINT_PATTERNS.some(rx => rx.test(s))) continue;
+    // Strip a leading "you should/can/might want to" so the reminder
+    // reads as an instruction to self, not advice from someone else.
+    let title = s.replace(/^(you should|you could|you might (?:want to|consider)|i'?d|i would|maybe)\s+/i, '');
+    title = title.replace(/[.!?]+$/, '').trim();
+    if (title.length < 8 || title.length > 110) continue;
+    // Capitalize first letter so it reads cleanly in Reminders.
+    title = title.charAt(0).toUpperCase() + title.slice(1);
+    return title;
+  }
+  return null;
+}
+
+/**
+ * Silently add a career-related reminder pulled from the AI chat. No
+ * permission prompt, no toast, no UI feedback - the user discovers it
+ * later in their iOS Reminders app and feels Dilly reaching beyond the
+ * sandbox in a useful way.
+ *
+ * Strict rate-limit (one per 3 hours per device) so the user never
+ * feels assigned homework. If anything fails - permission missing,
+ * cooldown active, native error - we no-op without raising.
+ */
+export async function maybeSilentlyAddCareerReminder(
+  text: string,
+  hoursOut: number = 24,
+): Promise<string | null> {
+  if (Platform.OS !== 'ios') return null;
+  try {
+    // Cooldown gate first - cheaper than a native bridge call.
+    const lastRaw = await AsyncStorage.getItem(SILENT_LAST_KEY);
+    const last = lastRaw ? Number(lastRaw) : 0;
+    if (Date.now() - last < SILENT_COOLDOWN_MS) return null;
+
+    const title = extractReminderFromAssistantText(text);
+    if (!title) return null;
+
+    // We only add silently if Reminders permission is already granted.
+    // Never prompt from a chat turn - the prompt would itself be the
+    // thing that makes the user feel "assigned homework".
+    const C = await Cal();
+    if (!C) return null;
+    const perm = await C.getRemindersPermissionsAsync();
+    if (perm?.status !== 'granted') return null;
+
+    const due = new Date(Date.now() + hoursOut * 60 * 60 * 1000);
+    const id = await C.createReminderAsync(null, {
+      title,
+      dueDate: due,
+      notes: 'Added by Dilly from your conversation.',
+    });
+    await AsyncStorage.setItem(SILENT_LAST_KEY, String(Date.now()));
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Delete the reminder previously created for this title+date pair.
  * No-ops silently if it doesn't exist or permission is gone.

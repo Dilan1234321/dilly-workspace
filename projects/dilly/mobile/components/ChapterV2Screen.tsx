@@ -88,22 +88,98 @@ function parseMood(raw?: string, fallback: DillyMood = 'curious'): DillyMood {
 let _msgCounter = 0;
 const nextMsgId = () => ++_msgCounter;
 
-// LLM responses sometimes include markdown emphasis (**bold**, *italic*,
-// _underscore_) and stray heading hashes that read as literal characters
-// in <Text>. Strip them at the API boundary so neither the typewriter
-// nor the recap card ever surfaces formatting marks. Backticks are
-// stripped too since chapter copy is conversational, not code.
+// We used to strip markdown emphasis at the API boundary because raw
+// `**bold**` rendered as literal asterisks. Now we RENDER it instead -
+// `**...**` becomes accent-colored bold, `__...__` becomes underlined
+// + accent-colored, so chapter messages have visual weight on the
+// phrases that matter. Stripping is reserved for stray heading hashes
+// and bullets that don't translate to inline rendering.
 function stripFormatting(s: string): string {
   if (!s) return '';
   return s
-    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')   // ***bold-italic***
-    .replace(/\*\*(.+?)\*\*/g, '$1')       // **bold**
-    .replace(/(^|[\s(])\*(?!\s)([^*\n]+?)\*(?=[\s).,!?;:]|$)/g, '$1$2') // *italic*
-    .replace(/(^|[\s(])_(?!\s)([^_\n]+?)_(?=[\s).,!?;:]|$)/g, '$1$2')   // _italic_
-    .replace(/`([^`]+)`/g, '$1')           // `code`
+    .replace(/`([^`]+)`/g, '$1')           // `code` -> plain
     .replace(/^#{1,6}\s+/gm, '')           // ### heading
     .replace(/^[ \t]*[-*+]\s+/gm, '')      // - bullets
     .trim();
+}
+
+/** Parse a chapter message into rendered <Text> segments.
+ *
+ *  Supported inline syntax:
+ *    **text**  - accent-colored + bold
+ *    __text__  - accent-colored + underlined
+ *    *text*    - italic (when surrounded by word boundaries)
+ *
+ *  When `incomplete` is true (mid-typewriter), we tolerate unclosed
+ *  tokens by rendering the trailing partial as plain text - the
+ *  segment will reflow once the closing marker arrives. */
+function renderChapterRich(
+  text: string,
+  accent: string,
+  baseColor: string,
+  baseStyle: any,
+): React.ReactNode {
+  if (!text) return text;
+  // Single-pass tokenizer. Each token = literal text OR a styled span.
+  const out: React.ReactNode[] = [];
+  let i = 0;
+  let key = 0;
+  while (i < text.length) {
+    // Try **bold** first (longer marker wins).
+    if (text[i] === '*' && text[i + 1] === '*') {
+      const end = text.indexOf('**', i + 2);
+      if (end > i + 2) {
+        const inner = text.slice(i + 2, end);
+        out.push(
+          <Text key={key++} style={{ fontWeight: '900', color: accent }}>
+            {inner}
+          </Text>
+        );
+        i = end + 2;
+        continue;
+      }
+    }
+    // Try __underline__ next.
+    if (text[i] === '_' && text[i + 1] === '_') {
+      const end = text.indexOf('__', i + 2);
+      if (end > i + 2) {
+        const inner = text.slice(i + 2, end);
+        out.push(
+          <Text
+            key={key++}
+            style={{ textDecorationLine: 'underline', color: accent, fontWeight: '700' }}
+          >
+            {inner}
+          </Text>
+        );
+        i = end + 2;
+        continue;
+      }
+    }
+    // Try *italic* (must be word-bounded to avoid catching bullet asterisks).
+    if (text[i] === '*' && i + 1 < text.length && text[i + 1] !== '*' && text[i + 1] !== ' ') {
+      const end = text.indexOf('*', i + 1);
+      if (end > i + 1 && text[end - 1] !== ' ' && text[end + 1] !== '*') {
+        const prev = i === 0 ? ' ' : text[i - 1];
+        if (prev === ' ' || prev === '\n' || /[,.;:!?(]/.test(prev)) {
+          const inner = text.slice(i + 1, end);
+          out.push(
+            <Text key={key++} style={{ fontStyle: 'italic' }}>
+              {inner}
+            </Text>
+          );
+          i = end + 1;
+          continue;
+        }
+      }
+    }
+    // Plain run: take everything up to the next marker or end.
+    let j = i + 1;
+    while (j < text.length && text[j] !== '*' && text[j] !== '_') j++;
+    out.push(text.slice(i, j));
+    i = j;
+  }
+  return out;
 }
 
 // ─── RecapCard ────────────────────────────────────────────────────────
@@ -139,19 +215,34 @@ function RecapCard({
       </Text>
       <View style={[rc.rule, { backgroundColor: theme.surface.border }]} />
 
-      <Text style={[rc.label, { color: theme.accent }]}>WHERE YOU ARE</Text>
-      <Text style={[rc.body, { color: theme.surface.t1 }]}>{recap.headline}</Text>
+      <View style={rc.sectionHeader}>
+        <Ionicons name="compass" size={13} color={theme.accent} />
+        <Text style={[rc.label, { color: theme.accent, marginTop: 0 }]}>WHERE YOU ARE</Text>
+      </View>
+      <Text style={[rc.body, { color: theme.surface.t1 }]}>
+        {renderChapterRich(recap.headline, theme.accent, theme.surface.t1, [rc.body])}
+      </Text>
 
-      <Text style={[rc.label, { color: theme.accent }]}>DILLY NOTICED</Text>
+      <View style={rc.sectionHeader}>
+        <Ionicons name="eye" size={13} color={theme.accent} />
+        <Text style={[rc.label, { color: theme.accent, marginTop: 0 }]}>DILLY NOTICED</Text>
+      </View>
       {recap.observations.map((obs, i) => (
         <View key={i} style={rc.bulletRow}>
           <Text style={[rc.bullet, { color: theme.accent }]}>•</Text>
-          <Text style={[rc.body, { color: theme.surface.t2, flex: 1 }]}>{obs}</Text>
+          <Text style={[rc.body, { color: theme.surface.t2, flex: 1 }]}>
+            {renderChapterRich(obs, theme.accent, theme.surface.t2, [rc.body])}
+          </Text>
         </View>
       ))}
 
-      <Text style={[rc.label, { color: theme.accent }]}>THIS WEEK</Text>
-      <Text style={[rc.commitment, { color: theme.surface.t1 }]}>{recap.commitment}</Text>
+      <View style={rc.sectionHeader}>
+        <Ionicons name="flag" size={13} color={theme.accent} />
+        <Text style={[rc.label, { color: theme.accent, marginTop: 0 }]}>THIS WEEK</Text>
+      </View>
+      <Text style={[rc.commitment, { color: theme.surface.t1 }]}>
+        {renderChapterRich(recap.commitment, theme.accent, theme.surface.t1, [rc.commitment])}
+      </Text>
       {deadlineStr && (
         <View style={rc.deadlineRow}>
           <Ionicons name="calendar-outline" size={12} color={theme.surface.t3} />
@@ -159,8 +250,13 @@ function RecapCard({
         </View>
       )}
 
-      <Text style={[rc.label, { color: theme.accent }]}>BETWEEN SESSIONS</Text>
-      <Text style={[rc.body, { color: theme.surface.t2 }]}>{recap.betweenSessionsPrompt}</Text>
+      <View style={rc.sectionHeader}>
+        <Ionicons name="bookmark" size={13} color={theme.accent} />
+        <Text style={[rc.label, { color: theme.accent, marginTop: 0 }]}>BETWEEN SESSIONS</Text>
+      </View>
+      <Text style={[rc.body, { color: theme.surface.t2 }]}>
+        {renderChapterRich(recap.betweenSessionsPrompt, theme.accent, theme.surface.t2, [rc.body])}
+      </Text>
 
       {nextStr && (
         <>
@@ -187,6 +283,9 @@ const rc = StyleSheet.create({
   deadlineRow: { flexDirection: 'row', gap: 6, alignItems: 'center', marginTop: 2 },
   deadlineText: { fontSize: 12, fontWeight: '600' },
   nextRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 2 },
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, marginBottom: 4,
+  },
 });
 
 // ─── ChapterV2Screen ──────────────────────────────────────────────────
@@ -689,20 +788,25 @@ export default function ChapterV2Screen() {
             const content = showTypingCursor ? (typingText ?? '') : msg.content;
 
             if (msg.role === 'assistant') {
+              const baseTextStyle = [
+                s.assistantText,
+                {
+                  color: theme.surface.t1,
+                  fontSize: screenIndex <= 1 ? 22 : 17,
+                  fontWeight: (screenIndex <= 1 ? '700' : '500') as '500' | '700',
+                  lineHeight: screenIndex <= 1 ? 30 : 25,
+                },
+              ];
               return (
                 <View key={msg.id} style={s.assistantBubble}>
-                  <Text
-                    style={[
-                      s.assistantText,
-                      {
-                        color: theme.surface.t1,
-                        fontSize: screenIndex <= 1 ? 22 : 17,
-                        fontWeight: screenIndex <= 1 ? '700' : '500',
-                        lineHeight: screenIndex <= 1 ? 30 : 25,
-                      },
-                    ]}
-                  >
-                    {content}
+                  <Text style={baseTextStyle as any}>
+                    {/* During typewriter, render plain text so partial
+                        markdown tokens (e.g. `**Tu`) read correctly.
+                        After typing finishes, render rich so the bold/
+                        underline/accent emphasis lands. */}
+                    {showTypingCursor
+                      ? content
+                      : renderChapterRich(content, theme.accent, theme.surface.t1, baseTextStyle)}
                     {showTypingCursor ? (
                       <Text style={{ color: theme.accent }}>▍</Text>
                     ) : null}

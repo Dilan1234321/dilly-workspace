@@ -527,7 +527,19 @@ function CardBack({ template = 'photo', username, showQr = false }: { template?:
 
 // ── Template Picker ─────────────────────────────────────────────────────────
 
-function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSelect: (t: CardTemplate) => void }) {
+function TemplatePicker({ selected, onSelect, darkFirst }: { selected: CardTemplate; onSelect: (t: CardTemplate) => void; darkFirst?: boolean }) {
+  // When the user is in a dark surface, surface the dark-friendly
+  // templates first so the picker preview does not blast a bright
+  // white card. The 12 templates are otherwise the same.
+  const orderedTemplates = darkFirst
+    ? (() => {
+        const darkIds = new Set<CardTemplate>(['dark', 'navy', 'midnight', 'slate']);
+        const dark = CARD_TEMPLATES.filter(t => darkIds.has(t.id));
+        const light = CARD_TEMPLATES.filter(t => !darkIds.has(t.id));
+        return [...dark, ...light];
+      })()
+    : CARD_TEMPLATES;
+
   // Scroll progress 0..1. drives the indicator track + thumb width.
   const [scrollProgress, setScrollProgress] = useState(0);
   const [thumbWidthPct, setThumbWidthPct] = useState(0.35);
@@ -557,7 +569,7 @@ function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSele
         }}
         contentContainerStyle={{ gap: 8, paddingRight: 8 }}
       >
-        {CARD_TEMPLATES.map((t) => {
+        {orderedTemplates.map((t) => {
           const active = t.id === selected;
           return (
             <TouchableOpacity
@@ -608,13 +620,14 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   const [data, setData] = useState<CardData>(initialData);
   const [showBack, setShowBack] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [template, setTemplate] = useState<CardTemplate>('photo');
-  const [showQr, setShowQr] = useState(true);
-  // Theme-aware editor field styling. The module-level `c` StyleSheet
-  // (fieldLabel/fieldInput) is frozen at light-palette values, so we
-  // override via inline styles at the call sites below. Fields were
-  // unreadable white-on-white in dark mode prior to this.
   const theme = useResolvedTheme();
+  // Default to the dark card when the user is in a dark surface so we
+  // do not blast a bright white card against a dark background. Other
+  // surfaces start on the photo (Default) variant. The user can still
+  // swipe to any of the 12 templates from there.
+  const _isDarkSurface = (theme.surface?.bg ?? '#FFFFFF').toLowerCase() < '#404040';
+  const [template, setTemplate] = useState<CardTemplate>(_isDarkSurface ? 'dark' : 'photo');
+  const [showQr, setShowQr] = useState(true);
   const frontRef = useRef<any>(null);
   const backRef = useRef<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -752,7 +765,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
       </View>
 
       {/* Template picker + QR toggle */}
-      <TemplatePicker selected={template} onSelect={setTemplate} />
+      <TemplatePicker selected={template} onSelect={setTemplate} darkFirst={_isDarkSurface} />
       <TouchableOpacity
         onPress={() => setShowQr(!showQr)}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 6 }}

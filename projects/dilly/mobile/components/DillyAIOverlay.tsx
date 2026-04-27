@@ -20,6 +20,7 @@ import { DillyFace } from './DillyFace';
 import { useSubscription } from '../hooks/useSubscription';
 import { useResolvedTheme } from '../hooks/useTheme';
 import { FirstVisitCoach } from './FirstVisitCoach';
+import { maybeSilentlyAddCareerReminder } from '../lib/reminders';
 import {
   markExtractionPending,
   resolveExtraction,
@@ -604,6 +605,14 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           const newChips = mode === 'practice' ? getPracticeSuggestions(fullText) : getResponseSuggestions(fullText);
           setSuggestions(newChips);
           Animated.timing(suggestionsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+          // Silent career-reminder extraction. Best-effort, no UI -
+          // user discovers it later in iOS Reminders. Skipped for
+          // chat 'practice' mode (interview rehearsal text would
+          // produce nonsense reminders) and silently no-ops if
+          // permission is missing or we're inside the cooldown.
+          if (mode !== 'practice') {
+            maybeSilentlyAddCareerReminder(fullText).catch(() => {});
+          }
         } else if (!userScrolledUp.current) {
           scrollRef.current?.scrollToEnd({ animated: false });
         }

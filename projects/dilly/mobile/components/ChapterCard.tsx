@@ -18,13 +18,16 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Animated, Easing, TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
 import { openPaywall } from '../hooks/usePaywall';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
 import { dilly } from '../lib/dilly';
+
+const SCHED_LATER_KEY = 'dilly_chapter_schedule_later_v1';
 
 export interface ChapterCardState {
   plan: string;
@@ -45,6 +48,15 @@ const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satu
 
 export default function ChapterCard({ state, theme }: Props) {
   const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  // "I'll schedule later" deferred-state flag, set from the recap
+  // screen when the user taps the third option in the reschedule
+  // prompt. We re-read on focus so the home tile picks up the new
+  // state immediately after the user backs out of recap.
+  const [scheduleLater, setScheduleLater] = useState(false);
+  useFocusEffect(useCallback(() => {
+    AsyncStorage.getItem(SCHED_LATER_KEY).then(v => setScheduleLater(v === '1'));
+  }, []));
 
   // Figure out the next scheduled datetime from the weekly cadence
   // plus any one-time override. All math client-side.
@@ -208,11 +220,81 @@ export default function ChapterCard({ state, theme }: Props) {
   const dayLabel = DAY_NAMES[state.schedule.day_of_week] || 'Sunday';
   const hourLabel = formatHour(state.schedule.hour);
 
+  // ── 4a. User said "I'll schedule later" after their last Chapter
+  //        recap. Surface a calmer, deferred-state CTA so the home
+  //        tile reflects their choice rather than reverting silently
+  //        to the weekly cadence. Tap → schedule screen. ──────────
+  if (scheduleLater && hasHadChapter) {
+    return (
+      <AnimatedPressable
+        style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+        onPress={() => router.push('/(app)/chapter/schedule')}
+        scaleDown={0.98}
+      >
+        <View style={s.topRow}>
+          <Text style={[s.eyebrow, { color: theme.accent }]}>WHEN YOU'RE READY</Text>
+          <Ionicons name="time-outline" size={14} color={theme.surface.t3} />
+        </View>
+        <Text style={[s.headline, {
+          color: theme.surface.t1,
+          fontFamily: theme.type.display,
+          fontWeight: theme.type.heroWeight,
+          letterSpacing: theme.type.heroTracking,
+        }]}>
+          Schedule your next Chapter.
+        </Text>
+        <Text style={[s.body, { color: theme.surface.t2 }]}>
+          You said you'd pick a time later. Tap here when that time is now - takes 10 seconds.
+        </Text>
+        <View style={[s.ghostBtn, { borderColor: theme.accentBorder, backgroundColor: theme.accentSoft, marginTop: 12, alignSelf: 'flex-start' }]}>
+          <Ionicons name="calendar" size={13} color={theme.accent} />
+          <Text style={[s.ghostBtnText, { color: theme.accent }]}>Pick a day</Text>
+        </View>
+      </AnimatedPressable>
+    );
+  }
+
+  // ── 4b. First-ever Chapter not yet scheduled. Sell what a Chapter
+  //        actually is so the user understands why they want one,
+  //        not just "your first chapter is on Sunday". ─────────────
+  if (!hasHadChapter) {
+    return (
+      <AnimatedPressable
+        style={[s.card, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}
+        onPress={() => router.push('/(app)/chapter/schedule')}
+        scaleDown={0.98}
+      >
+        <View style={s.topRow}>
+          <Text style={[s.eyebrow, { color: theme.accent }]}>YOUR FIRST CHAPTER</Text>
+          <View style={[s.lockChip, { backgroundColor: theme.accent }]}>
+            <Ionicons name="bookmark" size={9} color="#FFF" />
+            <Text style={[s.lockChipText, { color: '#FFF' }]}>WEEKLY · 1:1</Text>
+          </View>
+        </View>
+        <Text style={[s.headline, {
+          color: theme.surface.t1,
+          fontFamily: theme.type.display,
+          fontWeight: theme.type.heroWeight,
+          letterSpacing: theme.type.heroTracking,
+        }]}>
+          A weekly sit-down with Dilly.
+        </Text>
+        <Text style={[s.body, { color: theme.surface.t2 }]}>
+          One real read on your career every week - what's working, what isn't, the one move to make next. Pick the day and the time and Dilly does the rest.
+        </Text>
+        <View style={[s.ghostBtn, { borderColor: theme.accent, backgroundColor: theme.accent, marginTop: 14, alignSelf: 'flex-start' }]}>
+          <Ionicons name="calendar" size={13} color="#FFF" />
+          <Text style={[s.ghostBtnText, { color: '#FFF' }]}>Schedule my first Chapter</Text>
+        </View>
+      </AnimatedPressable>
+    );
+  }
+
   return (
     <View style={[s.card, { backgroundColor: close ? theme.accentSoft : theme.surface.s1, borderColor: close ? theme.accent : theme.surface.border }]}>
       <View style={s.topRow}>
         <Text style={[s.eyebrow, { color: theme.accent }]}>
-          {hasHadChapter ? 'YOUR NEXT CHAPTER' : 'YOUR FIRST CHAPTER'}
+          YOUR NEXT CHAPTER
         </Text>
         <AnimatedPressable onPress={() => router.push('/(app)/chapter/schedule')} hitSlop={8} scaleDown={0.9}>
           <Ionicons name="time-outline" size={14} color={theme.surface.t3} />
@@ -224,14 +306,12 @@ export default function ChapterCard({ state, theme }: Props) {
         fontWeight: theme.type.heroWeight,
         letterSpacing: theme.type.heroTracking,
       }]}>
-        {hasHadChapter && state.latest?.title
+        {state.latest?.title
           ? `Next · ${countdownText}`
           : `${dayLabel} at ${hourLabel}`}
       </Text>
       <Text style={[s.body, { color: theme.surface.t2 }]}>
-        {hasHadChapter
-          ? `Last: ${state.latest?.title || 'your Chapter'}. Next one lands every ${dayLabel}.`
-          : `Your Chapter opens ${dayLabel} at ${hourLabel}. Drop notes for Dilly before then.`}
+        {`Tap to prep for your next session. Add notes for Dilly to pick up - she reads them before she writes.`}
       </Text>
       {/* Inline quick-add for chapter notes. A small labeled heading
           above the input so users clearly understand this is where
@@ -253,17 +333,17 @@ export default function ChapterCard({ state, theme }: Props) {
 
       <View style={s.ctaRow}>
         <AnimatedPressable
-          style={[s.ghostBtn, { borderColor: theme.accentBorder }]}
-          onPress={() => router.push('/(app)/chapter/notes')}
+          style={[s.ghostBtn, { borderColor: theme.accent, backgroundColor: theme.accent }]}
+          onPress={() => router.push('/(app)/chapter/prep' as any)}
           scaleDown={0.97}
         >
-          <Ionicons name="journal-outline" size={13} color={theme.accent} />
-          <Text style={[s.ghostBtnText, { color: theme.accent }]}>All notes</Text>
+          <Ionicons name="sparkles" size={13} color="#FFF" />
+          <Text style={[s.ghostBtnText, { color: '#FFF' }]}>Prep for next session</Text>
         </AnimatedPressable>
         {hasHadChapter ? (
           <AnimatedPressable
             style={[s.ghostBtn, { borderColor: theme.surface.border }]}
-            onPress={() => router.push('/(app)/chapter')}
+            onPress={() => router.push('/(app)/chapter/recap' as any)}
             scaleDown={0.97}
           >
             <Ionicons name="book-outline" size={13} color={theme.surface.t2} />

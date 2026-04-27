@@ -21,11 +21,25 @@
  *     deadline feed so every future Dilly deadline auto-syncs
  */
 
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from './dilly';
 import { API_BASE } from './tokens';
 import { syncReminderForEvent } from './reminders';
+
+// Lazy-loaded expo-calendar reference. Static import at module level
+// crashed startup in build ~86 (see commit ccdff51) - dynamic import
+// defers native module access until the function is first called.
+let _Cal: any = null;
+async function loadCal(): Promise<any> {
+  if (_Cal) return _Cal;
+  try {
+    _Cal = await import('expo-calendar');
+    return _Cal;
+  } catch {
+    return null;
+  }
+}
 
 // AsyncStorage flag: "user has tapped Subscribe to Dilly Calendar at
 // least once on this device". When true, the Subscribe button on the
@@ -39,9 +53,58 @@ const CAL_SUBSCRIBED_KEY = 'dilly_cal_subscribed_v1';
 export async function isCalendarSubscribed(): Promise<boolean> {
   try {
     const v = await AsyncStorage.getItem(CAL_SUBSCRIBED_KEY);
-    return v === '1';
+    if (v !== '1') return false;
+    // Local flag says yes - now verify the user hasn't deleted the
+    // subscribed calendar from iOS Settings since last time. We can
+    // only check this if calendar permission is already granted; we
+    // never auto-prompt here. If permission is missing we trust the
+    // flag (status quo - no behaviour change vs prior versions).
+    if (Platform.OS !== 'ios') return true;
+    const present = await detectDillyCalendarPresent();
+    if (present === false) {
+      // The user removed the Dilly subscribed calendar in iOS Settings.
+      // Clear the local flag so the import CTA reappears in the app.
+      await clearCalendarSubscribed();
+      return false;
+    }
+    // present === true OR present === 'unknown' (no permission to check)
+    return true;
   } catch {
     return false;
+  }
+}
+
+/** Returns true if the Dilly subscribed calendar is currently present
+ *  in iOS's calendar database, false if it's gone, or 'unknown' if we
+ *  can't tell (no permission, non-iOS, or expo-calendar unavailable).
+ *
+ *  The check uses expo-calendar.getCalendarsAsync('event') and matches
+ *  by source URL containing the API base or by title containing 'Dilly'.
+ *  iOS reports subscribed calendars in this list with a source.type of
+ *  'subscribed' (or similar) - we don't filter on type because the field
+ *  name varies, the title/source-url match is sufficiently specific. */
+export async function detectDillyCalendarPresent(): Promise<boolean | 'unknown'> {
+  if (Platform.OS !== 'ios') return 'unknown';
+  try {
+    const C = await loadCal();
+    if (!C) return 'unknown';
+    // Don't prompt - only check if permission is already granted.
+    const perm = await C.getCalendarPermissionsAsync();
+    if (perm?.status !== 'granted') return 'unknown';
+    const cals: any[] = await C.getCalendarsAsync(C.EntityTypes?.EVENT || 'event');
+    const apiHost = (API_BASE || '').replace(/^https?:\/\//, '').split('/')[0].toLowerCase();
+    const found = (cals || []).some((c) => {
+      const title = String(c?.title || '').toLowerCase();
+      const sourceName = String(c?.source?.name || '').toLowerCase();
+      const sourceUrl = String(c?.source?.url || c?.url || '').toLowerCase();
+      if (title.includes('dilly')) return true;
+      if (sourceName.includes('dilly')) return true;
+      if (apiHost && sourceUrl.includes(apiHost)) return true;
+      return false;
+    });
+    return found;
+  } catch {
+    return 'unknown';
   }
 }
 

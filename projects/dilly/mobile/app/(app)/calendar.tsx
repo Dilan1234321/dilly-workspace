@@ -19,6 +19,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { openAddToCalendar, openSubscribeToDillyCalendar, isCalendarSubscribed } from '../../lib/calendar';
+import { syncReminderForEvent, deleteReminderForEvent } from '../../lib/reminders';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { DillyFace } from '../../components/DillyFace';
@@ -453,19 +454,20 @@ function ReminderToggles({ event, onUpdate }: { event: CalendarEvent; onUpdate: 
 
 function PrepDeckModalMobile({ deck, onClose }: { deck: PrepDeck; onClose: () => void }) {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
   const probColor: Record<string, string> = { high: CORAL, medium: AMBER, low: GREEN };
 
   return (
     <Modal visible animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={cs.modalOverlay}>
-        <View style={[cs.prepDeckSheet, { paddingBottom: insets.bottom + 20 }]}>
+        <View style={[cs.prepDeckSheet, { backgroundColor: theme.surface.s1, paddingBottom: insets.bottom + 20 }]}>
           <View style={cs.modalHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={cs.modalTitle}>Interview Prep Deck</Text>
-              <Text style={cs.prepDeckSub}>{deck.company} - {deck.role} ({deck.track_label})</Text>
+              <Text style={[cs.modalTitle, { color: theme.surface.t1 }]}>Interview Prep Deck</Text>
+              <Text style={[cs.prepDeckSub, { color: theme.surface.t3 }]}>{deck.company} - {deck.role} ({deck.track_label})</Text>
             </View>
             <AnimatedPressable onPress={onClose} scaleDown={0.9} hitSlop={12}>
-              <Ionicons name="close" size={20} color={colors.t2} />
+              <Ionicons name="close" size={20} color={theme.surface.t2} />
             </AnimatedPressable>
           </View>
 
@@ -621,7 +623,7 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
           </AnimatedPressable>
         )}
         <AnimatedPressable onPress={onDelete} scaleDown={0.85} hitSlop={8}>
-          <Ionicons name="trash-outline" size={14} color={colors.t3 + '60'} />
+          <Ionicons name="trash-outline" size={14} color={theme.surface.t3 + '60'} />
         </AnimatedPressable>
       </View>
     </View>
@@ -635,6 +637,7 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
   initialDate?: string | null;
 }) {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
   const [title, setTitle] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [notes, setNotes] = useState('');
@@ -673,20 +676,20 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
               (which pushed the X button up under the status bar with
               the keyboard open). maxHeight: 82% leaves room for the
               top notch area. */}
-          <View style={[cs.modalCard, { paddingBottom: insets.bottom + 20, maxHeight: '82%' }]}>
+          <View style={[cs.modalCard, { backgroundColor: theme.surface.s1, paddingBottom: insets.bottom + 20, maxHeight: '82%' }]}>
 
             {/* Close button bumped bigger and wrapped in a padded
                 press target so it's always reachable, even at the
                 top of a tall modal. */}
             <View style={cs.modalHeader}>
-              <Text style={cs.modalTitle}>New Event</Text>
+              <Text style={[cs.modalTitle, { color: theme.surface.t1 }]}>New Event</Text>
               <AnimatedPressable
                 onPress={onClose}
                 scaleDown={0.9}
                 hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
                 style={{ padding: 4 }}
               >
-                <Ionicons name="close" size={24} color={colors.t1} />
+                <Ionicons name="close" size={24} color={theme.surface.t1} />
               </AnimatedPressable>
             </View>
 
@@ -708,28 +711,28 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
               {(Object.entries(EVENT_CONFIG) as [EventType, typeof EVENT_CONFIG[EventType]][]).map(([key, cfg]) => (
                 <AnimatedPressable
                   key={key}
-                  style={[cs.typeChip, type === key && { backgroundColor: cfg.color + '20', borderColor: cfg.color + '40' }]}
+                  style={[cs.typeChip, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }, type === key && { backgroundColor: cfg.color + '20', borderColor: cfg.color + '40' }]}
                   onPress={() => setType(key)}
                   scaleDown={0.95}
                 >
-                  <Ionicons name={cfg.icon as any} size={12} color={type === key ? cfg.color : colors.t3} />
-                  <Text style={[cs.typeChipText, type === key && { color: cfg.color }]}>{cfg.label}</Text>
+                  <Ionicons name={cfg.icon as any} size={12} color={type === key ? cfg.color : theme.surface.t3} />
+                  <Text style={[cs.typeChipText, { color: theme.surface.t3 }, type === key && { color: cfg.color }]}>{cfg.label}</Text>
                 </AnimatedPressable>
               ))}
             </View>
 
             <TextInput
-              style={cs.modalInput}
+              style={[cs.modalInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }]}
               value={title}
               onChangeText={setTitle}
               placeholder="Event title"
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
               autoFocus
             />
 
             {/* Date picker - mini calendar */}
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.t2 }}>Date</Text>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: theme.surface.t2 }}>Date</Text>
               {(() => {
                 const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
                 const selected = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
@@ -741,21 +744,21 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
                 const monthName = new Date(pickerYear, pickerMonth).toLocaleString('default', { month: 'long' });
 
                 return (
-                  <View style={{ backgroundColor: colors.s1, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, padding: 10 }}>
+                  <View style={{ backgroundColor: theme.surface.s1, borderRadius: 10, borderWidth: 1, borderColor: theme.surface.border, padding: 10 }}>
                     {/* Month/Year nav */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <AnimatedPressable onPress={() => { if (pickerMonth === 0) { setPickerMonth(11); setPickerYear(pickerYear - 1); } else setPickerMonth(pickerMonth - 1); }} scaleDown={0.9} hitSlop={8}>
-                        <Ionicons name="chevron-back" size={18} color={colors.t2} />
+                        <Ionicons name="chevron-back" size={18} color={theme.surface.t2} />
                       </AnimatedPressable>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>{monthName} {pickerYear}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>{monthName} {pickerYear}</Text>
                       <AnimatedPressable onPress={() => { if (pickerMonth === 11) { setPickerMonth(0); setPickerYear(pickerYear + 1); } else setPickerMonth(pickerMonth + 1); }} scaleDown={0.9} hitSlop={8}>
-                        <Ionicons name="chevron-forward" size={18} color={colors.t2} />
+                        <Ionicons name="chevron-forward" size={18} color={theme.surface.t2} />
                       </AnimatedPressable>
                     </View>
                     {/* Day headers */}
                     <View style={{ flexDirection: 'row' }}>
                       {['S','M','T','W','T','F','S'].map((d, i) => (
-                        <Text key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '600', color: colors.t3 }}>{d}</Text>
+                        <Text key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '600', color: theme.surface.t3 }}>{d}</Text>
                       ))}
                     </View>
                     {/* Day grid */}
@@ -772,8 +775,8 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
                             onPress={() => setDateStr(key)}
                             scaleDown={0.9}
                           >
-                            <View style={isSelected ? { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.indigo, alignItems: 'center', justifyContent: 'center' } : undefined}>
-                              <Text style={{ fontSize: 12, fontWeight: isSelected ? '700' : '400', color: isSelected ? '#fff' : colors.t1 }}>{day}</Text>
+                            <View style={isSelected ? { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' } : undefined}>
+                              <Text style={{ fontSize: 12, fontWeight: isSelected ? '700' : '400', color: isSelected ? '#fff' : theme.surface.t1 }}>{day}</Text>
                             </View>
                           </AnimatedPressable>
                         );
@@ -782,19 +785,19 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
                   </View>
                 );
               })()}
-              {dateStr ? <Text style={{ fontSize: 11, color: colors.indigo, fontWeight: '600', marginTop: 4 }}>{dateStr}</Text> : null}
+              {dateStr ? <Text style={{ fontSize: 11, color: theme.accent, fontWeight: '600', marginTop: 4 }}>{dateStr}</Text> : null}
             </View>
 
             <TextInput
-              style={[cs.modalInput, { minHeight: 60 }]}
+              style={[cs.modalInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1, minHeight: 60 }]}
               value={notes}
               onChangeText={setNotes}
               placeholder="Notes (optional)"
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
               multiline
             />
 
-            <AnimatedPressable style={cs.modalBtn} onPress={handleAdd} scaleDown={0.97}>
+            <AnimatedPressable style={[cs.modalBtn, { backgroundColor: theme.accent }]} onPress={handleAdd} scaleDown={0.97}>
               <Ionicons name="add-circle" size={16} color="#FFFFFF" />
               <Text style={cs.modalBtnText}>Add Event</Text>
             </AnimatedPressable>
@@ -977,10 +980,16 @@ export default function CalendarScreen() {
 
   function handleAddEvent(event: CalendarEvent) {
     saveEvents([...events, event]);
+    // Fire-and-forget: also create a native iOS Reminder if the user
+    // turned on Sync to Reminders in Settings. Silently no-ops when
+    // the toggle is off or permission was revoked.
+    syncReminderForEvent(event.title, event.date).catch(() => {});
   }
 
   function handleComplete(id: string) {
+    const target = events.find(e => e.id === id);
     saveEvents(events.map(e => e.id === id ? { ...e, completedAt: new Date().toISOString() } : e));
+    if (target) deleteReminderForEvent(target.title, target.date).catch(() => {});
   }
 
   async function handleDelete(id: string) {
@@ -990,7 +999,10 @@ export default function CalendarScreen() {
       confirmLabel: 'Delete',
       destructive: true,
     });
-    if (ok) saveEvents(events.filter(e => e.id !== id));
+    if (!ok) return;
+    const target = events.find(e => e.id === id);
+    saveEvents(events.filter(e => e.id !== id));
+    if (target) deleteReminderForEvent(target.title, target.date).catch(() => {});
   }
 
   // Update reminders
@@ -1246,12 +1258,12 @@ export default function CalendarScreen() {
           {/* Build-78: smart empty state */}
           {displayEvents.length === 0 ? (
             <View style={cs.emptyWrap}>
-              <Ionicons name="calendar-outline" size={32} color={colors.t3 + '40'} />
-              <Text style={cs.emptyText}>
+              <Ionicons name="calendar-outline" size={32} color={theme.surface.t3 + '40'} />
+              <Text style={[cs.emptyText, { color: theme.surface.t3 }]}>
                 {selectedDay ? 'Nothing on this day' : 'No upcoming events'}
               </Text>
               {!selectedDay && events.length === 0 && (
-                <Text style={cs.emptyHint}>
+                <Text style={[cs.emptyHint, { color: theme.surface.t3 }]}>
                   Track an application with a deadline, or add an interview date  -  Dilly will build your prep plan automatically.
                 </Text>
               )}

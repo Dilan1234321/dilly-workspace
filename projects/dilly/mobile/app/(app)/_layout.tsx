@@ -17,6 +17,7 @@ import useCelebration from '../../hooks/useCelebration';
 import ProfileGrowthToast from '../../components/ProfileGrowthToast';
 import GlobalToast from '../../components/GlobalToast';
 import GlobalConfirm from '../../components/GlobalConfirm';
+import EdgeSwipeBack from '../../components/EdgeSwipeBack';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -410,6 +411,7 @@ export default function AppLayout() {
           <ProfileGrowthToast />
           <GlobalToast />
           <GlobalConfirm />
+          <EdgeSwipeBack />
         </>
       </ErrorBoundary>
     </SubscriptionProvider>

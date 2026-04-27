@@ -671,13 +671,13 @@ const h = StyleSheet.create({
   trajCtaText: { fontSize: 12, fontWeight: '700', color: INDIGO },
 
   // Tools
-  toolsRow: { flexDirection: 'row', gap: 16, justifyContent: 'center', alignItems: 'flex-start' },
-  toolItem: { alignItems: 'center', gap: 6, width: 64 },
+  toolsRow: { flexDirection: 'row', gap: 18, justifyContent: 'center', alignItems: 'flex-start' },
+  toolItem: { alignItems: 'center', gap: 7, width: 72 },
   toolIcon: {
-    width: 48, height: 48, borderRadius: 14,
+    width: 58, height: 58, borderRadius: 17,
     alignItems: 'center', justifyContent: 'center',
   },
-  toolLabel: { fontSize: 11, fontWeight: '700', color: colors.t2 },
+  toolLabel: { fontSize: 12, fontWeight: '700', color: colors.t2 },
 });
 
 
@@ -2338,8 +2338,8 @@ const s = StyleSheet.create({
   jobCompany: { fontSize: 11, color: colors.t2, marginTop: 2 },
 
   // Tools
-  toolRow: { gap: 16, paddingVertical: 4, marginBottom: 16 },
-  toolItem: { alignItems: 'center', width: 56 },
-  toolIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  toolLabel: { fontSize: 10, fontWeight: '600', color: colors.t2, textAlign: 'center' },
+  toolRow: { gap: 18, paddingVertical: 4, marginBottom: 16 },
+  toolItem: { alignItems: 'center', width: 72 },
+  toolIcon: { width: 58, height: 58, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
+  toolLabel: { fontSize: 12, fontWeight: '700', color: colors.t2, textAlign: 'center' },
 });

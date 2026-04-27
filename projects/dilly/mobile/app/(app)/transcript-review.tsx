@@ -11,6 +11,7 @@ import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { showToast } from '../../lib/globalToast';
+import { safeBack } from '../../lib/navigation';
 
 interface Course {
   code?: string | null;
@@ -165,7 +166,7 @@ export default function TranscriptReviewScreen() {
     return (
       <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
         <View style={s.topBar}>
-          <TouchableOpacity onPress={() => router.replace('/(app)/my-dilly-profile')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
           </TouchableOpacity>
           <Text style={[s.navTitle, { color: theme.surface.t1 }]}>Transcript</Text>

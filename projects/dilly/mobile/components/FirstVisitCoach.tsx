@@ -144,6 +144,11 @@ export function FirstVisitCoach({
   const titleColor = '#ffffff';            // readable on both dims
   const sublineColor = 'rgba(255,255,255,0.78)';
   const hintColor = 'rgba(255,255,255,0.6)';
+  // Hardcoded light blue (sky-400). Overrides theme.accent so the
+  // coach mark icon stays bright and readable against the dark scrim
+  // regardless of which Customize Dilly theme the user picked - some
+  // accents (e.g. dark navy) disappear into the backdrop.
+  const coachAccent = '#38BDF8';
 
   // Wrap in a native Modal so the coach overlays EVERYTHING - the
   // tab bar, any floating FABs, etc. Without this, the tab bar sits
@@ -182,15 +187,15 @@ export function FirstVisitCoach({
                 width: 88,
                 height: 88,
                 borderRadius: 44,
-                backgroundColor: theme.accent + '22',
+                backgroundColor: coachAccent + '22',
                 borderWidth: 2,
-                borderColor: theme.accent,
+                borderColor: coachAccent,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 28,
               }}
             >
-              <Ionicons name={iconName} size={44} color={theme.accent} />
+              <Ionicons name={iconName} size={44} color={coachAccent} />
             </View>
 
             <Text

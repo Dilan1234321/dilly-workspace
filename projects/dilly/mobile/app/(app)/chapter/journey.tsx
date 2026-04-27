@@ -36,6 +36,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import AnimatedPressable from '../../../components/AnimatedPressable';
+import { safeBack } from '../../../lib/navigation';
 import { openDillyOverlay } from '../../../hooks/useDillyOverlay';
 
 interface Screen { slot: string; body: string; }
@@ -196,7 +197,7 @@ export default function ChapterJourneyScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <AnimatedPressable onPress={() => router.replace('/(app)')} hitSlop={12} scaleDown={0.9}>
+        <AnimatedPressable onPress={() => safeBack('/(app)')} hitSlop={12} scaleDown={0.9}>
           <Ionicons name="close" size={22} color={theme.surface.t3} />
         </AnimatedPressable>
         <View style={{ flex: 1, alignItems: 'center' }}>
