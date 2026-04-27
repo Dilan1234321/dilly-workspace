@@ -22,6 +22,9 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { registerNotificationCategories } from '../lib/notifications';
 import { registerBackgroundRefresh } from '../lib/backgroundRefresh';
 import { indexAppSections, onSpotlightTap } from '../lib/spotlight';
+import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
+import { refreshAllWidgets } from '../lib/widgetContent';
+import { drainTruthAnswerQueue } from '../lib/widgetData';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useResolvedTheme } from '../hooks/useTheme';
 
@@ -178,6 +181,40 @@ export default function RootLayout() {
   // the user needing to open the app. Fires every ~4-6h when iOS feels
   // like it. Result: no loading spinner on next cold start.
   useEffect(() => { registerBackgroundRefresh().catch(() => {}); }, []);
+  // Compute fresh content for the home-screen widgets on cold start
+  // and drain any Moment-of-Truth answers the user logged from the
+  // widget's interactive button while the app was closed. The widget
+  // timeline auto-refreshes every 30 min on its own; this primes it
+  // immediately with the latest values.
+  useEffect(() => {
+    refreshAllWidgets().catch(() => {});
+    (async () => {
+      try {
+        const queue = await drainTruthAnswerQueue();
+        if (!queue.length) return;
+        const { dilly } = await import('../lib/dilly');
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        // Best-effort: write the answers as profile facts. The streak
+        // counter is bumped client-side so the widget updates without
+        // a roundtrip. Backend tally happens later if/when we add the
+        // /widgets/truth/answer endpoint.
+        const today = `${new Date().getFullYear()}-${Math.floor(((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000))}`;
+        await AsyncStorage.setItem('dilly_truth_answered_day_v1', today);
+        const prev = Number((await AsyncStorage.getItem('dilly_truth_streak_days_v1')) || '0');
+        await AsyncStorage.setItem('dilly_truth_streak_days_v1', String(prev + 1));
+        for (const row of queue) {
+          dilly.fetch('/memory/items', {
+            method: 'POST',
+            body: JSON.stringify({
+              category: 'reflection',
+              label: row.question.slice(0, 80),
+              value: `${row.answer.toUpperCase()} (logged ${new Date(row.answeredAt * 1000).toISOString().slice(0, 10)})`,
+            }),
+          }).catch(() => {});
+        }
+      } catch {}
+    })();
+  }, []);
   // Index Dilly's app sections into iOS Spotlight on cold start so a
   // user pulling down on Home and typing "interview" or "Goldman"
   // gets Dilly results inline with system results. Saved jobs +
@@ -295,14 +332,56 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ErrorBoundary surface="Dilly" resetKey={pathname}>
-          <ThemedAppStack pathname={pathname} />
-        </ErrorBoundary>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ShareIntentProvider options={{ debug: false, resetOnBackground: true }}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ErrorBoundary surface="Dilly" resetKey={pathname}>
+            <ShareIntentReceiver />
+            <ThemedAppStack pathname={pathname} />
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ShareIntentProvider>
   );
+}
+
+/** Listens for incoming Share Extension payloads. The user taps "Send
+ *  to Dilly" from another app's share sheet, iOS launches Dilly with
+ *  the URL/text, we save it as a tracked application + route to Jobs.
+ *  App Group group.com.dilly.app bridges the data between processes. */
+function ShareIntentReceiver() {
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
+  useEffect(() => {
+    if (!hasShareIntent || !shareIntent) return;
+    (async () => {
+      try {
+        const url = shareIntent?.webUrl || shareIntent?.text || '';
+        if (!url) { resetShareIntent(); return; }
+        const host = (() => {
+          try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'Saved link'; }
+        })();
+        const { dilly } = await import('../lib/dilly');
+        await dilly.fetch('/applications', {
+          method: 'POST',
+          body: JSON.stringify({
+            company: host,
+            role: 'Sent to Dilly',
+            status: 'saved',
+            notes: 'Shared from another app via Send to Dilly.',
+            job_url: url,
+          }),
+        }).catch(() => {});
+        try {
+          const { showToast } = await import('../lib/globalToast');
+          showToast({ message: `Dilly saved this link from ${host}.`, type: 'success' });
+        } catch {}
+        try { router.push('/(app)/jobs' as any); } catch {}
+      } finally {
+        resetShareIntent();
+      }
+    })();
+  }, [hasShareIntent, shareIntent, resetShareIntent]);
+  return null;
 }
 
 /** Crossfade overlay that fires when the OS dark/light mode toggles.

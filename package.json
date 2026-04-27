@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "expo-share-intent": "^6.1.0",
     "stripe": "^17.7.0"
   }
 }

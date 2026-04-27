@@ -92,7 +92,19 @@ async def get_profile(request: Request):
 
         # Getting-Started predicates (build 387). Evaluated server-side so the
         # client never has to re-derive them from raw profile state.
-        profile["gs_profile_done"] = bool(profile.get("name") and profile.get("has_run_first_audit"))
+        # gs_profile_done flips when the user has either uploaded a
+        # resume (the subtitle on the journey step explicitly promises
+        # "Upload your resume so Dilly knows your story") OR run their
+        # first audit. Previously it required has_run_first_audit only,
+        # so users who uploaded a resume but never tapped "audit" were
+        # stuck with the step open forever - exactly what the user
+        # reported as "Getting Started doesn't check off after action".
+        profile["gs_profile_done"] = bool(
+            profile.get("name") and (
+                profile.get("has_run_first_audit")
+                or profile.get("resume_uploaded_at")
+            )
+        )
         profile["gs_transcript"]   = bool(profile.get("transcript_uploaded_at"))
         profile["gs_resume"]       = bool(profile.get("resume_uploaded_at"))
         profile["gs_win"]          = bool(len(profile.get("wins") or []) > 0)
