@@ -16,20 +16,28 @@
       "supportsTablet": false,
       "appleTeamId": "F46NQK75DK",
       "bundleIdentifier": "com.dilly.app",
-      "buildNumber": "437",
+      "buildNumber": "438",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
         "ITSAppUsesNonExemptEncryption": false,
-        "NSContactsUsageDescription": "Dilly saves networking contacts you meet (with a 'Met through Dilly' note) and helps you find warm intros to companies in your phone before applying.",
+        "NSContactsUsageDescription": "Allow Dilly to look up contacts so you can quickly attach context to interview prep and outreach.",
         "NSCalendarsUsageDescription": "Dilly syncs your application deadlines, interviews, and Chapter sessions to your calendar so they live alongside the rest of your week.",
         "NSRemindersUsageDescription": "Dilly creates Reminders for application deadlines, interview prep, and weekly career check-ins in a dedicated 'Dilly' list.",
-        "UIBackgroundModes": ["fetch", "processing"],
-        "BGTaskSchedulerPermittedIdentifiers": ["dilly-warm-cache"]
+        "UIBackgroundModes": [
+          "fetch",
+          "processing"
+        ],
+        "BGTaskSchedulerPermittedIdentifiers": [
+          "dilly-warm-cache"
+        ],
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Allow Dilly to add interview reminders and weekly briefs to your calendar."
       },
       "entitlements": {
-        "com.apple.security.application-groups": ["group.com.dilly.app"]
+        "com.apple.security.application-groups": [
+          "group.com.dilly.app"
+        ]
       }
     },
     "android": {
@@ -66,7 +74,9 @@
             "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
             "NSExtensionActivationSupportsText": true
           },
-          "androidIntentFilters": ["text/*"]
+          "androidIntentFilters": [
+            "text/*"
+          ]
         }
       ],
       "@bacons/apple-targets"
