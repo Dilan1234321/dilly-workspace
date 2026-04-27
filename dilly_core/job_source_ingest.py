@@ -219,6 +219,239 @@ def ingest_niche_sources(conn) -> Dict[str, Any]:
     except Exception as e:
         stats["errors"].append(f"usajobs: {type(e).__name__}: {str(e)[:200]}")
 
+    # Volume sources. The active deploy was firing only nsf_reu +
+    # usajobs because the workspace-root file was the import path and
+    # only had those two wired in. Project-local had 30+ sources
+    # already; ported here so the user actually gets the thousands of
+    # listings the infra was built for. Each source is independently
+    # try-wrapped - one network blip never kills the whole batch.
+
+    # SimplifyJobs (Summer internships + New-Grad entry-level)
+    try:
+        from dilly_core.job_source_simplify import fetch_simplify_listings
+        simplify = fetch_simplify_listings() or []
+        inserted = sum(1 for item in simplify if _upsert_listing(cur, item))
+        stats["sources"]["simplify"] = {"fetched": len(simplify), "inserted": inserted}
+        stats["total_fetched"] += len(simplify)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"simplify: {type(e).__name__}: {str(e)[:200]}")
+
+    # RemoteOK (~100 remote jobs, daily)
+    try:
+        from dilly_core.job_source_remoteok import fetch_remoteok_listings
+        remoteok = fetch_remoteok_listings() or []
+        inserted = sum(1 for item in remoteok if _upsert_listing(cur, item))
+        stats["sources"]["remoteok"] = {"fetched": len(remoteok), "inserted": inserted}
+        stats["total_fetched"] += len(remoteok)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"remoteok: {type(e).__name__}: {str(e)[:200]}")
+
+    # WeWorkRemotely (~100 remote jobs, daily)
+    try:
+        from dilly_core.job_source_weworkremotely import fetch_weworkremotely_listings
+        wwr = fetch_weworkremotely_listings() or []
+        inserted = sum(1 for item in wwr if _upsert_listing(cur, item))
+        stats["sources"]["weworkremotely"] = {"fetched": len(wwr), "inserted": inserted}
+        stats["total_fetched"] += len(wwr)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"weworkremotely: {type(e).__name__}: {str(e)[:200]}")
+
+    # SAP SuccessFactors (big tech, pharma, consumer goods, consulting)
+    try:
+        from dilly_core.job_source_successfactors import fetch_all_successfactors
+        sfsf = fetch_all_successfactors() or []
+        inserted = sum(1 for item in sfsf if _upsert_listing(cur, item))
+        stats["sources"]["successfactors"] = {"fetched": len(sfsf), "inserted": inserted}
+        stats["total_fetched"] += len(sfsf)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"successfactors: {type(e).__name__}: {str(e)[:200]}")
+
+    # Taleo / Oracle (telecom, automotive, energy, banking, defense, retail)
+    try:
+        from dilly_core.job_source_taleo import fetch_all_taleo
+        taleo = fetch_all_taleo() or []
+        inserted = sum(1 for item in taleo if _upsert_listing(cur, item))
+        stats["sources"]["taleo"] = {"fetched": len(taleo), "inserted": inserted}
+        stats["total_fetched"] += len(taleo)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"taleo: {type(e).__name__}: {str(e)[:200]}")
+
+    # iCIMS (enterprise: hospitals, pharma, defense, retail, insurance)
+    try:
+        from dilly_core.job_source_icims import fetch_all_icims
+        icims = fetch_all_icims() or []
+        inserted = sum(1 for item in icims if _upsert_listing(cur, item))
+        stats["sources"]["icims"] = {"fetched": len(icims), "inserted": inserted}
+        stats["total_fetched"] += len(icims)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"icims: {type(e).__name__}: {str(e)[:200]}")
+
+    # Pinpoint HQ (UK fintech + PE-backed companies)
+    try:
+        from dilly_core.job_source_pinpoint import fetch_all_pinpoint
+        pinpoint = fetch_all_pinpoint() or []
+        inserted = sum(1 for item in pinpoint if _upsert_listing(cur, item))
+        stats["sources"]["pinpoint"] = {"fetched": len(pinpoint), "inserted": inserted}
+        stats["total_fetched"] += len(pinpoint)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"pinpoint: {type(e).__name__}: {str(e)[:200]}")
+
+    # Paylocity + Paycom (US mid-market HCM platforms)
+    try:
+        from dilly_core.job_source_paylocity import fetch_all_paylocity, fetch_all_paycom
+        paylocity = fetch_all_paylocity() or []
+        inserted = sum(1 for item in paylocity if _upsert_listing(cur, item))
+        stats["sources"]["paylocity"] = {"fetched": len(paylocity), "inserted": inserted}
+        stats["total_fetched"] += len(paylocity)
+        stats["total_inserted"] += inserted
+
+        paycom = fetch_all_paycom() or []
+        inserted = sum(1 for item in paycom if _upsert_listing(cur, item))
+        stats["sources"]["paycom"] = {"fetched": len(paycom), "inserted": inserted}
+        stats["total_fetched"] += len(paycom)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"paylocity_paycom: {type(e).__name__}: {str(e)[:200]}")
+
+    # TalentLyft (Eastern Europe / Balkans ATS)
+    try:
+        from dilly_core.job_source_talentlyft import fetch_all_talentlyft
+        tlyft = fetch_all_talentlyft() or []
+        inserted = sum(1 for item in tlyft if _upsert_listing(cur, item))
+        stats["sources"]["talentlyft"] = {"fetched": len(tlyft), "inserted": inserted}
+        stats["total_fetched"] += len(tlyft)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"talentlyft: {type(e).__name__}: {str(e)[:200]}")
+
+    # Zoho Recruit (India/SE Asia/MENA tech, global SMBs)
+    try:
+        from dilly_core.job_source_zoho import fetch_all_zoho
+        zoho = fetch_all_zoho() or []
+        inserted = sum(1 for item in zoho if _upsert_listing(cur, item))
+        stats["sources"]["zoho_recruit"] = {"fetched": len(zoho), "inserted": inserted}
+        stats["total_fetched"] += len(zoho)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"zoho_recruit: {type(e).__name__}: {str(e)[:200]}")
+
+    # Freshteam / Freshworks (SMB tech, SaaS, communications)
+    try:
+        from dilly_core.job_source_freshteam import fetch_all_freshteam
+        freshteam = fetch_all_freshteam() or []
+        inserted = sum(1 for item in freshteam if _upsert_listing(cur, item))
+        stats["sources"]["freshteam"] = {"fetched": len(freshteam), "inserted": inserted}
+        stats["total_fetched"] += len(freshteam)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"freshteam: {type(e).__name__}: {str(e)[:200]}")
+
+    # ADP Recruiting (grocery / financial services / homebuilding)
+    try:
+        from dilly_core.job_source_adp import fetch_all_adp
+        adp = fetch_all_adp() or []
+        inserted = sum(1 for item in adp if _upsert_listing(cur, item))
+        stats["sources"]["adp"] = {"fetched": len(adp), "inserted": inserted}
+        stats["total_fetched"] += len(adp)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"adp: {type(e).__name__}: {str(e)[:200]}")
+
+    # UKG Pro / Dayforce (healthcare, hospitality, retail, trucking)
+    try:
+        from dilly_core.job_source_ukg import fetch_all_ukg, fetch_all_dayforce
+        ukg = fetch_all_ukg() or []
+        inserted = sum(1 for item in ukg if _upsert_listing(cur, item))
+        stats["sources"]["ukg"] = {"fetched": len(ukg), "inserted": inserted}
+        stats["total_fetched"] += len(ukg)
+        stats["total_inserted"] += inserted
+
+        dayforce = fetch_all_dayforce() or []
+        inserted = sum(1 for item in dayforce if _upsert_listing(cur, item))
+        stats["sources"]["dayforce"] = {"fetched": len(dayforce), "inserted": inserted}
+        stats["total_fetched"] += len(dayforce)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"ukg_dayforce: {type(e).__name__}: {str(e)[:200]}")
+
+    # Cornerstone OnDemand (retail, hospitals, staffing, manufacturing)
+    try:
+        from dilly_core.job_source_cornerstone import fetch_all_cornerstone
+        csod = fetch_all_cornerstone() or []
+        inserted = sum(1 for item in csod if _upsert_listing(cur, item))
+        stats["sources"]["cornerstone"] = {"fetched": len(csod), "inserted": inserted}
+        stats["total_fetched"] += len(csod)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"cornerstone: {type(e).__name__}: {str(e)[:200]}")
+
+    # Personio (Germany, France, Spain, Nordics)
+    try:
+        from dilly_core.job_source_personio import fetch_all_personio
+        personio = fetch_all_personio() or []
+        inserted = sum(1 for item in personio if _upsert_listing(cur, item))
+        stats["sources"]["personio"] = {"fetched": len(personio), "inserted": inserted}
+        stats["total_fetched"] += len(personio)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"personio: {type(e).__name__}: {str(e)[:200]}")
+
+    # BambooHR (tech SMBs, design, e-commerce, cybersecurity)
+    try:
+        from dilly_core.job_source_bamboohr import fetch_all_bamboohr
+        bamboo = fetch_all_bamboohr() or []
+        inserted = sum(1 for item in bamboo if _upsert_listing(cur, item))
+        stats["sources"]["bamboohr"] = {"fetched": len(bamboo), "inserted": inserted}
+        stats["total_fetched"] += len(bamboo)
+        stats["total_inserted"] += inserted
+    except Exception as e:
+        stats["errors"].append(f"bamboohr: {type(e).__name__}: {str(e)[:200]}")
+
+    # Teamtailor / Jobvite / Comeet via crawl_internships_v2 crawlers
+    try:
+        import sys as _sys, os as _os
+        _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", ".."))
+        from projects.dilly.crawl_internships_v2 import (
+            TEAMTAILOR_COMPANIES, crawl_teamtailor,
+            JOBVITE_COMPANIES, crawl_jobvite,
+            COMEET_COMPANIES, crawl_comeet,
+        )
+        for company_dict, crawl_fn, label in [
+            (TEAMTAILOR_COMPANIES, crawl_teamtailor, "teamtailor"),
+            (JOBVITE_COMPANIES, crawl_jobvite, "jobvite"),
+            (COMEET_COMPANIES, crawl_comeet, "comeet"),
+        ]:
+            fetched = 0
+            inserted_count = 0
+            for slug, (name, industry) in company_dict.items():
+                try:
+                    jobs = crawl_fn(slug, name)
+                    fetched += len(jobs)
+                    for job in jobs:
+                        item = {
+                            **job,
+                            "external_id": job.get("external_id", f"{label}-{slug}-{job.get('title','')}"),
+                            "source_ats": label,
+                            "cohorts": [],
+                            "industry": industry.lower(),
+                        }
+                        if _upsert_listing(cur, item):
+                            inserted_count += 1
+                except Exception:
+                    pass
+            stats["sources"][label] = {"fetched": fetched, "inserted": inserted_count}
+            stats["total_fetched"] += fetched
+            stats["total_inserted"] += inserted_count
+    except Exception as e:
+        stats["errors"].append(f"teamtailor_jobvite_comeet: {type(e).__name__}: {str(e)[:200]}")
+
     conn.commit()
     return stats
 

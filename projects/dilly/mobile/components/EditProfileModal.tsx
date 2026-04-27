@@ -21,6 +21,7 @@ import { useResolvedTheme } from '../hooks/useTheme';
 import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
 import * as ImagePicker from 'expo-image-picker';
+import { showToast } from '../lib/globalToast';
 
 const GOLD = '#2B3A8E';
 
@@ -166,7 +167,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Allow Dilly to access your photos to set a profile picture.');
+        showToast({ message: 'Allow Dilly to access your photos to set a profile picture.', type: 'info' });
         return;
       }
 
@@ -231,7 +232,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
             setLocalPhoto(null);
             onSaved();
           } catch {
-            Alert.alert('Error', 'Could not remove photo.');
+            showToast({ message: 'Could not remove photo.', type: 'error' });
           }
         },
       },

@@ -61,6 +61,7 @@ import FadeInView from '../../components/FadeInView';
 import { DillyFeatureBanner } from '../../components/DillyFeatureBanner';
 import { useSubscription } from '../../hooks/useSubscription';
 import { useResolvedTheme } from '../../hooks/useTheme';
+import { showToast } from '../../lib/globalToast';
 
 const W = Dimensions.get('window').width;
 const INDIGO = colors.indigo;
@@ -78,6 +79,92 @@ interface GeneratedSection {
   experiences?: { company?: string; role?: string; date?: string; location?: string; bullets?: { text: string }[] }[];
   projects?: { name?: string; date?: string; tech?: string; bullets?: { text: string }[] }[];
   simple?: { lines?: string[] };
+}
+
+// Pull the first non-empty string from a list of profile shapes.
+// Profiles can store the same data under different keys depending on
+// when the row was created (transcript_school vs school_name etc.).
+function _firstStr(...candidates: any[]): string {
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim()) return c.trim();
+    if (typeof c === 'number' && !Number.isNaN(c)) return String(c);
+  }
+  return '';
+}
+
+function _firstFromArr(arr: any): string {
+  if (!Array.isArray(arr)) return '';
+  for (const item of arr) {
+    if (typeof item === 'string' && item.trim()) return item.trim();
+    if (item && typeof item === 'object') {
+      // {label, number} for phones, {city} for locations, etc.
+      const v = item.number || item.value || item.city || item.name || '';
+      if (typeof v === 'string' && v.trim()) return v.trim();
+    }
+  }
+  return '';
+}
+
+/**
+ * Fill empty contact + education fields with what Dilly already
+ * knows about the user. The LLM's generation often leaves these
+ * blank or generic (it doesn't know your phone number); pulling
+ * them from /profile saves the user from re-typing every time.
+ *
+ * Existing non-empty values are preserved - we only fill blanks so
+ * any deliberate edit the user already made is not overwritten.
+ */
+function hydrateFromProfile(
+  sections: GeneratedSection[],
+  profile: Record<string, any>,
+): GeneratedSection[] {
+  if (!profile || !sections.length) return sections;
+
+  const profileEmail   = _firstStr(profile.email, profile.login_email);
+  const profilePhone   = _firstStr(profile.phone, profile.phone_number) || _firstFromArr(profile.phones);
+  const profileCity    = _firstFromArr(profile.job_locations) || _firstStr(profile.location, profile.city);
+  const profileLinked  = _firstStr(profile.linkedin_url, profile.linkedin);
+  const profileName    = _firstStr(profile.name, profile.full_name);
+  const profileSchool  = _firstStr(profile.transcript_school, profile.school_name, profile.school);
+  const profileMajor   = _firstStr(profile.transcript_major, profile.major) || _firstFromArr(profile.majors);
+  const profileMinor   = _firstStr(profile.transcript_minor, profile.minor) || _firstFromArr(profile.minors);
+  const profileGpa     = _firstStr(profile.transcript_gpa, profile.gpa);
+  const profileGradYr  = _firstStr(profile.graduation_year, profile.grad_year);
+  const profileGradStr = profileGradYr
+    ? (profile.graduation_term ? `${profile.graduation_term} ${profileGradYr}` : `Expected ${profileGradYr}`)
+    : '';
+
+  return sections.map(s => {
+    if (s.contact) {
+      const c = s.contact;
+      return {
+        ...s,
+        contact: {
+          name:     c.name     || profileName,
+          email:    c.email    || profileEmail,
+          phone:    c.phone    || profilePhone,
+          location: c.location || profileCity,
+          linkedin: c.linkedin || profileLinked,
+        },
+      };
+    }
+    if (s.education) {
+      const e = s.education;
+      return {
+        ...s,
+        education: {
+          ...e,
+          university: e.university || profileSchool,
+          major:      e.major      || profileMajor,
+          minor:      e.minor      || profileMinor,
+          gpa:        e.gpa        || profileGpa,
+          graduation: e.graduation || profileGradStr,
+          location:   e.location   || profileCity,
+        },
+      };
+    }
+    return s;
+  });
 }
 
 // The forge stages the user sees during generation. Each dwells
@@ -298,7 +385,7 @@ export default function ResumeGenerateScreen() {
   async function handleDownloadFormat(format: 'pdf' | 'docx') {
     try {
       if (!variantId) {
-        Alert.alert('Saving resume…', 'Give it a second and tap Download again.');
+        showToast({ message: 'Give it a second and tap Download again.', type: 'info' });
         return;
       }
 
@@ -435,7 +522,10 @@ export default function ResumeGenerateScreen() {
             setJobTitle(resume.job_title || '');
             setCompany(resume.company || '');
             setJd(resume.job_description || '');
-            setSections(resume.sections || []);
+            // Hydrate when reopening too - if the variant was saved
+            // before profile data existed (e.g. user added phone after),
+            // the empty fields fill in with the latest profile values.
+            setSections(hydrateFromProfile(resume.sections || [], profile));
             setSaved(true);
             setVariantId(viewId);
             setStage('done');
@@ -465,11 +555,11 @@ export default function ResumeGenerateScreen() {
 
   async function handleGenerate() {
     if (!jobTitle.trim() || !company.trim()) {
-      Alert.alert('Missing info', 'Please enter a job title and company.');
+      showToast({ message: 'Please enter a job title and company.', type: 'info' });
       return;
     }
     if (!jd.trim()) {
-      Alert.alert('Job description required', 'Paste the job description so Dilly can tailor your resume for this role.');
+      showToast({ message: 'Paste the job description so Dilly can tailor your resume for this role.', type: 'info' });
       return;
     }
 
@@ -531,11 +621,16 @@ export default function ResumeGenerateScreen() {
         }
       }
 
-      setSections(parsed);
+      // Hydrate empty contact/education fields with what Dilly already
+      // knows from the user's profile. Saves the user from re-typing
+      // their email, phone, school, GPA etc. when the LLM left them
+      // blank or generic.
+      const hydrated = hydrateFromProfile(parsed, profile);
+      setSections(hydrated);
       setAtsInfo(data);
       progressAnim.value = withTiming(1, { duration: 400 });
       setStage('done');
-      await saveVariant(parsed);
+      await saveVariant(hydrated);
     } catch (err: any) {
       const detail = String(err?.message || err?.toString?.() || 'Unknown error').slice(0, 400);
       setGenerateError(detail);
@@ -1093,6 +1188,23 @@ function DonePhase({
         <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>YOUR RESUME</Text>
         <Text style={[styles.previewHighlightLegend, { color: theme.surface.t3 }]}>
           <Text style={{ color: theme.accent, fontWeight: '800' }}>•</Text> JD match
+        </Text>
+      </View>
+      {/* Affordance banner. Testers were missing the inline-edit
+          capability entirely - the EditableText components look like
+          static text until you tap them. A pencil + one-line hint
+          right above the preview makes it obvious. */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        marginHorizontal: 16, marginBottom: 8,
+        paddingHorizontal: 12, paddingVertical: 9,
+        borderRadius: 10,
+        backgroundColor: theme.accentSoft,
+        borderWidth: 1, borderColor: theme.accentBorder,
+      }}>
+        <Ionicons name="create-outline" size={14} color={theme.accent} />
+        <Text style={{ flex: 1, fontSize: 12, fontWeight: '600', color: theme.accent, lineHeight: 17 }}>
+          Tap any field to edit it - your name, bullets, dates, anything.
         </Text>
       </View>
       <View style={[styles.previewCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>

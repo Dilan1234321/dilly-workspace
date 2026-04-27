@@ -14,6 +14,7 @@ import { useResolvedTheme } from '../../../hooks/useTheme'
 import ArenaPage from '../../../components/arena/ArenaPage'
 import { openDillyOverlay } from '../../../hooks/useDillyOverlay'
 import { resolvePlaybook, type CohortPlaybook } from '../../../lib/arena/cohort-playbook'
+import { showToast } from '../../../lib/globalToast';
 
 export default function ColdEmailStudio() {
   const theme = useResolvedTheme()
@@ -58,7 +59,7 @@ export default function ColdEmailStudio() {
 
   const copy = async () => {
     await Clipboard.setStringAsync(draft)
-    Alert.alert('Copied', 'The email draft is on your clipboard.')
+    showToast({ message: 'The email draft is on your clipboard.', type: 'info' })
   }
 
   return (

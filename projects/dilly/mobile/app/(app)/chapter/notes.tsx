@@ -27,6 +27,7 @@ import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import AnimatedPressable from '../../../components/AnimatedPressable';
 import FadeInView from '../../../components/FadeInView';
+import { showToast } from '../../../lib/globalToast';
 
 interface ChapterNote {
   id: string;
@@ -95,7 +96,7 @@ export default function ChapterNotesScreen() {
         Alert.alert('Not now', message);
       }
     } catch {
-      Alert.alert('Not now', 'Could not reach Dilly right now.');
+      showToast({ message: 'Could not reach Dilly right now.', type: 'error' });
     } finally {
       setSubmitting(false);
     }

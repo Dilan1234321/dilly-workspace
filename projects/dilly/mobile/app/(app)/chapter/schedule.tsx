@@ -22,6 +22,7 @@ import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import AnimatedPressable from '../../../components/AnimatedPressable';
 import { scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
+import { showToast } from '../../../lib/globalToast';
 
 const DAYS = [
   { idx: 0, label: 'Mon' },
@@ -79,10 +80,10 @@ export default function ChapterScheduleScreen() {
         // immediately sees their countdown and can write notes.
         router.replace('/(app)/chapter/prep' as any);
       } else {
-        Alert.alert('Not now', 'Could not save your schedule right now.');
+        showToast({ message: 'Could not save your schedule right now.', type: 'error' });
       }
     } catch {
-      Alert.alert('Not now', 'Could not reach Dilly right now.');
+      showToast({ message: 'Could not reach Dilly right now.', type: 'error' });
     } finally {
       setSaving(false);
     }

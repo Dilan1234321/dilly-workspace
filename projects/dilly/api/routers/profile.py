@@ -955,6 +955,28 @@ def _fan_out_transcript_facts(
 @router.post("/profile/transcript")
 async def upload_profile_transcript(request: Request, file: UploadFile = File(...)):
     """Upload transcript (PDF). Validates file type and size; parses GPA, courses, honors. Replaces any existing transcript."""
+    try:
+        return await _upload_profile_transcript_impl(request, file)
+    except HTTPException:
+        # Already a controlled error (validation/internal with a useful
+        # message); let FastAPI render it as-is.
+        raise
+    except Exception as _e:
+        # Last-resort safety net so the user gets something actionable
+        # even if a path we did not anticipate throws (psycopg flake,
+        # tempfile permission, parser regression). Without this the
+        # request falls through to the global 500 handler that returns
+        # the generic "Something went wrong on our end" line.
+        import sys as _sys, traceback as _tb
+        _sys.stderr.write(f"[transcript] uncaught: {type(_e).__name__}: {str(_e)[:300]}\n")
+        _tb.print_exc(file=_sys.stderr)
+        raise errors.internal(
+            f"Transcript upload hit an unexpected error ({type(_e).__name__}). "
+            "Try again, and if it keeps happening try a different PDF export."
+        )
+
+
+async def _upload_profile_transcript_impl(request: Request, file: UploadFile):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     if not email:

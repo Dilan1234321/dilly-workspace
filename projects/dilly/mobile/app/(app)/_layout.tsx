@@ -16,6 +16,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import useCelebration from '../../hooks/useCelebration';
 import ProfileGrowthToast from '../../components/ProfileGrowthToast';
 import GlobalToast from '../../components/GlobalToast';
+import GlobalConfirm from '../../components/GlobalConfirm';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -408,6 +409,7 @@ export default function AppLayout() {
               happens to be when extraction resolves. */}
           <ProfileGrowthToast />
           <GlobalToast />
+          <GlobalConfirm />
         </>
       </ErrorBoundary>
     </SubscriptionProvider>

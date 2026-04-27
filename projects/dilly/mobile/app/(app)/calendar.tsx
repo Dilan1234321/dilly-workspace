@@ -23,6 +23,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { DillyFace } from '../../components/DillyFace';
 import { TouchableOpacity } from 'react-native';
+import { showToast } from '../../lib/globalToast';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -605,7 +606,7 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
                 created = !!r;
               }
               if (created) Alert.alert('Reminder set', `Added to your Reminders app.`);
-              else Alert.alert('Could not set reminder', 'Check Reminders permissions in Settings.');
+              else showToast({ message: 'Check Reminders permissions in Settings.', type: 'error' });
             }}
             scaleDown={0.85}
             hitSlop={8}
@@ -647,10 +648,10 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
 
   function handleAdd() {
     if (!title.trim()) { Alert.alert('Title required'); return; }
-    if (!dateStr.trim()) { Alert.alert('Date required', 'Enter a date like 2026-04-15'); return; }
+    if (!dateStr.trim()) { showToast({ message: 'Enter a date like 2026-04-15', type: 'info' }); return; }
     // Validate date
     const parsed = parseDate(dateStr);
-    if (!parsed) { Alert.alert('Invalid date', 'Use format YYYY-MM-DD'); return; }
+    if (!parsed) { showToast({ message: 'Use format YYYY-MM-DD', type: 'error' }); return; }
 
     onAdd({
       id: uid(),
@@ -1039,7 +1040,7 @@ export default function CalendarScreen() {
         Alert.alert('Prep Schedule', `${data.blocks.length} prep blocks added for ${event.company}`);
       }
     } catch {
-      Alert.alert('Error', 'Could not generate prep schedule');
+      showToast({ message: 'Could not generate prep schedule', type: 'error' });
     } finally {
       setLoadingPrepScheduleId(null);
     }

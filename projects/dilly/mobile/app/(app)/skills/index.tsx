@@ -103,26 +103,31 @@ function fmtDuration(sec: number): string {
 
 // ─── Persona copy - subhead / section label / empty state per AppMode ────────
 
+// Subhead copy is the page's "this is yours" signal. The user told
+// Dilly about their cohort, their target role, the jobs they applied
+// to - and Skills should read like a result of that, not a generic
+// library. Each subhead names the inputs Dilly used so the page feels
+// alive and tied to the rest of the app.
 const PERSONA_COPY: Record<AppMode, { subhead: string; sectionLabel: string; emptyState: string }> = {
   student: {
-    subhead: 'Skills to ace your senior year',
+    subhead: 'Picked for you from your major, target jobs, and what your cohort is hiring for right now.',
     sectionLabel: 'YOUR STUDENT SKILL LAB',
     emptyState: "No picks yet - add your major and graduation year to unlock your skill queue.",
   },
   seeker: {
-    subhead: 'Skills to land your next role',
+    subhead: 'Picked for you from your target role, the jobs you saved, and the skill gaps Dilly noticed in your profile.',
     sectionLabel: 'YOUR JOB SEARCH SKILL LAB',
     emptyState: "No picks yet - complete your target role to unlock tailored recommendations.",
   },
   holder: {
-    subhead: 'Skills to grow into your next title',
+    subhead: 'Picked for you from your current role, where your field is heading, and the moves your AI Arena flagged.',
     sectionLabel: 'YOUR CAREER SKILL LAB',
     emptyState: "No picks yet - add your current role and growth goals to see what to learn.",
   },
 };
 
 const GENERIC_COPY = {
-  subhead: "Today's picks for you",
+  subhead: "Picked for you from your profile and what your cohort is hiring for.",
   sectionLabel: 'YOUR SKILL LAB TODAY',
   emptyState: 'No recommendations yet. Finish setting up your profile and check back.',
 };

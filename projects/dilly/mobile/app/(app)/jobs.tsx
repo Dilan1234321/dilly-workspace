@@ -1163,7 +1163,7 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
 // -- Job Card -----------------------------------------------------------------
 
 function JobCard(props: CardCommonProps) {
-  const { job, profile, theme, expanded, gapVideoId } = props;
+  const { job, profile, theme, expanded, gapVideoId, onApply } = props;
   const story = buildFitStory(job, profile);
   const posted = daysAgo(job.posted_date);
 
@@ -1187,26 +1187,37 @@ function JobCard(props: CardCommonProps) {
       </View>
       {story ? <Text style={[styles.cardStory, { color: theme.surface.t1 }]} numberOfLines={expanded ? 0 : 2}>{story}</Text> : null}
 
-      {/* Skill-gap pill - shown collapsed too so the Skills <-> Jobs
-          cross-link is visible without having to expand. Tap routes
-          straight into Dilly Skills (in-app, never a browser). When
-          expanded the full SkillsVideoCard renders inside ExpandedDetails. */}
-      {!expanded && gapVideoId ? (
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={(e) => {
-            // Stop the tap from bubbling up to the card's onExpand.
-            e.stopPropagation?.();
-            router.push(`/skills/video/${gapVideoId}`);
-          }}
-          style={[styles.gapPill, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
-        >
-          <Ionicons name="play-circle" size={14} color={theme.accent} />
-          <Text style={[styles.gapPillText, { color: theme.accent }]} numberOfLines={1}>
-            Close the skill gap - 1 video in Dilly Skills
-          </Text>
-          <Ionicons name="chevron-forward" size={12} color={theme.accent} />
-        </TouchableOpacity>
+      {/* Collapsed-card action row. Apply ships the user straight to
+          the listing without forcing them to expand first - the
+          previous flow buried Apply two taps deep. The skill-gap
+          shortcut sits next to Apply so the cross-link to Dilly
+          Skills is one tap from any card that needs an upskill. */}
+      {!expanded ? (
+        <View style={styles.cardActionRow}>
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={(e) => { e.stopPropagation?.(); onApply(job); }}
+            style={[styles.cardApplyBtn, { backgroundColor: theme.accent }]}
+          >
+            <Ionicons name="arrow-forward" size={13} color="#fff" />
+            <Text style={styles.cardApplyText}>Apply</Text>
+          </TouchableOpacity>
+          {gapVideoId ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                router.push(`/skills/video/${gapVideoId}`);
+              }}
+              style={[styles.gapPill, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder, marginTop: 0, flex: 1 }]}
+            >
+              <Ionicons name="play-circle" size={14} color={theme.accent} />
+              <Text style={[styles.gapPillText, { color: theme.accent }]} numberOfLines={1}>
+                Skill gap - 1 video
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       ) : null}
 
       {expanded ? <ExpandedDetails {...props} /> : null}
@@ -1478,6 +1489,22 @@ const styles = StyleSheet.create({
   cardPosted:  { fontSize: 11, fontWeight: '600' },
   cardCompany: { fontSize: 12, fontWeight: '600', marginTop: 3 },
   cardStory:   { fontSize: 12, fontStyle: 'italic', lineHeight: 17, marginTop: 8 },
+  cardActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  cardApplyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  cardApplyText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   gapPill: {
     marginTop: 10,
     flexDirection: 'row',

@@ -35,6 +35,7 @@ import AnimatedPressable from '../../../components/AnimatedPressable';
 import FadeInView from '../../../components/FadeInView';
 import { readProfileSlim } from '../../../lib/profileCache';
 import { DillyFace } from '../../../components/DillyFace';
+import { showToast } from '../../../lib/globalToast';
 
 interface ChapterNote { id: string; text: string; added_at: string; }
 interface NotesResponse {
@@ -198,7 +199,7 @@ export default function ChapterPrepScreen() {
         Alert.alert('Not now', message);
       }
     } catch {
-      Alert.alert('Not now', 'Could not reach Dilly right now.');
+      showToast({ message: 'Could not reach Dilly right now.', type: 'error' });
     } finally {
       setSubmitting(false);
     }

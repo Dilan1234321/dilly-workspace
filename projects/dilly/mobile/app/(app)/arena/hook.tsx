@@ -13,6 +13,7 @@ import { dilly } from '../../../lib/dilly'
 import { useResolvedTheme } from '../../../hooks/useTheme'
 import ArenaPage from '../../../components/arena/ArenaPage'
 import { resolvePlaybook, type CohortPlaybook } from '../../../lib/arena/cohort-playbook'
+import { showToast } from '../../../lib/globalToast';
 
 interface Profile {
   first_name?: string
@@ -65,7 +66,7 @@ export default function TheHook() {
 
   const copy = async (text: string) => {
     await Clipboard.setStringAsync(text)
-    Alert.alert('Copied', 'The hook is on your clipboard.')
+    showToast({ message: 'The hook is on your clipboard.', type: 'info' })
   }
 
   return (

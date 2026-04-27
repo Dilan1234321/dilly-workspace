@@ -24,6 +24,7 @@ import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { openAddToCalendar } from '../../lib/calendar';
 import { useResolvedTheme } from '../../hooks/useTheme';
+import { showToast } from '../../lib/globalToast';
 
 const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
@@ -455,7 +456,7 @@ export default function InternshipTrackerScreen() {
         setApps(prev => [data.application, ...prev]);
       }
     } catch {
-      Alert.alert('Error', 'Could not save this application. Check your connection and try again.');
+      showToast({ message: 'Could not save this application. Check your connection and try again.', type: 'error' });
     }
   }
 
@@ -469,7 +470,7 @@ export default function InternshipTrackerScreen() {
       });
     } catch {
       setApps(previousApps);
-      Alert.alert('Error', 'Status update failed. Your change was not saved.');
+      showToast({ message: 'Status update failed. Your change was not saved.', type: 'error' });
     }
   }
 

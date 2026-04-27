@@ -29,6 +29,7 @@ import FadeInView from '../../components/FadeInView';
 import { CancelGoodbyeModal } from '../../components/CancelGoodbyeModal';
 import { THEMES, useTheme, setTheme, useResolvedTheme } from '../../hooks/useTheme';
 import { useSubscription } from '../../hooks/useSubscription';
+import { showToast } from '../../lib/globalToast';
 
 const INDIGO = colors.indigo;
 const APP_VERSION = '1.0.0';
@@ -1132,50 +1133,10 @@ export default function SettingsScreen() {
                       is driven by web_profile_settings.learning_profile_visible;
                       we patch the whole blob because the backend
                       doesn't have an atomic toggle endpoint for it. */}
-                  {webProfileOn && slug ? (
-                    <>
-                      <Divider />
-                      <ToggleRow
-                        label="Public learning profile"
-                        hint={learningProfileOn
-                          ? `skills.hellodilly.com/s/${slug}`
-                          : 'Your learning receipt is hidden'}
-                        value={learningProfileOn}
-                        onToggle={async (v: boolean) => {
-                          setLearningProfileOn(v);
-                          // Read-modify-write the settings blob so we
-                          // do not clobber other user-chosen keys
-                          // (hidden_fact_ids, section toggles, etc).
-                          try {
-                            const p: any = await dilly.get('/profile').catch(() => null);
-                            const ws = (p && p.web_profile_settings) || {};
-                            savePref('web_profile_settings', {
-                              ...ws,
-                              learning_profile_visible: v,
-                            });
-                          } catch {
-                            savePref('web_profile_settings', {
-                              learning_profile_visible: v,
-                            });
-                          }
-                        }}
-                      />
-                      {learningProfileOn ? (
-                        <>
-                          <Divider />
-                          <Row
-                            label="View learning profile"
-                            onPress={() => Linking.openURL(`https://skills.hellodilly.com/s/${slug}`)}
-                          />
-                          <Divider />
-                          <Row
-                            label="Manage what's public"
-                            onPress={() => router.push('/skills/profile-settings')}
-                          />
-                        </>
-                      ) : null}
-                    </>
-                  ) : null}
+                  {/* Public learning profile + Manage what's public
+                      removed - the public learning page is being phased
+                      out in favor of the in-app surface. The web URL
+                      survives but no longer surfaces from settings. */}
                 </>
               );
             })()}
@@ -1233,9 +1194,9 @@ export default function SettingsScreen() {
         <FadeInView delay={160}>
           <SectionLabel text="ABOUT" />
           <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-            <Row label="Terms of Service" onPress={() => Alert.alert('Terms of Service', 'By using Dilly, you agree to the following:\n\n1. Dilly is a career guidance platform. It is not a guarantee of employment.\n2. AI-generated content (fit narratives, resumes, interview feedback) may not always be accurate. Verify important information independently.\n3. Your Dilly Profile data is stored securely and used to provide personalized career guidance.\n4. You may delete your account and all data at any time from Settings.\n5. Dilly is not a substitute for professional career counseling.\n6. We reserve the right to modify features and pricing with notice.\n7. Misuse of the platform (fake profiles, spam, harassment) will result in account termination.\n\nQuestions? Email ceo@hellodilly.com')} />
+            <Row label="Terms of Service" onPress={() => showToast({ message: 'By using Dilly, you agree to the following:\n\n1. Dilly is a career guidance platform. It is not a guarantee of employment.\n2. AI-generated content (fit narratives, resumes, interview feedback) may not always be accurate. Verify important information independently.\n3. Your Dilly Profile data is stored securely and used to provide personalized career guidance.\n4. You may delete your account and all data at any time from Settings.\n5. Dilly is not a substitute for professional career counseling.\n6. We reserve the right to modify features and pricing with notice.\n7. Misuse of the platform (fake profiles, spam, harassment) will result in account termination.\n\nQuestions? Email ceo@hellodilly.com', type: 'info' })} />
             <Divider />
-            <Row label="Privacy Policy" onPress={() => Alert.alert('Privacy Policy', 'Your privacy matters to us.\n\n1. We collect: email, name, profile information you provide, and conversation history with Dilly AI.\n2. We use this data to: build your Dilly Profile, generate fit narratives, tailor resumes, and improve our service.\n3. We do NOT sell your data to third parties.\n4. We use Anthropic (Claude) for AI features. Your conversations are processed by their API but not used to train their models.\n5. We use Resend for email delivery and Railway for hosting.\n6. You can delete all your data at any time from Settings > Delete Account.\n7. We may use anonymized, aggregated data for product improvement.\n8. We use cookies and local storage for authentication only.\n\nQuestions? Email ceo@hellodilly.com')} />
+            <Row label="Privacy Policy" onPress={() => showToast({ message: 'Your privacy matters to us.\n\n1. We collect: email, name, profile information you provide, and conversation history with Dilly AI.\n2. We use this data to: build your Dilly Profile, generate fit narratives, tailor resumes, and improve our service.\n3. We do NOT sell your data to third parties.\n4. We use Anthropic (Claude) for AI features. Your conversations are processed by their API but not used to train their models.\n5. We use Resend for email delivery and Railway for hosting.\n6. You can delete all your data at any time from Settings > Delete Account.\n7. We may use anonymized, aggregated data for product improvement.\n8. We use cookies and local storage for authentication only.\n\nQuestions? Email ceo@hellodilly.com', type: 'info' })} />
             <Divider />
             <Row label="Contact us" onPress={() => Linking.openURL('mailto:ceo@hellodilly.com')} />
           </View>

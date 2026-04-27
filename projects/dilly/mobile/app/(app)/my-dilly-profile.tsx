@@ -914,7 +914,7 @@ function SeekerProfileScreen() {
         {/* ── Edit Profile Section ──────────────────────────── */}
         {editMode && (
           <FadeInView delay={0}>
-            <View style={d.editSection}>
+            <View style={[d.editSection, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               {/* Photo */}
               <AnimatedPressable
                 style={d.editPhotoBtn}
@@ -1740,15 +1740,18 @@ function SeekerProfileScreen() {
             })}
             scaleDown={0.98}
           >
-            <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: starterOpacity }}>
+            <Animated.View style={{ alignItems: 'center', justifyContent: 'center', gap: 8, opacity: starterOpacity }}>
               <View style={[d.talkIcon, { backgroundColor: theme.accent + '22' }]}>
-                <Ionicons name={starter.icon as any} size={18} color={theme.accent} />
+                <Ionicons name={starter.icon as any} size={20} color={theme.accent} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[d.talkPrompt, { color: theme.surface.t1 }]}>{starter.display}</Text>
-                <Text style={[d.talkHint, { color: theme.accent }]}>Tap to tell Dilly</Text>
-              </View>
-              <Ionicons name="chatbubble-ellipses" size={20} color={theme.accent} />
+              <Text
+                style={[d.talkPrompt, { color: theme.surface.t1, textAlign: 'center', fontSize: 16, lineHeight: 22 }]}
+              >
+                {starter.display}
+              </Text>
+              <Text style={[d.talkHint, { color: theme.accent, textAlign: 'center' }]}>
+                Tap to tell Dilly
+              </Text>
             </Animated.View>
           </AnimatedPressable>
         </FadeInView>
@@ -1908,18 +1911,55 @@ function SeekerProfileScreen() {
           <WinsCard />
         </FadeInView>
 
-        {/* ── 4. Skills Cloud ──────────────────────────────────── */}
+        {/* ── 4. Skills Cloud ────────────────────────────────────
+            Cap inline display at 8 chips to stop the cloud from
+            consuming half the screen for power users. The "See all"
+            row jumps to the same per-category page used by the
+            Strengths Map, where the user can scroll the full list. */}
         {allSkills.length > 0 && (
           <FadeInView delay={260}>
-            <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>SKILLS DILLY KNOWS</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={[d.sectionLabel, { color: theme.surface.t3, marginBottom: 0 }]}>SKILLS DILLY KNOWS</Text>
+              {allSkills.length > 8 && (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: theme.surface.t3 }}>
+                  {allSkills.length} total
+                </Text>
+              )}
+            </View>
             <View style={d.skillCloud}>
-              {allSkills.slice(0, 20).map((skill, i) => {
+              {allSkills.slice(0, 8).map((skill, i) => {
                 const conf = skill.confidence === 'high' ? 1 : skill.confidence === 'medium' ? 0.7 : 0.4;
                 return (
                   <SkillTag key={skill.id || i} skill={skill} conf={conf} onPress={(anchor) => setPopup({ visible: true, anchor, fact: skill })} />
                 );
               })}
             </View>
+            {allSkills.length > 8 && (
+              <AnimatedPressable
+                style={{
+                  marginTop: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: theme.accentBorder,
+                  backgroundColor: theme.accentSoft,
+                }}
+                onPress={() => router.push({
+                  pathname: '/my-dilly-category',
+                  params: { category: 'skill_unlisted', label: 'Skills', color: '#0E7490' },
+                })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="list" size={14} color={theme.accent} />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: theme.accent }}>
+                  See all {allSkills.length} skills
+                </Text>
+              </AnimatedPressable>
+            )}
           </FadeInView>
         )}
 

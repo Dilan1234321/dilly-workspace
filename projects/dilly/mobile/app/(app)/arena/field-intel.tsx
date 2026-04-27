@@ -167,13 +167,24 @@ function adaptFieldIntel(raw: RawFieldIntel | null): FieldIntelResponse | null {
     live_ai_pct: livePct,
   }
 
-  // Role radar dots - convert ai_fluency level → numeric percent so the
-  // existing scatter chart can plot them on a continuous Y axis.
-  const role_radar: RadarDot[] = ro.map(r => ({
-    role_cluster: r.role_cluster,
-    label: humanizeRoleCluster(r.role_cluster),
-    vol: r.count,
-    ai_pct: aiFluencyToPct(r.ai_fluency),
+  // Role radar dots. The backend groups by (role_cluster, ai_fluency)
+  // which produces one row per fluency level per cluster - so a single
+  // role like "software_engineer" can appear 3 times with low/medium/
+  // high splits. Collapse to one dot per cluster, with vol = sum of
+  // postings and ai_pct = posting-weighted average across the splits.
+  // That is what the user actually wants to see on the chart.
+  const _byCluster = new Map<string, { totalVol: number; weightedPct: number }>()
+  for (const r of ro) {
+    const cur = _byCluster.get(r.role_cluster) || { totalVol: 0, weightedPct: 0 }
+    cur.totalVol += r.count
+    cur.weightedPct += aiFluencyToPct(r.ai_fluency) * r.count
+    _byCluster.set(r.role_cluster, cur)
+  }
+  const role_radar: RadarDot[] = Array.from(_byCluster.entries()).map(([cluster, agg]) => ({
+    role_cluster: cluster,
+    label: humanizeRoleCluster(cluster),
+    vol: agg.totalVol,
+    ai_pct: agg.totalVol > 0 ? Math.round(agg.weightedPct / agg.totalVol) : 0,
   }))
 
   return {
@@ -257,15 +268,12 @@ export default function FieldIntelScreen() {
       contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 80 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
     >
-      {/* ── Section 1: Header ─────────────────────────────────────────── */}
+      {/* Section 1: Header. AI Arena is a tab destination (not a
+          drill-down), so the back button was nonsensical - tapping
+          it bumped the user to a stale "ai-arena" route shell. The
+          tab bar is the back. */}
       <View style={s.header}>
-        <TouchableOpacity
-          onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(app)/ai-arena' as any) }}
-          hitSlop={12}
-        >
-          <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 10 }}>
+        <View style={{ flex: 1 }}>
           <Text style={[s.eyebrow, { color: theme.accent }]}>AI FIELD INTELLIGENCE</Text>
           <Text style={[s.title, { color: theme.surface.t1 }]}>{cohortName}</Text>
           <Text style={[s.sub, { color: theme.surface.t2 }]}>
@@ -273,6 +281,70 @@ export default function FieldIntelScreen() {
           </Text>
         </View>
       </View>
+
+      {/* ── FLAGSHIP HERO: how do I get & stay ahead of AI ─────────────
+          This is the AI Arena's reason to exist. Not a stat dump - a
+          verdict + a 90-day move that puts the user on the right side
+          of where their field is heading. The graphs / pulses below
+          are evidence; this is the takeaway. */}
+      {pulse || threatOpp ? (
+        <View style={[s.flagshipCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '60' }]}>
+          <View style={[s.flagshipAccentBar, { backgroundColor: theme.accent }]} />
+          <Text style={[s.flagshipEyebrow, { color: theme.accent }]}>HOW YOU STAY AHEAD</Text>
+          <Text style={[s.flagshipVerdict, { color: theme.surface.t1 }]}>
+            {(() => {
+              const pct = pulse?.ai_fluency_pct ?? threatOpp?.disruption_pct ?? 0
+              const skill = (threatOpp?.opportunities?.[0]) || ''
+              const namePiece = fname ? `, ${fname}` : ''
+              if (pct >= 60) {
+                return `${pct}% of ${cohortName} is already AI-shaped${namePiece}. Your edge is not learning the tools - it is owning ${skill || 'the human work AI cannot replicate'}.`
+              }
+              if (pct >= 30) {
+                return `${cohortName} is reshaping itself around AI - ${pct}% of new postings now require it. The window where ${skill || 'fluency'} is a differentiator closes within 12 months.`
+              }
+              return `${cohortName} has not been hit hard yet, but it is coming. The people who get ahead start ${skill ? `building on ${skill}` : 'now'} before the wave lands.`
+            })()}
+          </Text>
+
+          {/* The 90-day move. Three concrete weekly bets, derived from
+              the cohort's resistant skills. Tap each to plan it with
+              Dilly. This is the page's primary action. */}
+          <View style={s.planBlock}>
+            <Text style={[s.planLabel, { color: theme.surface.t3 }]}>YOUR NEXT 90 DAYS</Text>
+            {[0, 1, 2].map(idx => {
+              const skill = (threatOpp?.opportunities || [])[idx]
+              const weekRange = idx === 0 ? 'Weeks 1-4' : idx === 1 ? 'Weeks 5-8' : 'Weeks 9-12'
+              const move = skill
+                ? (idx === 0
+                  ? `Build one piece of public proof on ${skill}.`
+                  : idx === 1
+                  ? `Use ${skill} on a real project at work or a side build.`
+                  : `Tell the story - resume bullet, post, talk - of how ${skill} changed your output.`)
+                : (idx === 0
+                  ? `Pick the one human-only skill that compounds in ${cohortName}.`
+                  : idx === 1
+                  ? `Apply it to one real piece of work, not a tutorial.`
+                  : `Make the proof public so recruiters and your network see it.`)
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  activeOpacity={0.85}
+                  onPress={() => openDillyOverlay({
+                    initialMessage: `My AI Arena says my next ${weekRange.toLowerCase()} should be: "${move}". Walk me through what that actually looks like in practice for a ${cohortName} role. Be specific.`,
+                  })}
+                  style={[s.planRow, { borderTopColor: theme.surface.border }]}
+                >
+                  <View style={[s.planChip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                    <Text style={[s.planChipText, { color: theme.accent }]}>{weekRange}</Text>
+                  </View>
+                  <Text style={[s.planMove, { color: theme.surface.t1 }]} numberOfLines={2}>{move}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={theme.accent} />
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
+      ) : null}
 
       {/* ── Section 2: Cohort Pulse ────────────────────────────────────── */}
       <SectionLabel label="COHORT PULSE" theme={theme} />
@@ -521,6 +593,48 @@ const s = StyleSheet.create({
     fontSize: 12, lineHeight: 17,
     paddingHorizontal: 20, marginBottom: 8,
   },
+
+  // Flagship verdict + 90-day plan. Owns the top of the page.
+  flagshipCard: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    padding: 18,
+    paddingTop: 20,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  flagshipAccentBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 4 },
+  flagshipEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6, marginBottom: 10 },
+  flagshipVerdict: {
+    fontSize: 17, fontWeight: '700', lineHeight: 24,
+    marginBottom: 18,
+  },
+  planBlock: {
+    marginTop: 4,
+    borderRadius: 12,
+  },
+  planLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.4, marginBottom: 8 },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  planChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  planChipText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
+  planMove: { flex: 1, fontSize: 13, fontWeight: '600', lineHeight: 18 },
 
   card: {
     marginHorizontal: 16,

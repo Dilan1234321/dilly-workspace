@@ -29,6 +29,7 @@ import AnimatedPressable from '../../../components/AnimatedPressable';
 import { cancelMissReminder, scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
 import { scheduleOutcomePushes } from '../../../hooks/useOutcomePushes';
 import { triggerCelebration } from '../../../hooks/useCelebration';
+import { showToast } from '../../../lib/globalToast';
 
 // ─── Default export: gates on CHAPTER_V2_ENABLED ──────────────────────
 
@@ -481,7 +482,7 @@ function ChapterV1() {
       await dilly.fetch('/calendar/events', { method: 'POST', body: JSON.stringify({ title, notes: oneMove.body, type: 'deadline', date_iso: date.toISOString() }) }).catch(() => {});
       scheduleOutcomePushes({ id: `chapter-move-${chapter.id || 'session'}-${date.toISOString().slice(0, 10)}`, title, at: date, prepPrompt: `My Chapter homework is due tomorrow: "${oneMove.body}". Help me prep - what should I actually do in the next hour to make sure I do this?` }).catch(() => {});
       Alert.alert('Added', "I've put this on your calendar for next week.");
-    } catch { Alert.alert('Not now', 'Could not add that right now. Try again.'); }
+    } catch { showToast({ message: 'Could not add that right now. Try again.', type: 'error' }); }
   }
 
   if (loading) {
