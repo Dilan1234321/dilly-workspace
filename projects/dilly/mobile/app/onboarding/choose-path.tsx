@@ -17,6 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import FadeInView from '../../components/FadeInView';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { setToken } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
+import { signInWithApple, signInWithGoogle } from '../../lib/oauthSignIn';
+import { Platform } from 'react-native';
 
 export default function ChoosePathScreen() {
   const insets = useSafeAreaInsets();
@@ -41,6 +45,12 @@ export default function ChoosePathScreen() {
   const [generalEmail, setGeneralEmail] = useState('');
   const [generalError, setGeneralError] = useState('');
   const [generalLoading, setGeneralLoading] = useState(false);
+  // OAuth state — Apple + Google sign-in are non-student paths only
+  // (showStudentFirst === false). Either button kicks the user through
+  // the same auto-account-create flow as email-code, then routes to
+  // profile-pro for non-student onboarding.
+  const [oauthLoading, setOauthLoading] = useState<null | 'apple' | 'google'>(null);
+  const [oauthError, setOauthError] = useState('');
 
   // Student email state
   const [studentEmail, setStudentEmail] = useState('');
@@ -107,6 +117,76 @@ export default function ChoosePathScreen() {
 
   const generalActive = generalEmail.trim().length > 0 && !generalLoading;
   const studentActive = studentEmail.trim().length > 0 && !studentLoading;
+
+  // Shared post-OAuth handler. Stores the session token, PATCHes
+  // user_path + user_type='general' onto the freshly-created profile,
+  // wipes the pending-path AsyncStorage key, and routes to profile-pro
+  // (or profile-holder for the i_have_a_job situation).
+  async function _completeOAuthSignIn(token: string) {
+    await setToken(token);
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const pendingPath = await AsyncStorage.getItem('dilly_pending_user_path');
+      const pendingPlan = await AsyncStorage.getItem('dilly_pending_plan');
+      const patch: Record<string, string> = { user_type: 'general' };
+      if (pendingPath) patch.user_path = pendingPath;
+      if (pendingPlan) patch.plan = pendingPlan;
+      await dilly.fetch('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      }).catch(() => {});
+      await AsyncStorage.removeItem('dilly_pending_user_path');
+      await AsyncStorage.removeItem('dilly_pending_plan');
+      // Reset the tutorial flag so the new account sees the 5-card intro.
+      await AsyncStorage.removeItem('dilly_tutorial_shown').catch(() => {});
+
+      if (pendingPath === 'i_have_a_job') {
+        router.replace('/onboarding/profile-holder');
+      } else {
+        router.replace('/onboarding/profile-pro');
+      }
+    } catch {
+      // If anything in the post-auth chore fails, still route to
+      // profile-pro — the user has a valid session and can complete
+      // setup; missing user_path will surface as a default 'exploring'.
+      router.replace('/onboarding/profile-pro');
+    }
+  }
+
+  async function handleAppleSignIn() {
+    setOauthError('');
+    setOauthLoading('apple');
+    try {
+      const result = await signInWithApple();
+      if (!result?.token) throw new Error('Apple sign-in returned no token.');
+      await _completeOAuthSignIn(result.token);
+    } catch (err: any) {
+      const msg = err?.message || 'Apple sign-in failed.';
+      // Suppress the user-cancel case so the screen doesn't shout at them.
+      if (!/cancel|user.+cancell?ed|ERR_REQUEST_CANCELED/i.test(msg)) {
+        setOauthError(msg);
+      }
+    } finally {
+      setOauthLoading(null);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setOauthError('');
+    setOauthLoading('google');
+    try {
+      const result = await signInWithGoogle();
+      if (!result?.token) throw new Error('Google sign-in returned no token.');
+      await _completeOAuthSignIn(result.token);
+    } catch (err: any) {
+      const msg = err?.message || 'Google sign-in failed.';
+      if (!/cancel/i.test(msg)) {
+        setOauthError(msg);
+      }
+    } finally {
+      setOauthLoading(null);
+    }
+  }
 
   return (
     <KeyboardAvoidingView
@@ -187,6 +267,49 @@ export default function ChoosePathScreen() {
             </View>
           ) : (
             <View style={s.section}>
+              {/* OAuth — non-student paths only. Apple HIG requires
+                  Sign in with Apple to be visually equal to or above
+                  any other social sign-in option, so SIWA is on top.
+                  Both flows route through _completeOAuthSignIn which
+                  mirrors the email-code post-auth onboarding flow. */}
+              {Platform.OS === 'ios' ? (
+                <TouchableOpacity
+                  style={[s.oauthButtonApple, oauthLoading ? s.buttonDisabled : null]}
+                  onPress={handleAppleSignIn}
+                  disabled={!!oauthLoading}
+                  activeOpacity={0.9}
+                >
+                  {oauthLoading === 'apple' ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                      <Text style={s.oauthAppleText}>Sign in with Apple</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                style={[s.oauthButtonGoogle, oauthLoading ? s.buttonDisabled : null, { marginTop: Platform.OS === 'ios' ? 10 : 0 }]}
+                onPress={handleGoogleSignIn}
+                disabled={!!oauthLoading}
+                activeOpacity={0.9}
+              >
+                {oauthLoading === 'google' ? (
+                  <ActivityIndicator size="small" color="#1F1F1F" />
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="logo-google" size={18} color="#1F1F1F" />
+                    <Text style={s.oauthGoogleText}>Sign in with Google</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {oauthError ? <Text style={[s.errorText, { marginTop: 8 }]}>{oauthError}</Text> : null}
+              <View style={s.divider}>
+                <View style={s.dividerLine} />
+                <Text style={s.dividerText}>or use email</Text>
+                <View style={s.dividerLine} />
+              </View>
               <Text style={s.sectionLabel}>Your email</Text>
               <View style={s.inputWrapper}>
                 <TextInput
@@ -344,9 +467,29 @@ const s = StyleSheet.create({
   buttonDisabled: { backgroundColor: colors.s3 },
   buttonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 20 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 16 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.b1 },
-  dividerText: { fontSize: 13, color: colors.t3, fontWeight: '500' },
+  dividerText: { fontSize: 12, color: colors.t3, fontWeight: '600', letterSpacing: 0.3 },
+  oauthButtonApple: {
+    backgroundColor: '#000000',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  oauthAppleText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  oauthButtonGoogle: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.b2,
+    minHeight: 50,
+  },
+  oauthGoogleText: { color: '#1F1F1F', fontSize: 15, fontWeight: '700' },
 
   footer: { fontSize: 12, color: colors.t3, textAlign: 'center', lineHeight: 17, paddingHorizontal: 20, marginTop: 28 },
 });
