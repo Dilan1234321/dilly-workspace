@@ -218,6 +218,12 @@ export default function FieldIntelScreen() {
   const [intel, setIntel] = useState<FieldIntelResponse | null>(null)
 
   const load = useCallback(async () => {
+    // Minimum-show timer: keeps the loading screen up at least
+    // 4.5s even if data arrives faster. Field Intel is meant to feel
+    // like Dilly is reading + synthesizing — flashing through the
+    // loading screen in 200ms breaks the spell.
+    const minShowMs = 4500
+    const start = Date.now()
     try {
       const [prof, intelRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
@@ -226,8 +232,12 @@ export default function FieldIntelScreen() {
       setProfile((prof || {}) as Profile)
       setIntel(adaptFieldIntel(intelRes as RawFieldIntel | null))
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      const elapsed = Date.now() - start
+      const remaining = Math.max(0, minShowMs - elapsed)
+      setTimeout(() => {
+        setLoading(false)
+        setRefreshing(false)
+      }, remaining)
     }
   }, [])
 
@@ -256,7 +266,14 @@ export default function FieldIntelScreen() {
         insetTop={insets.top}
         mood="thoughtful"
         accessory="glasses"
-        messages={['Reading your field…', 'Pulling live market data…', 'Mapping threats and openings…']}
+        messages={[
+          'Reading your field…',
+          'Pulling live market data…',
+          'Cross-referencing your cohort…',
+          'Mapping threats and openings…',
+          'Sorting roles by AI exposure…',
+          'Almost there. Stitching it together…',
+        ]}
         onRetry={load}
       />
     )

@@ -147,6 +147,14 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   // Accessory "writing" scribble. Only active for writing mood with pencil.
   const scribbleAnim = useRef(new Animated.Value(0)).current
 
+  // Always-on accessory pulse. 0 -> 1 -> 0 over ~2.4s. Each accessory
+  // (crown, briefcase, headphones, glasses, trophy, compass) reads
+  // this and animates its own "signature" motion: a jewel twinkle, a
+  // cushion pulse, a needle wobble, a glint sliding across the lens,
+  // sparkle dots, a handle swing. The result: every Dilly variant
+  // feels alive, not just the writing one.
+  const pulseAnim = useRef(new Animated.Value(0)).current
+
   const cx = size / 2
   const cy = size / 2
   const mW = 8 * s
@@ -208,6 +216,26 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     loop.start()
     return () => loop.stop()
   }, [mood, scribbleAnim])
+
+  // Always-on pulse loop. Runs whether an accessory is shown or not
+  // (cheap — just one Animated.Value updating). Each accessory subscribes
+  // and shapes the pulse into its own signature motion.
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin),
+          useNativeDriver: false,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0, duration: 1200, easing: Easing.inOut(Easing.sin),
+          useNativeDriver: false,
+        }),
+      ]),
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [pulseAnim])
 
   useEffect(() => {
     pickTarget()
@@ -341,6 +369,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
                 s={s}
                 color={accessoryColor || faceInk}
                 scribbleAnim={mood === 'writing' ? scribbleAnim : null}
+                pulseAnim={pulseAnim}
               />
             )}
           </Svg>
@@ -493,22 +522,25 @@ interface AccessoryProps {
   color: string
   /** If non-null, drives a scribble stroke-dash animation (pencil only). */
   scribbleAnim: Animated.Value | null
+  /** Always-on 0→1→0 pulse driver. Each accessory uses it differently
+   *  (crown twinkle, briefcase swing, headphones cushion pulse, etc.). */
+  pulseAnim?: Animated.Value
   /** True on dark surfaces (Midnight theme). Pencil tip + scribble
    *  flip from black → white so the pencil reads on dark mode. */
   isDark?: boolean
 }
 
-function Accessory({ kind, cx, cy, s, color, scribbleAnim, isDark }: AccessoryProps) {
+function Accessory({ kind, cx, cy, s, color, scribbleAnim, pulseAnim, isDark }: AccessoryProps) {
   switch (kind) {
     case 'pencil':     return <PencilAccessory cx={cx} cy={cy} s={s} color={color} scribbleAnim={scribbleAnim} isDark={isDark} />
     case 'magnifier':  return <MagnifierAccessory cx={cx} cy={cy} s={s} color={color} />
     case 'paintbrush': return <PaintbrushAccessory cx={cx} cy={cy} s={s} color={color} />
-    case 'crown':      return <CrownAccessory cx={cx} cy={cy} s={s} color={color} />
-    case 'briefcase':  return <BriefcaseAccessory cx={cx} cy={cy} s={s} color={color} />
-    case 'headphones': return <HeadphonesAccessory cx={cx} cy={cy} s={s} color={color} />
-    case 'glasses':    return <GlassesAccessory cx={cx} cy={cy} s={s} color={color} />
-    case 'trophy':     return <TrophyAccessory cx={cx} cy={cy} s={s} color={color} />
-    case 'compass':    return <CompassAccessory cx={cx} cy={cy} s={s} color={color} />
+    case 'crown':      return <CrownAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
+    case 'briefcase':  return <BriefcaseAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
+    case 'headphones': return <HeadphonesAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
+    case 'glasses':    return <GlassesAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
+    case 'trophy':     return <TrophyAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
+    case 'compass':    return <CompassAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
     default:           return null
   }
 }
@@ -553,11 +585,13 @@ function BriefcaseAccessory({ cx, cy, s }: Omit<AccessoryProps, 'kind' | 'scribb
   const LEATHER_DARK = '#2A1F12'
   const BRASS = '#B88A1F'
   const HIGHLIGHT = '#5C4626'
-  const bodyX = cx + 9 * s
-  const bodyY = cy + 11 * s
-  const bodyW = 9 * s
-  const bodyH = 6 * s
-  const cornerR = 0.8 * s
+  // Sized + placed to occupy the pencil's hand zone (cx+11..cx+22,
+  // cy+5..cy+15). Bigger than v1 so it reads at glance.
+  const bodyX = cx + 11 * s
+  const bodyY = cy + 7 * s
+  const bodyW = 12 * s
+  const bodyH = 9 * s
+  const cornerR = 1 * s
   const handleY = bodyY - 1.5 * s
   const handleLeftX = bodyX + 2.2 * s
   const handleRightX = bodyX + bodyW - 2.2 * s
@@ -597,21 +631,21 @@ function HeadphonesAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' |
     <>
       <Path d={bandPath} stroke={BODY} strokeWidth={1.6 * s} strokeLinecap="round" fill="none" />
       <Rect x={cx - cupOuterX} y={cy + cupTopY} width={cupW} height={cupH} rx={cupW / 2} ry={cupW / 2} fill={BODY} stroke={BODY_DARK} strokeWidth={0.4 * s} />
-      <Rect x={cx - cupOuterX + 0.6 * s} y={cy + cupTopY + 0.8 * s} width={cupW - 1.2 * s} height={cupH - 1.6 * s} rx={(cupW - 1.2 * s) / 2} ry={(cupW - 1.2 * s) / 2} fill={color} opacity={0.9} />
+      <AnimatedRect x={cx - cupOuterX + 0.6 * s} y={cy + cupTopY + 0.8 * s} width={cupW - 1.2 * s} height={cupH - 1.6 * s} rx={(cupW - 1.2 * s) / 2} ry={(cupW - 1.2 * s) / 2} fill={color} opacity={pulseAnim ? (pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1.0] }) as any) : 0.9} />
       <Rect x={cx + cupInnerX} y={cy + cupTopY} width={cupW} height={cupH} rx={cupW / 2} ry={cupW / 2} fill={BODY} stroke={BODY_DARK} strokeWidth={0.4 * s} />
-      <Rect x={cx + cupInnerX + 0.6 * s} y={cy + cupTopY + 0.8 * s} width={cupW - 1.2 * s} height={cupH - 1.6 * s} rx={(cupW - 1.2 * s) / 2} ry={(cupW - 1.2 * s) / 2} fill={color} opacity={0.9} />
+      <AnimatedRect x={cx + cupInnerX + 0.6 * s} y={cy + cupTopY + 0.8 * s} width={cupW - 1.2 * s} height={cupH - 1.6 * s} rx={(cupW - 1.2 * s) / 2} ry={(cupW - 1.2 * s) / 2} fill={color} opacity={pulseAnim ? (pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1.0] }) as any) : 0.9} />
     </>
   )
 }
 
 /** Round reading glasses for the insights / "Dilly read this" surfaces.
  *  Thin circular frames over the eye area, joined by a bridge. */
-function GlassesAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+function GlassesAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
   const eyeY = cy - 4 * s
-  const lensR = 4.2 * s
+  const lensR = 5.5 * s
   const leftCx = cx - 8 * s
   const rightCx = cx + 8 * s
-  const frameW = 0.7 * s
+  const frameW = 1 * s
   return (
     <>
       <Line x1={leftCx + lensR - 0.3 * s} y1={eyeY} x2={rightCx - lensR + 0.3 * s} y2={eyeY} stroke={color} strokeWidth={frameW} strokeLinecap="round" />
@@ -619,29 +653,43 @@ function GlassesAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 's
       <Circle cx={rightCx} cy={eyeY} r={lensR} stroke={color} strokeWidth={frameW} fill="none" />
       <Line x1={leftCx - lensR + 0.2 * s} y1={eyeY - 0.3 * s} x2={leftCx - lensR - 1.8 * s} y2={eyeY - 1 * s} stroke={color} strokeWidth={frameW} strokeLinecap="round" />
       <Line x1={rightCx + lensR - 0.2 * s} y1={eyeY - 0.3 * s} x2={rightCx + lensR + 1.8 * s} y2={eyeY - 1 * s} stroke={color} strokeWidth={frameW} strokeLinecap="round" />
+      {/* Animated glint — small bright dots slide L→R across both
+          lenses. Reads as light catching the glasses; very subtle but
+          makes them feel like real glass instead of a wireframe. */}
+      {pulseAnim && (
+        <AnimatedG transform={pulseAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [`translate(${-lensR * 0.7} 0)`, `translate(${lensR * 0.7} 0)`],
+        }) as any}>
+          <Circle cx={leftCx} cy={eyeY - lensR * 0.4} r={0.6 * s} fill="#FFFFFF" opacity={0.55} />
+          <Circle cx={rightCx} cy={eyeY - lensR * 0.4} r={0.6 * s} fill="#FFFFFF" opacity={0.55} />
+        </AnimatedG>
+      )}
     </>
   )
 }
 
 /** Gold trophy held up in the bottom-right hand zone. Tapered cup with
  *  side handles, stem, and base. Same gold family as the crown. */
-function TrophyAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+function TrophyAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
   const GOLD = '#E5B143'
   const GOLD_DARK = '#B88A1F'
-  const cupTopY = cy + 8 * s
-  const cupMidY = cy + 12 * s
-  const cupBottomY = cy + 13 * s
-  const stemBottomY = cy + 15 * s
+  // Sized + placed to occupy the pencil's hand zone. Cup spans
+  // cx+11..cx+22 horizontally, cy+5..cy+16 vertically.
+  const cupTopY = cy + 5 * s
+  const cupMidY = cy + 9 * s
+  const cupBottomY = cy + 11 * s
+  const stemBottomY = cy + 13.5 * s
   const baseTopY = stemBottomY
-  const baseBottomY = cy + 17 * s
-  const cupTopL = cx + 9 * s
-  const cupTopR = cx + 17 * s
-  const cupBotL = cx + 11 * s
-  const cupBotR = cx + 15 * s
-  const stemL = cx + 12 * s
-  const stemR = cx + 14 * s
-  const baseL = cx + 10 * s
-  const baseR = cx + 16 * s
+  const baseBottomY = cy + 16 * s
+  const cupTopL = cx + 11 * s
+  const cupTopR = cx + 22 * s
+  const cupBotL = cx + 13.5 * s
+  const cupBotR = cx + 19.5 * s
+  const stemL = cx + 15 * s
+  const stemR = cx + 18 * s
+  const baseL = cx + 13 * s
+  const baseR = cx + 20 * s
   const cupPath = `M ${cupTopL} ${cupTopY} L ${cupTopR} ${cupTopY} L ${cupBotR} ${cupBottomY} L ${cupBotL} ${cupBottomY} Z`
   const handleLPath = `M ${cupTopL} ${cupTopY + 0.5 * s} Q ${cupTopL - 1.8 * s} ${(cupTopY + cupMidY) / 2} ${cupTopL + 0.4 * s} ${cupMidY}`
   const handleRPath = `M ${cupTopR} ${cupTopY + 0.5 * s} Q ${cupTopR + 1.8 * s} ${(cupTopY + cupMidY) / 2} ${cupTopR - 0.4 * s} ${cupMidY}`
@@ -653,6 +701,18 @@ function TrophyAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'sc
       <Circle cx={(cupTopL + cupTopR) / 2} cy={(cupTopY + cupBottomY) / 2 - 0.2 * s} r={1 * s} fill={color} />
       <Rect x={stemL} y={cupBottomY} width={stemR - stemL} height={stemBottomY - cupBottomY} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.3 * s} />
       <Rect x={baseL} y={baseTopY} width={baseR - baseL} height={baseBottomY - baseTopY} rx={0.3 * s} ry={0.3 * s} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.4 * s} />
+      {/* Sparkle wave — three white pinprick dots around the cup that
+          fade in and out in sequence. Reads as "this just got won." */}
+      {pulseAnim && (
+        <>
+          <AnimatedCircleX cx={cupTopL - 0.5 * s} cy={cupTopY + 0.5 * s} r={0.5 * s} fill="#FFFFFF"
+            opacity={pulseAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0, 1, 0, 0] }) as any} />
+          <AnimatedCircleX cx={cupTopR + 0.3 * s} cy={cupTopY + 1.5 * s} r={0.5 * s} fill="#FFFFFF"
+            opacity={pulseAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0, 0, 1, 0] }) as any} />
+          <AnimatedCircleX cx={(cupTopL + cupTopR) / 2} cy={cupTopY - 0.8 * s} r={0.45 * s} fill="#FFFFFF"
+            opacity={pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 1, 0.2] }) as any} />
+        </>
+      )}
     </>
   )
 }
@@ -660,7 +720,7 @@ function TrophyAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'sc
 /** Open compass for direction-finding surfaces (mode switch, Next
  *  Role). Brass body, cream face, two-color needle pointing north.
  *  The north arm uses the theme accent. */
-function CompassAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+function CompassAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
   const BRASS = '#B88A1F'
   const BRASS_DARK = '#7A5A0F'
   const FACE = '#FFF6D6'
@@ -682,8 +742,14 @@ function CompassAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 's
       <Circle cx={ccx + faceR - 0.4 * s} cy={ccy} r={0.3 * s} fill={BRASS_DARK} />
       <Circle cx={ccx} cy={ccy + faceR - 0.4 * s} r={0.3 * s} fill={BRASS_DARK} />
       <Circle cx={ccx - faceR + 0.4 * s} cy={ccy} r={0.3 * s} fill={BRASS_DARK} />
-      <Path d={needleDownPath} fill={NEEDLE_DOWN} stroke={BRASS_DARK} strokeWidth={0.2 * s} strokeLinejoin="round" />
-      <Path d={needleUpPath} fill={color} stroke={BRASS_DARK} strokeWidth={0.2 * s} strokeLinejoin="round" />
+      {/* Needle wobbles ±6° around the pivot — reads as "settling
+          on north," not just static. Cardinal markers stay still. */}
+      <AnimatedG transform={pulseAnim
+        ? (pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [`rotate(-6 ${ccx} ${ccy})`, `rotate(6 ${ccx} ${ccy})`] }) as any)
+        : undefined}>
+        <Path d={needleDownPath} fill={NEEDLE_DOWN} stroke={BRASS_DARK} strokeWidth={0.2 * s} strokeLinejoin="round" />
+        <Path d={needleUpPath} fill={color} stroke={BRASS_DARK} strokeWidth={0.2 * s} strokeLinejoin="round" />
+      </AnimatedG>
       <Circle cx={ccx} cy={ccy} r={0.5 * s} fill={PIVOT} />
     </>
   )
