@@ -16,7 +16,7 @@
       "supportsTablet": false,
       "appleTeamId": "F46NQK75DK",
       "bundleIdentifier": "com.dilly.app",
-      "buildNumber": "440",
+      "buildNumber": "441",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true

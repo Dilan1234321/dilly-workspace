@@ -58,7 +58,10 @@
     "expo-auth-session": "~7.0.0",
     "expo-crypto": "~15.0.7",
     "dilly-activity": "file:./modules/dilly-activity",
-    "dilly-scanner": "file:./modules/dilly-scanner"
+    "dilly-scanner": "file:./modules/dilly-scanner",
+    "dilly-intents": "file:./modules/dilly-intents",
+    "dilly-wallet": "file:./modules/dilly-wallet",
+    "expo-quick-actions": "^4.0.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

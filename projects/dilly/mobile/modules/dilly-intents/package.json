@@ -1,0 +1,7 @@
+{
+  "name": "dilly-intents",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "private": true,
+  "platforms": ["ios"]
+}

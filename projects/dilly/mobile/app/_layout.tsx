@@ -22,6 +22,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { registerNotificationCategories } from '../lib/notifications';
 import { registerBackgroundRefresh } from '../lib/backgroundRefresh';
 import { indexAppSections, onSpotlightTap } from '../lib/spotlight';
+import { donateAppIntents, installAppStateConsumer, installQuickActionsHandler } from '../lib/appIntents';
 import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
 import { refreshAllWidgets } from '../lib/widgetContent';
 import { drainTruthAnswerQueue } from '../lib/widgetData';
@@ -214,6 +215,20 @@ export default function RootLayout() {
         }
       } catch {}
     })();
+  }, []);
+  // Donate App Intents so Siri/Spotlight surface "Log a win", "Open
+  // today", "Start a chapter", "Open voice". Also installs the
+  // pending-intent consumer so when the user fires an intent (Siri,
+  // Shortcuts, Action Button), the app routes on next foreground.
+  useEffect(() => {
+    donateAppIntents().catch(() => {});
+    const unsub = installAppStateConsumer();
+    let unsubQa: undefined | (() => void);
+    installQuickActionsHandler().then((u) => { unsubQa = u; }).catch(() => {});
+    return () => {
+      try { unsub(); } catch {}
+      try { unsubQa?.(); } catch {}
+    };
   }, []);
   // Index Dilly's app sections into iOS Spotlight on cold start so a
   // user pulling down on Home and typing "interview" or "Goldman"
