@@ -1,13 +1,26 @@
 // DillyWidget.swift — Dilly's home-screen widget bundle.
 //
-// Six widgets, each a small portrait with its own atmosphere:
+// Three widgets. One per size. Each represents a different relationship
+// with Dilly:
 //
-//   1. DillyQuestionWidget   — today's question to sit with (sm + md)
-//   2. OneMoveWidget         — single most important career move (sm + md + lg)
-//   3. TonightWidget         — what to spend 15 min on tonight (sm + md, interactive)
-//   4. DillyProfileWidget    — living, breathing profile (sm + md) [REPLACED HonestMirror]
-//   5. MomentOfTruthWidget   — daily question, build the streak (sm, interactive)
-//   6. DillySummaryWidget    — Question + One Move + Tonight in one large widget
+//   SMALL  (2x2)  MomentOfTruthWidget  — HABIT
+//                 Daily question + streak. Tap-to-answer interactive.
+//                 The widget you check every morning.
+//
+//   MEDIUM (4x2)  DillyProfileWidget   — MEMORY
+//                 Rotating "Dilly remembers: ___" pulled from the user's
+//                 actual facts. New every iOS refresh. The "living,
+//                 breathing profile" surface.
+//
+//   LARGE  (4x4)  DillyTodayWidget     — MISSION
+//                 Today's Question + Your One Move + Tonight's 15 Min in
+//                 one panel, with streak badge in the header. Mission
+//                 control for the day.
+//
+// No multi-size variants. No standalone Today's Question / One Move /
+// Tonight / Summary widgets — that content lives inside Dilly Today
+// (Large). Editorial decision to force the user into one widget per
+// relationship instead of decision fatigue across 6 options.
 //
 // Design language (vs. the build-440 version):
 //
@@ -465,178 +478,6 @@ struct EmptyHint: View {
     }
 }
 
-// MARK: - 1) Today's Question
-
-struct DillyQuestionWidget: Widget {
-    let kind = "DillyQuestionWidget"
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: DillyProvider()) { entry in
-            DillyQuestionView(entry: entry)
-                .containerBackground(for: .widget) { WidgetGradient(mood: .lateNight, time: entry.timeOfDay) }
-        }
-        .configurationDisplayName("Today's Question")
-        .description("One question Dilly wants you to sit with today.")
-        .supportedFamilies([.systemSmall, .systemMedium])
-    }
-}
-
-struct DillyQuestionView: View {
-    @Environment(\.widgetFamily) var family
-    let entry: DillyEntry
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            HStack { Spacer()
-                VStack { Spacer()
-                    DillyFaceView(size: family == .systemSmall ? 50 : 70, mood: .thoughtful, accessory: .glasses,
-                        inkColor: Color(hex: 0xE9E2C9), ringColor: Color(hex: 0xE9E2C9).opacity(0.3), ringFill: Color.clear)
-                        .opacity(0.85)
-                }
-            }
-            .padding(.bottom, family == .systemSmall ? 4 : 8).padding(.trailing, family == .systemSmall ? 0 : 4)
-
-            VStack(alignment: .leading, spacing: 8) {
-                EyebrowLabel(text: "TODAY", tint: Color(hex: 0xE9E2C9))
-                if let q = entry.data.todaysQuestion, !q.isEmpty {
-                    Text(q)
-                        .font(.system(size: family == .systemSmall ? 14 : 18, weight: .semibold, design: .serif))
-                        .italic()
-                        .foregroundColor(Color(hex: 0xF5F0DD))
-                        .lineLimit(family == .systemSmall ? 6 : 5)
-                        .lineSpacing(2).minimumScaleFactor(0.85)
-                } else {
-                    EmptyHint(icon: "moon.stars", line: "Open Dilly to load today's question.")
-                }
-                Spacer(minLength: 0)
-                Text(family == .systemSmall ? "Tap to think" : "Tap to think it through with Dilly")
-                    .font(.system(size: 10, weight: .heavy)).tracking(1.0).foregroundColor(Color(hex: 0xE9E2C9).opacity(0.7))
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(URL(string: "dilly:///(app)?seed=todays-question"))
-    }
-}
-
-// MARK: - 2) Your One Move
-
-struct OneMoveWidget: Widget {
-    let kind = "OneMoveWidget"
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: DillyProvider()) { entry in
-            OneMoveView(entry: entry)
-                .containerBackground(for: .widget) { WidgetGradient(mood: .goldenHour, time: entry.timeOfDay) }
-        }
-        .configurationDisplayName("Your One Move")
-        .description("The single most important career move this week.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-    }
-}
-
-struct OneMoveView: View {
-    @Environment(\.widgetFamily) var family
-    let entry: DillyEntry
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            HStack { Spacer()
-                VStack { Spacer()
-                    DillyFaceView(size: family == .systemLarge ? 90 : (family == .systemMedium ? 60 : 48), mood: .focused, accessory: .compass,
-                        inkColor: Color(hex: 0x4A1810), ringColor: Color(hex: 0x4A1810).opacity(0.4), ringFill: Color(hex: 0xFFF5DC).opacity(0.18))
-                }
-            }
-            .padding(.bottom, 4)
-
-            VStack(alignment: .leading, spacing: family == .systemLarge ? 12 : 6) {
-                HStack(spacing: 6) { EyebrowLabel(text: "THIS WEEK · ONE MOVE", tint: Color(hex: 0x4A1810)); Spacer() }
-                if let title = entry.data.oneMoveTitle, !title.isEmpty {
-                    Text(title)
-                        .font(.system(size: family == .systemSmall ? 14 : (family == .systemLarge ? 22 : 17), weight: .heavy))
-                        .lineSpacing(2).foregroundColor(Color(hex: 0x2A0A05))
-                        .lineLimit(family == .systemSmall ? 5 : (family == .systemLarge ? 6 : 4))
-                        .minimumScaleFactor(0.85)
-                    if family != .systemSmall, let body = entry.data.oneMoveBody, !body.isEmpty {
-                        Text(body).font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: 0x4A1810).opacity(0.85))
-                            .lineLimit(family == .systemLarge ? 5 : 2)
-                    }
-                } else {
-                    EmptyHint(icon: "flag.checkered", line: "Dilly will pick your weekly move after your next Chapter.")
-                }
-                Spacer(minLength: 0)
-                HStack {
-                    Text("Tap to act").font(.system(size: 10, weight: .heavy)).tracking(1.0).foregroundColor(Color(hex: 0x2A0A05))
-                    Image(systemName: "arrow.right").font(.system(size: 10, weight: .heavy)).foregroundColor(Color(hex: 0x2A0A05))
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(URL(string: entry.data.oneMoveDeepLink ?? "dilly:///(app)"))
-    }
-}
-
-// MARK: - 3) Tonight's 15 Minutes
-
-struct TonightWidget: Widget {
-    let kind = "TonightWidget"
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: DillyProvider()) { entry in
-            TonightView(entry: entry)
-                .containerBackground(for: .widget) { WidgetGradient(mood: .deepEvening, time: entry.timeOfDay) }
-        }
-        .configurationDisplayName("Tonight's 15 Minutes")
-        .description("What to spend 15 minutes on tonight, end of story.")
-        .supportedFamilies([.systemSmall, .systemMedium])
-    }
-}
-
-struct TonightView: View {
-    @Environment(\.widgetFamily) var family
-    let entry: DillyEntry
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            VStack {
-                HStack { Spacer()
-                    Image(systemName: "sparkle").font(.system(size: 9)).foregroundColor(Color.white.opacity(0.4))
-                    Image(systemName: "sparkle").font(.system(size: 6)).foregroundColor(Color.white.opacity(0.25))
-                        .padding(.leading, -2).padding(.top, 6)
-                }
-                Spacer()
-            }
-            .padding(.top, 4).padding(.trailing, 4)
-
-            HStack { Spacer()
-                VStack { Spacer()
-                    DillyFaceView(size: family == .systemSmall ? 48 : 64, mood: .focused, accessory: .pencil,
-                        inkColor: Color(hex: 0xE2D6FF), ringColor: Color(hex: 0xE2D6FF).opacity(0.3), ringFill: Color.white.opacity(0.05))
-                }
-            }
-            .padding(.bottom, family == .systemSmall ? 4 : 8).padding(.trailing, family == .systemSmall ? 2 : 4)
-
-            VStack(alignment: .leading, spacing: 8) {
-                EyebrowLabel(text: "TONIGHT · 15 MIN", tint: Color(hex: 0xC9B8FF))
-                if let title = entry.data.tonightTitle, !title.isEmpty {
-                    Text(title)
-                        .font(.system(size: family == .systemSmall ? 14 : 17, weight: .heavy, design: .serif))
-                        .lineSpacing(1).foregroundColor(Color(hex: 0xF5F0FF))
-                        .lineLimit(family == .systemSmall ? 5 : 3).minimumScaleFactor(0.9)
-                } else {
-                    EmptyHint(icon: "moon.stars.fill", line: "Dilly is picking your 15 minutes for tonight.")
-                }
-                Spacer(minLength: 0)
-                if let deepLink = entry.data.tonightDeepLink, !deepLink.isEmpty {
-                    Link(destination: URL(string: deepLink)!) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "play.fill").font(.system(size: 11, weight: .heavy))
-                            Text("Start").font(.system(size: 12, weight: .heavy))
-                        }
-                        .foregroundColor(Color(hex: 0x180A38)).padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(Color(hex: 0xE2D6FF)).clipShape(Capsule())
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
 // MARK: - 4) Dilly Profile (REPLACES HonestMirror)
 
 struct DillyProfileWidget: Widget {
@@ -648,7 +489,7 @@ struct DillyProfileWidget: Widget {
         }
         .configurationDisplayName("Your Dilly Profile")
         .description("What Dilly remembers about you. Updates as your profile grows.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemMedium])
     }
 }
 
@@ -782,20 +623,20 @@ struct AnswerTruthIntent: AppIntent {
 
 // MARK: - 6) Dilly Today summary (large)
 
-struct DillySummaryWidget: Widget {
-    let kind = "DillySummaryWidget"
+struct DillyTodayWidget: Widget {
+    let kind = "DillyTodayWidget"
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DillyProvider()) { entry in
-            DillySummaryView(entry: entry)
+            DillyTodayView(entry: entry)
                 .containerBackground(for: .widget) { WidgetGradient(mood: .dusk, time: entry.timeOfDay) }
         }
         .configurationDisplayName("Dilly Today")
-        .description("Question + One Move + Tonight, all in one.")
+        .description("Today's Question, your One Move, and Tonight's 15 minutes — all in one.")
         .supportedFamilies([.systemLarge])
     }
 }
 
-struct DillySummaryView: View {
+struct DillyTodayView: View {
     let entry: DillyEntry
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -807,6 +648,18 @@ struct DillySummaryView: View {
                     Text(formattedDate()).font(.system(size: 11, weight: .semibold)).foregroundColor(Color.white.opacity(0.7))
                 }
                 Spacer()
+                // Streak flame badge — same one from the small Moment of
+                // Truth widget. Pulled into the Large header so users
+                // who pin only the Large still see their streak.
+                if let streak = entry.data.truthStreakDays, streak > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "flame.fill").font(.system(size: 11)).foregroundColor(Color.white)
+                        Text("\(streak)").font(.system(size: 13, weight: .black)).foregroundColor(Color.white)
+                    }
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(Color.white.opacity(0.18))
+                    .clipShape(Capsule())
+                }
             }
             Divider().background(Color.white.opacity(0.2))
             sectionRow(eyebrow: "TODAY · QUESTION", body: entry.data.todaysQuestion, icon: "moon.stars", fontSize: 14, italicStyle: true)
@@ -854,11 +707,11 @@ struct DillySummaryView: View {
 @main
 struct DillyWidgetBundle: WidgetBundle {
     var body: some Widget {
-        DillyQuestionWidget()
-        OneMoveWidget()
-        TonightWidget()
-        DillyProfileWidget()
+        // SMALL — habit. The daily streak/question loop.
         MomentOfTruthWidget()
-        DillySummaryWidget()
+        // MEDIUM — memory. The rotating "Dilly remembers..." recall.
+        DillyProfileWidget()
+        // LARGE — mission. Question + One Move + Tonight in one panel.
+        DillyTodayWidget()
     }
 }
