@@ -457,6 +457,16 @@ export default function JobsScreen() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Donate the jobs activity once on mount so iOS learns the user
+  // visits the Jobs tab and surfaces "Find me a job" as a Spotlight
+  // / lock-screen suggestion at their typical times.
+  useEffect(() => {
+    try {
+      const { donateActivity, ACTIVITY_JOBS } = require('../../lib/siriDonations');
+      donateActivity?.(ACTIVITY_JOBS);
+    } catch {}
+  }, []);
+
   const onRefresh = useCallback(() => { setRefreshing(true); loadData(); }, [loadData]);
 
   // Unique cities from the loaded jobs, sorted by how many postings
