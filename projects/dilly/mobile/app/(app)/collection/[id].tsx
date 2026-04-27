@@ -20,6 +20,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { dilly } from '../../../lib/dilly';
+import { showConfirm } from '../../../lib/globalConfirm';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import AnimatedPressable from '../../../components/AnimatedPressable';
 import FadeInView from '../../../components/FadeInView';
@@ -73,25 +74,19 @@ export default function CollectionDetail() {
 
   async function removeJob(jobId: string) {
     if (!collection) return;
-    Alert.alert(
-      'Remove from collection?',
-      'The job stays in Dilly - this just takes it out of this collection.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove', style: 'destructive', onPress: async () => {
-            // Optimistic update so the row disappears instantly.
-            setCollection({ ...collection, jobs: collection.jobs.filter(j => j.job_id !== jobId) });
-            try {
-              await dilly.fetch(`/collections/${collection.id}/jobs/${jobId}`, { method: 'DELETE' });
-            } catch {
-              // Rollback on failure.
-              fetchCollection();
-            }
-          },
-        },
-      ],
-    );
+    const ok = await showConfirm({
+      title: 'Remove from collection?',
+      message: 'The job stays in Dilly - this just takes it out of this collection.',
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!ok) return;
+    setCollection({ ...collection, jobs: collection.jobs.filter(j => j.job_id !== jobId) });
+    try {
+      await dilly.fetch(`/collections/${collection.id}/jobs/${jobId}`, { method: 'DELETE' });
+    } catch {
+      fetchCollection();
+    }
   }
 
   async function renameCollection() {

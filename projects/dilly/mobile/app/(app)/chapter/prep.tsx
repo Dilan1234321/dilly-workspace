@@ -36,6 +36,7 @@ import FadeInView from '../../../components/FadeInView';
 import { readProfileSlim } from '../../../lib/profileCache';
 import { DillyFace } from '../../../components/DillyFace';
 import { showToast } from '../../../lib/globalToast';
+import { showConfirm } from '../../../lib/globalConfirm';
 
 interface ChapterNote { id: string; text: string; added_at: string; }
 interface NotesResponse {
@@ -196,7 +197,7 @@ export default function ChapterPrepScreen() {
         const message = typeof detail === 'string'
           ? detail
           : (detail?.message || 'Could not add that note.');
-        Alert.alert('Not now', message);
+        showToast({ message, type: 'info' });
       }
     } catch {
       showToast({ message: 'Could not reach Dilly right now.', type: 'error' });
@@ -206,22 +207,22 @@ export default function ChapterPrepScreen() {
   }
 
   async function removeNote(id: string) {
-    Alert.alert("Remove this note?", "Dilly won't bring it up in your next Chapter.", [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove', style: 'destructive', onPress: async () => {
-          if (notesData) {
-            setNotesData({
-              ...notesData,
-              notes: notesData.notes.filter(n => n.id !== id),
-              count: Math.max(0, notesData.count - 1),
-            });
-          }
-          try { await dilly.fetch(`/chapters/notes/${id}`, { method: 'DELETE' }); } catch {}
-          fetchNotes();
-        },
-      },
-    ]);
+    const ok = await showConfirm({
+      title: 'Remove this note?',
+      message: "Dilly won't bring it up in your next Chapter.",
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!ok) return;
+    if (notesData) {
+      setNotesData({
+        ...notesData,
+        notes: notesData.notes.filter(n => n.id !== id),
+        count: Math.max(0, notesData.count - 1),
+      });
+    }
+    try { await dilly.fetch(`/chapters/notes/${id}`, { method: 'DELETE' }); } catch {}
+    fetchNotes();
   }
 
   const atCap = !!notesData && notesData.count >= notesData.cap;

@@ -28,6 +28,7 @@ import { useResolvedTheme } from '../../../hooks/useTheme';
 import AnimatedPressable from '../../../components/AnimatedPressable';
 import FadeInView from '../../../components/FadeInView';
 import { showToast } from '../../../lib/globalToast';
+import { showConfirm } from '../../../lib/globalConfirm';
 
 interface ChapterNote {
   id: string;
@@ -93,7 +94,7 @@ export default function ChapterNotesScreen() {
         const message = typeof detail === 'string'
           ? detail
           : (detail?.message || 'Could not add that note.');
-        Alert.alert('Not now', message);
+        showToast({ message, type: 'info' });
       }
     } catch {
       showToast({ message: 'Could not reach Dilly right now.', type: 'error' });
@@ -103,21 +104,16 @@ export default function ChapterNotesScreen() {
   }
 
   async function removeNote(id: string) {
-    Alert.alert(
-      'Remove this note?',
-      "Dilly won't bring it up in your next Chapter.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove', style: 'destructive', onPress: async () => {
-            // Optimistic.
-            if (data) setData({ ...data, notes: data.notes.filter(n => n.id !== id), count: Math.max(0, data.count - 1) });
-            try { await dilly.fetch(`/chapters/notes/${id}`, { method: 'DELETE' }); } catch {}
-            fetchNotes();
-          },
-        },
-      ],
-    );
+    const ok = await showConfirm({
+      title: 'Remove this note?',
+      message: "Dilly won't bring it up in your next Chapter.",
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!ok) return;
+    if (data) setData({ ...data, notes: data.notes.filter(n => n.id !== id), count: Math.max(0, data.count - 1) });
+    try { await dilly.fetch(`/chapters/notes/${id}`, { method: 'DELETE' }); } catch {}
+    fetchNotes();
   }
 
   const atCap = !!data && data.count >= data.cap;

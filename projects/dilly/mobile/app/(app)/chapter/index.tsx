@@ -481,7 +481,7 @@ function ChapterV1() {
       const title = `Chapter homework: ${oneMove.body.slice(0, 60)}`;
       await dilly.fetch('/calendar/events', { method: 'POST', body: JSON.stringify({ title, notes: oneMove.body, type: 'deadline', date_iso: date.toISOString() }) }).catch(() => {});
       scheduleOutcomePushes({ id: `chapter-move-${chapter.id || 'session'}-${date.toISOString().slice(0, 10)}`, title, at: date, prepPrompt: `My Chapter homework is due tomorrow: "${oneMove.body}". Help me prep - what should I actually do in the next hour to make sure I do this?` }).catch(() => {});
-      Alert.alert('Added', "I've put this on your calendar for next week.");
+      showToast({ message: "I've put this on your calendar for next week.", type: 'success' });
     } catch { showToast({ message: 'Could not add that right now. Try again.', type: 'error' }); }
   }
 
