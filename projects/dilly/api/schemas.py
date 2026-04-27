@@ -34,6 +34,34 @@ class AuthVerifyCodeRequest(BaseModel):
     code: str = Field(..., min_length=1, description="6-digit verification code")
     intent: str = Field(default="student", description="'student' or 'recruiter' — must match what was sent at send-code")
 
+
+class SignInWithAppleRequest(BaseModel):
+    """Body for POST /auth/sign-in-with-apple.
+
+    The mobile client uses expo-apple-authentication, which returns an
+    identityToken (JWT signed by Apple), the Apple stable user sub, and
+    optionally email + fullName on first sign-in. We verify identityToken
+    server-side, extract the sub + email, and resolve to a Dilly account.
+    Restricted to non-student situations because Apple's relay-email
+    can never satisfy the .edu requirement for student paths."""
+    identity_token: str = Field(..., min_length=1, description="Apple identity token (JWT)")
+    user: str = Field(..., min_length=1, description="Apple stable user sub")
+    email: str | None = Field(default=None, description="Apple-provided email (real or @privaterelay.appleid.com)")
+    full_name: str | None = Field(default=None, description="User's display name (only sent on first sign-in)")
+
+
+class SignInWithGoogleRequest(BaseModel):
+    """Body for POST /auth/sign-in-with-google.
+
+    The mobile client uses Google Sign-In SDK, which returns an idToken
+    (JWT signed by Google) plus the user's email and full name. We verify
+    idToken server-side, extract the sub + email, and resolve to a Dilly
+    account. Restricted to non-student situations to keep the .edu
+    student verification path clean and predictable."""
+    id_token: str = Field(..., min_length=1, description="Google ID token (JWT)")
+    email: str = Field(..., min_length=1, description="Google-provided email")
+    full_name: str | None = Field(default=None, description="User's full name from Google profile")
+
 class FamilyAddStudentRequest(BaseModel):
     family_add_token: str = Field(..., min_length=1, description="Token from family invite link")
     student_email: str = Field(..., min_length=1, description=".edu email to add")

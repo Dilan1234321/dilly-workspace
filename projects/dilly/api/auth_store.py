@@ -98,6 +98,120 @@ def _upsert_user(email: str, account_type: str = "student") -> dict:
         return dict(cur.fetchone())
 
 
+# ── Sign in with Apple / Google support ───────────────────────────
+# Idempotent migration: ensures the Apple/Google sub columns + their
+# unique indexes exist. Run on first call to either lookup function so
+# we never need a separate migration step on Railway. Cheap to call
+# repeatedly thanks to IF NOT EXISTS.
+_oauth_columns_ensured = False
+
+def _ensure_oauth_columns() -> None:
+    global _oauth_columns_ensured
+    if _oauth_columns_ensured:
+        return
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_sub TEXT")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub TEXT")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT")
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_apple_sub_idx ON users(apple_sub) WHERE apple_sub IS NOT NULL")
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub_idx ON users(google_sub) WHERE google_sub IS NOT NULL")
+            conn.commit()
+        _oauth_columns_ensured = True
+    except Exception:
+        # Migration failure shouldn't block reads; the affected lookups
+        # will just fall through to email-based resolution.
+        pass
+
+
+def get_user_by_apple_sub(apple_sub: str) -> dict | None:
+    _ensure_oauth_columns()
+    if not apple_sub:
+        return None
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE apple_sub = %s", (apple_sub,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def get_user_by_google_sub(google_sub: str) -> dict | None:
+    _ensure_oauth_columns()
+    if not google_sub:
+        return None
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE google_sub = %s", (google_sub,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def upsert_oauth_user(
+    *,
+    provider: str,           # 'apple' or 'google'
+    provider_sub: str,       # Apple's sub or Google's sub claim
+    email: str,
+    account_type: str = "general",
+) -> dict:
+    """Resolve a SIWA/Google sign-in to a user account.
+
+    Lookup order:
+      1. Existing user with matching {provider}_sub  -> use that account
+      2. Existing user with matching email           -> stamp the sub onto
+                                                        that account, return
+      3. Otherwise                                   -> create new account
+                                                        with email + sub +
+                                                        auth_provider stamped
+
+    Email is normalized lowercase. account_type defaults to 'general'
+    because both providers are non-student-only by design (SIWA can't
+    satisfy .edu, and we restrict Google to non-students for a cleaner
+    mental model). The email-code path stays the only way to create a
+    'student' account."""
+    _ensure_oauth_columns()
+    if provider not in ("apple", "google"):
+        raise ValueError(f"Unknown OAuth provider: {provider}")
+    sub_col = "apple_sub" if provider == "apple" else "google_sub"
+    email_n = (email or "").strip().lower()
+
+    # 1. Lookup by sub (most authoritative — never changes)
+    by_sub = get_user_by_apple_sub(provider_sub) if provider == "apple" else get_user_by_google_sub(provider_sub)
+    if by_sub:
+        return by_sub
+
+    # 2. Lookup by email — link this provider to the existing account
+    if email_n:
+        existing = get_user_by_email(email_n)
+        if existing:
+            with get_db() as conn:
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cur.execute(
+                    f"UPDATE users SET {sub_col} = %s, auth_provider = COALESCE(auth_provider, %s), updated_at = now() WHERE email = %s RETURNING *",
+                    (provider_sub, provider, email_n),
+                )
+                conn.commit()
+                row = cur.fetchone()
+                return dict(row) if row else existing
+
+    # 3. New user — create with email + sub + provider stamp
+    if not email_n:
+        raise ValueError("OAuth provider must return an email")
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            f"""
+            INSERT INTO users (email, subscribed, account_type, {sub_col}, auth_provider)
+            VALUES (%s, false, %s, %s, %s)
+            ON CONFLICT (email) DO UPDATE SET {sub_col} = EXCLUDED.{sub_col}, auth_provider = COALESCE(users.auth_provider, EXCLUDED.auth_provider), updated_at = now()
+            RETURNING *
+            """,
+            (email_n, account_type, provider_sub, provider),
+        )
+        conn.commit()
+        return dict(cur.fetchone())
+
+
 # ── 5. get_user_by_email ───────────────────────────────────────────────────────
 
 def get_user_by_email(email: str) -> dict | None:

@@ -10,6 +10,8 @@ from projects.dilly.api.openapi_helpers import ERROR_RESPONSES
 from projects.dilly.api.schemas import (
     AuthSendCodeRequest,
     AuthVerifyCodeRequest,
+    SignInWithAppleRequest,
+    SignInWithGoogleRequest,
     RedeemGiftRequest,
     BetaUnlockRequest,
     GiftCheckoutRequest,
@@ -213,6 +215,163 @@ async def auth_verify_code(request: Request, body: AuthVerifyCodeRequest):
         "token": session_token,
         "user": _serialize_user(user),
     }
+
+
+@router.post("/sign-in-with-apple", responses=ERROR_RESPONSES)
+async def sign_in_with_apple(request: Request, body: SignInWithAppleRequest):
+    """Sign in with Apple — non-student paths only.
+
+    Verifies Apple's identity token server-side (validates issuer, audience,
+    expiry, signature against Apple's JWKS), extracts the stable sub +
+    email, and resolves to a Dilly account via apple_sub or email. Always
+    creates account_type='general' because SIWA's relay email
+    (xxx@privaterelay.appleid.com) can never satisfy the .edu requirement
+    for student situations. The student auth path stays email-code only.
+
+    Returns the same {token, user} shape as /auth/verify-code so the
+    mobile client can route to onboarding or home identically."""
+    deps.rate_limit(request, "siwa", max_requests=10, window_sec=300)
+
+    apple_sub = (body.user or "").strip()
+    email = (body.email or "").strip().lower()
+
+    # Verify Apple's identity token. apple-sign-in tokens are JWTs signed
+    # by Apple's JWKS (https://appleid.apple.com/auth/keys). We use the
+    # `python-jose` library if available, else fall back to a permissive
+    # decode that trusts the bundled `user` field. Production should
+    # ALWAYS verify; the fallback is only for environments where jose
+    # isn't installed yet.
+    try:
+        from jose import jwt as jose_jwt  # type: ignore
+        try:
+            unverified_header = jose_jwt.get_unverified_header(body.identity_token)
+            kid = unverified_header.get("kid")
+            import urllib.request, json as _json
+            jwks_raw = urllib.request.urlopen("https://appleid.apple.com/auth/keys", timeout=8).read()
+            jwks = _json.loads(jwks_raw).get("keys", [])
+            key = next((k for k in jwks if k.get("kid") == kid), None)
+            if not key:
+                raise errors.validation_error("Could not verify Apple sign-in. Try again.")
+            payload = jose_jwt.decode(
+                body.identity_token,
+                key,
+                algorithms=[key.get("alg", "RS256")],
+                audience="com.dilly.app",
+                issuer="https://appleid.apple.com",
+                options={"verify_at_hash": False},
+            )
+            verified_sub = payload.get("sub")
+            verified_email = (payload.get("email") or "").strip().lower()
+            if verified_sub and verified_sub != apple_sub:
+                raise errors.validation_error("Apple sign-in token mismatch.")
+            if verified_email:
+                email = verified_email
+            apple_sub = verified_sub or apple_sub
+        except errors.validation_error.__class__:
+            raise
+        except Exception as e:
+            # Token verification failed — surface a clean error.
+            raise errors.validation_error(f"Apple sign-in token invalid: {type(e).__name__}")
+    except ImportError:
+        # `python-jose` not installed — trust the client-supplied sub +
+        # email. Acceptable for early beta but log a warning so we know
+        # to install jose before public launch.
+        print("[auth.siwa] WARNING: python-jose not installed; trusting client sub", flush=True)
+
+    if not apple_sub:
+        raise errors.validation_error("Apple sign-in did not return a user identifier.")
+    if not email:
+        # Apple lets users hide their email even from the app on
+        # subsequent sign-ins. Without an email we can't create a Dilly
+        # account that maps cleanly to all our email-keyed tables.
+        raise errors.validation_error("Apple sign-in must provide an email. Re-try and choose 'Share My Email'.")
+
+    from projects.dilly.api.auth_store import upsert_oauth_user, create_session, get_session, update_company_fields
+    user = upsert_oauth_user(provider="apple", provider_sub=apple_sub, email=email, account_type="general")
+    session_token = create_session(email, account_type="general")
+
+    # Ensure profile row exists so the first PATCH from the mobile client
+    # can land basic info (name from full_name claim, etc.) without
+    # racing the profile-store auto-create.
+    try:
+        from projects.dilly.api.profile_store import ensure_profile_exists
+        ensure_profile_exists(email)
+        if body.full_name:
+            from projects.dilly.api.profile_store import save_profile
+            save_profile(email, {"name": body.full_name.strip()})
+    except Exception:
+        pass
+
+    sess_user = get_session(session_token)
+    return {"token": session_token, "user": _serialize_user(sess_user)}
+
+
+@router.post("/sign-in-with-google", responses=ERROR_RESPONSES)
+async def sign_in_with_google(request: Request, body: SignInWithGoogleRequest):
+    """Sign in with Google — non-student paths only.
+
+    Verifies Google's ID token server-side (issuer, audience, expiry,
+    signature against Google's certs), extracts the stable sub + email,
+    and resolves to a Dilly account via google_sub or email. Restricted
+    to account_type='general' to keep the .edu student verification
+    path clean and predictable. Students must use the email-code flow
+    even if they have a Google Workspace .edu account."""
+    deps.rate_limit(request, "google_signin", max_requests=10, window_sec=300)
+
+    email = (body.email or "").strip().lower()
+    google_sub = ""
+
+    try:
+        from jose import jwt as jose_jwt  # type: ignore
+        try:
+            unverified_header = jose_jwt.get_unverified_header(body.id_token)
+            kid = unverified_header.get("kid")
+            import urllib.request, json as _json
+            jwks_raw = urllib.request.urlopen("https://www.googleapis.com/oauth2/v3/certs", timeout=8).read()
+            jwks = _json.loads(jwks_raw).get("keys", [])
+            key = next((k for k in jwks if k.get("kid") == kid), None)
+            if not key:
+                raise errors.validation_error("Could not verify Google sign-in. Try again.")
+            # We accept tokens for either of our OAuth client IDs (iOS / web fallback).
+            audiences = [a.strip() for a in (os.environ.get("GOOGLE_OAUTH_CLIENT_IDS", "")).split(",") if a.strip()]
+            decode_kwargs = {"algorithms": [key.get("alg", "RS256")], "issuer": "https://accounts.google.com"}
+            if audiences:
+                decode_kwargs["audience"] = audiences if len(audiences) > 1 else audiences[0]
+            payload = jose_jwt.decode(body.id_token, key, **decode_kwargs)
+            google_sub = payload.get("sub", "")
+            verified_email = (payload.get("email") or "").strip().lower()
+            email_verified = bool(payload.get("email_verified"))
+            if not email_verified:
+                raise errors.validation_error("Your Google account email isn't verified yet. Verify it in Google then try again.")
+            if verified_email:
+                email = verified_email
+        except errors.validation_error.__class__:
+            raise
+        except Exception as e:
+            raise errors.validation_error(f"Google sign-in token invalid: {type(e).__name__}")
+    except ImportError:
+        # Same fallback note as Apple — install jose before public launch.
+        print("[auth.google] WARNING: python-jose not installed; trusting client claims", flush=True)
+        google_sub = email  # best-effort: use email as a stable id
+
+    if not email:
+        raise errors.validation_error("Google sign-in did not provide an email.")
+
+    from projects.dilly.api.auth_store import upsert_oauth_user, create_session, get_session
+    user = upsert_oauth_user(provider="google", provider_sub=google_sub or email, email=email, account_type="general")
+    session_token = create_session(email, account_type="general")
+
+    try:
+        from projects.dilly.api.profile_store import ensure_profile_exists
+        ensure_profile_exists(email)
+        if body.full_name:
+            from projects.dilly.api.profile_store import save_profile
+            save_profile(email, {"name": body.full_name.strip()})
+    except Exception:
+        pass
+
+    sess_user = get_session(session_token)
+    return {"token": session_token, "user": _serialize_user(sess_user)}
 
 
 @router.get("/verify")
