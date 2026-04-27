@@ -26,6 +26,7 @@ import AnimatedPressable from './AnimatedPressable';
 import { openPaywall } from '../hooks/usePaywall';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
 import { dilly } from '../lib/dilly';
+import { useAccessibilityPrefs, boldenWeight } from '../hooks/useAccessibilityPrefs';
 
 const SCHED_LATER_KEY = 'dilly_chapter_schedule_later_v1';
 
@@ -48,6 +49,11 @@ const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satu
 
 export default function ChapterCard({ state, theme }: Props) {
   const pulseAnim = useRef(new Animated.Value(0)).current;
+  // Honor iOS Bold Text - bumps every headline weight by one notch so
+  // users with the accessibility pref on see chunkier titles, like
+  // every system app does.
+  const a11y = useAccessibilityPrefs();
+  const heroWeight = boldenWeight(theme.type.heroWeight, a11y.boldText);
 
   // "I'll schedule later" deferred-state flag, set from the recap
   // screen when the user taps the third option in the reschedule
@@ -111,7 +117,7 @@ export default function ChapterCard({ state, theme }: Props) {
         <Text style={[s.headline, {
           color: theme.surface.t1,
           fontFamily: theme.type.display,
-          fontWeight: theme.type.heroWeight,
+          fontWeight: heroWeight,
           letterSpacing: theme.type.heroTracking,
         }]}>
           A weekly session with Dilly.
@@ -132,7 +138,7 @@ export default function ChapterCard({ state, theme }: Props) {
         <Text style={[s.headline, {
           color: theme.surface.t1,
           fontFamily: theme.type.display,
-          fontWeight: theme.type.heroWeight,
+          fontWeight: heroWeight,
           letterSpacing: theme.type.heroTracking,
         }]}>
           Tell Dilly {remaining} more {remaining === 1 ? 'thing' : 'things'}.
@@ -192,7 +198,7 @@ export default function ChapterCard({ state, theme }: Props) {
           <Text style={[s.headline, {
             color: theme.surface.t1,
             fontFamily: theme.type.display,
-            fontWeight: theme.type.heroWeight,
+            fontWeight: heroWeight,
             letterSpacing: theme.type.heroTracking,
           }]}>
             Open the next Chapter.
@@ -238,7 +244,7 @@ export default function ChapterCard({ state, theme }: Props) {
         <Text style={[s.headline, {
           color: theme.surface.t1,
           fontFamily: theme.type.display,
-          fontWeight: theme.type.heroWeight,
+          fontWeight: heroWeight,
           letterSpacing: theme.type.heroTracking,
         }]}>
           Schedule your next Chapter.
@@ -274,7 +280,7 @@ export default function ChapterCard({ state, theme }: Props) {
         <Text style={[s.headline, {
           color: theme.surface.t1,
           fontFamily: theme.type.display,
-          fontWeight: theme.type.heroWeight,
+          fontWeight: heroWeight,
           letterSpacing: theme.type.heroTracking,
         }]}>
           A weekly sit-down with Dilly.
@@ -303,7 +309,7 @@ export default function ChapterCard({ state, theme }: Props) {
       <Text style={[s.headline, {
         color: theme.surface.t1,
         fontFamily: theme.type.display,
-        fontWeight: theme.type.heroWeight,
+        fontWeight: heroWeight,
         letterSpacing: theme.type.heroTracking,
       }]}>
         {state.latest?.title
