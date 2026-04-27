@@ -432,6 +432,19 @@ export default function JobsScreen() {
         : Array.isArray(feedRes) ? feedRes : [];
       setJobs(listings);
       setProfile(profileRes && typeof profileRes === 'object' ? (profileRes as Profile) : null);
+      // Index the top job matches into iOS Spotlight so the user can
+      // pull-down search "Goldman Sachs" or "Stripe" from their home
+      // screen and tap the result to land on the job card. Capped at
+      // 50 to avoid bloating the Spotlight index.
+      try {
+        const { indexSavedJobs } = require('../../lib/spotlight');
+        indexSavedJobs?.(listings.slice(0, 50).map((l: any) => ({
+          id: String(l?.id ?? ''),
+          title: String(l?.title ?? ''),
+          company: l?.company ? String(l.company) : undefined,
+          city: l?.city ? String(l.city) : undefined,
+        })));
+      } catch {}
 
       // /memory returns either a { items: [...] } wrapper or
       // a raw array depending on build; handle both. We only need

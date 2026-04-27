@@ -21,6 +21,7 @@ import SplashScreen from '../components/SplashScreen';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { registerNotificationCategories } from '../lib/notifications';
 import { registerBackgroundRefresh } from '../lib/backgroundRefresh';
+import { indexAppSections, onSpotlightTap } from '../lib/spotlight';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useResolvedTheme } from '../hooks/useTheme';
 
@@ -177,6 +178,27 @@ export default function RootLayout() {
   // the user needing to open the app. Fires every ~4-6h when iOS feels
   // like it. Result: no loading spinner on next cold start.
   useEffect(() => { registerBackgroundRefresh().catch(() => {}); }, []);
+  // Index Dilly's app sections into iOS Spotlight on cold start so a
+  // user pulling down on Home and typing "interview" or "Goldman"
+  // gets Dilly results inline with system results. Saved jobs +
+  // skills get indexed by the relevant feature screens; this is just
+  // the static "every screen Dilly has" set.
+  useEffect(() => { indexAppSections().catch(() => {}); }, []);
+  // Hook spotlight taps so opening a Dilly result deep-links into
+  // the correct screen instead of cold-starting on Home. Returns an
+  // unsubscribe registered to component teardown.
+  useEffect(() => {
+    let unsub: undefined | (() => void);
+    onSpotlightTap((url) => {
+      try {
+        // Strip the dilly:// prefix so expo-router gets a path it
+        // already knows. router.push accepts the in-app pathname.
+        const path = url.replace(/^dilly:\/\//, '');
+        router.push(path as any);
+      } catch {}
+    }).then((u) => { unsub = u; }).catch(() => {});
+    return () => { try { unsub?.(); } catch {} };
+  }, []);
   // Used as ErrorBoundary resetKey so the boundary auto-clears on
   // route change. Otherwise a single render crash leaves a permanent
   // sad-Dilly screen even after the user navigates elsewhere.
