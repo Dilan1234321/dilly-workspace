@@ -34,7 +34,38 @@
         ],
         "NSCalendarsWriteOnlyAccessUsageDescription": "Allow Dilly to add interview reminders and weekly briefs to your calendar.",
         "NSSupportsLiveActivities": true,
-        "NSSupportsLiveActivitiesFrequentUpdates": true
+        "NSSupportsLiveActivitiesFrequentUpdates": true,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "dilly",
+              "com.googleusercontent.apps.67780456310-mgekhblfqmkl0qqa6va631hp5jjafudu"
+            ]
+          }
+        ],
+        "UIApplicationShortcutItems": [
+          {
+            "UIApplicationShortcutItemType": "com.dilly.app.shortcut.today",
+            "UIApplicationShortcutItemTitle": "Today",
+            "UIApplicationShortcutItemSubtitle": "Mission + read",
+            "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeDate"
+          },
+          {
+            "UIApplicationShortcutItemType": "com.dilly.app.shortcut.log-win",
+            "UIApplicationShortcutItemTitle": "Log a win",
+            "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeAdd"
+          },
+          {
+            "UIApplicationShortcutItemType": "com.dilly.app.shortcut.new-chapter",
+            "UIApplicationShortcutItemTitle": "New chapter",
+            "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeCompose"
+          },
+          {
+            "UIApplicationShortcutItemType": "com.dilly.app.shortcut.voice",
+            "UIApplicationShortcutItemTitle": "Voice mode",
+            "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeAudio"
+          }
+        ]
       },
       "entitlements": {
         "com.apple.security.application-groups": [
