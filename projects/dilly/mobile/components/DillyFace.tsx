@@ -217,10 +217,13 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     return () => loop.stop()
   }, [mood, scribbleAnim])
 
-  // Always-on pulse loop. Runs whether an accessory is shown or not
-  // (cheap — just one Animated.Value updating). Each accessory subscribes
-  // and shapes the pulse into its own signature motion.
+  // Accessory pulse loop. Skipped entirely when no accessory is set —
+  // earlier this ran on every DillyFace mount which churned the JS
+  // thread (useNativeDriver: false because Svg props can't bridge to
+  // native). With many DillyFace instances scattered through the app
+  // the always-on cost added up to noticeable lag.
   useEffect(() => {
+    if (!accessory) return
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -235,7 +238,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     )
     loop.start()
     return () => loop.stop()
-  }, [pulseAnim])
+  }, [accessory, pulseAnim])
 
   useEffect(() => {
     pickTarget()
