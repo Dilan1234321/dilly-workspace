@@ -1163,7 +1163,7 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
 // -- Job Card -----------------------------------------------------------------
 
 function JobCard(props: CardCommonProps) {
-  const { job, profile, theme, expanded } = props;
+  const { job, profile, theme, expanded, gapVideoId } = props;
   const story = buildFitStory(job, profile);
   const posted = daysAgo(job.posted_date);
 
@@ -1186,6 +1186,29 @@ function JobCard(props: CardCommonProps) {
         </View>
       </View>
       {story ? <Text style={[styles.cardStory, { color: theme.surface.t1 }]} numberOfLines={expanded ? 0 : 2}>{story}</Text> : null}
+
+      {/* Skill-gap pill - shown collapsed too so the Skills <-> Jobs
+          cross-link is visible without having to expand. Tap routes
+          straight into Dilly Skills (in-app, never a browser). When
+          expanded the full SkillsVideoCard renders inside ExpandedDetails. */}
+      {!expanded && gapVideoId ? (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={(e) => {
+            // Stop the tap from bubbling up to the card's onExpand.
+            e.stopPropagation?.();
+            router.push(`/skills/video/${gapVideoId}`);
+          }}
+          style={[styles.gapPill, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+        >
+          <Ionicons name="play-circle" size={14} color={theme.accent} />
+          <Text style={[styles.gapPillText, { color: theme.accent }]} numberOfLines={1}>
+            Close the skill gap - 1 video in Dilly Skills
+          </Text>
+          <Ionicons name="chevron-forward" size={12} color={theme.accent} />
+        </TouchableOpacity>
+      ) : null}
+
       {expanded ? <ExpandedDetails {...props} /> : null}
     </TouchableOpacity>
   );
@@ -1455,6 +1478,19 @@ const styles = StyleSheet.create({
   cardPosted:  { fontSize: 11, fontWeight: '600' },
   cardCompany: { fontSize: 12, fontWeight: '600', marginTop: 3 },
   cardStory:   { fontSize: 12, fontStyle: 'italic', lineHeight: 17, marginTop: 8 },
+  gapPill: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    maxWidth: '100%',
+  },
+  gapPillText: { fontSize: 11, fontWeight: '700', flexShrink: 1 },
 
   narrativeEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   narrativeSkel:    { gap: 6 },

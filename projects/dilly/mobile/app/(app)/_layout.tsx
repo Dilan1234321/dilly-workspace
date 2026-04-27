@@ -15,6 +15,7 @@ import { usePaywallState } from '../../hooks/usePaywall';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import useCelebration from '../../hooks/useCelebration';
 import ProfileGrowthToast from '../../components/ProfileGrowthToast';
+import GlobalToast from '../../components/GlobalToast';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -406,6 +407,7 @@ export default function AppLayout() {
               Mounted at the app shell so it reads anywhere the user
               happens to be when extraction resolves. */}
           <ProfileGrowthToast />
+          <GlobalToast />
         </>
       </ErrorBoundary>
     </SubscriptionProvider>

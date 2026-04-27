@@ -10,6 +10,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { showToast } from '../../lib/globalToast';
 
 interface Course {
   code?: string | null;
@@ -65,7 +66,7 @@ export default function TranscriptReviewScreen() {
         setManuallyEdited(t.manually_edited ?? {});
       }
     } catch {
-      Alert.alert('Error', 'Could not load transcript data.');
+      showToast({ message: 'Could not load transcript data.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -126,25 +127,32 @@ export default function TranscriptReviewScreen() {
       if (res.ok) {
         const body = await res.json();
         if (body.low_confidence) {
-          Alert.alert('Heads up', body.low_confidence_message ?? "We parsed your transcript but couldn't find all the details - you can edit them below.");
+          showToast({
+            message: body.low_confidence_message ?? "Parsed your transcript - check the fields below for anything missing.",
+            type: 'info',
+          });
+        } else {
+          showToast({ message: 'Transcript uploaded.', type: 'success' });
         }
         await loadTranscript();
       } else {
-        // Surface the API's actual reason instead of a generic line - the
-        // generic version was hiding bugs (wrong filename casing, missing
-        // PDF magic, file too big, etc.) and leaving users guessing.
+        // Surface the API's actual reason instead of a generic line.
         let detail = '';
         try {
           const body = await res.json();
-          detail = (body?.detail || body?.message || '').toString().trim();
+          detail = (body?.detail || body?.error || body?.message || '').toString().trim();
         } catch { /* non-JSON response */ }
-        Alert.alert(
-          'Upload failed',
-          detail || `Server returned ${res.status}. Make sure it's a PDF with selectable text (not a photo).`
-        );
+        showToast({
+          message: detail || `Upload failed (${res.status}). Make sure it's a PDF with selectable text.`,
+          type: 'error',
+          durationMs: 5000,
+        });
       }
     } catch (e: any) {
-      Alert.alert('Upload failed', e?.message ? `Could not read the file: ${e.message}` : 'Could not read the file.');
+      showToast({
+        message: e?.message ? `Could not read the file: ${e.message}` : 'Could not read the file.',
+        type: 'error',
+      });
     } finally {
       setUploading(false);
     }

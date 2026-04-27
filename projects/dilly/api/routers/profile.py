@@ -1010,7 +1010,16 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
                     result = parse_transcript_text(text)
             except Exception:
                 pass
-        save_transcript_file(email, temp_path, ".pdf")
+        # Persist file + parsed fields. Each step is independently
+        # guarded so one storage hiccup doesn't surface as a generic
+        # "Something went wrong on our end" 500 - the user gets a
+        # specific actionable message and we still keep what we parsed.
+        try:
+            save_transcript_file(email, temp_path, ".pdf")
+        except Exception as _e:
+            import sys as _sys
+            _sys.stderr.write(f"[transcript] save_transcript_file failed for {email}: {type(_e).__name__}: {str(_e)[:200]}\n")
+            raise errors.internal("Could not save your transcript file. Please try again.")
         payload = {
             "transcript_uploaded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "transcript_gpa": result.gpa,
@@ -1022,17 +1031,30 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
             "transcript_school": result.school,
             "transcript_warnings": getattr(result, "warnings", []) or [],
         }
-        save_profile(email, payload)
-        _fan_out_transcript_facts(
-            email,
-            gpa=result.gpa,
-            bcpm_gpa=getattr(result, "bcpm_gpa", None),
-            major=getattr(result, "major", None),
-            minor=getattr(result, "minor", None),
-            honors=getattr(result, "honors", None),
-            courses=result.to_dict().get("courses", []),
-            school=getattr(result, "school", None),
-        )
+        try:
+            save_profile(email, payload)
+        except Exception as _e:
+            import sys as _sys
+            _sys.stderr.write(f"[transcript] save_profile failed for {email}: {type(_e).__name__}: {str(_e)[:200]}\n")
+            raise errors.internal("Could not save your transcript details. Please try again.")
+        # Fact fan-out is best-effort - if it fails we still want the
+        # transcript saved and the user to see success. Previously a
+        # missing column or LLM extraction blip threw to the global 500
+        # handler, masking the fact that the transcript actually landed.
+        try:
+            _fan_out_transcript_facts(
+                email,
+                gpa=result.gpa,
+                bcpm_gpa=getattr(result, "bcpm_gpa", None),
+                major=getattr(result, "major", None),
+                minor=getattr(result, "minor", None),
+                honors=getattr(result, "honors", None),
+                courses=result.to_dict().get("courses", []),
+                school=getattr(result, "school", None),
+            )
+        except Exception as _e:
+            import sys as _sys
+            _sys.stderr.write(f"[transcript] fan_out_facts failed for {email} (transcript still saved): {type(_e).__name__}: {str(_e)[:200]}\n")
         try:
             from projects.dilly.api.dilly_profile_txt import write_dilly_profile_txt
             write_dilly_profile_txt(email)

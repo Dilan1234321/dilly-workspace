@@ -133,20 +133,24 @@ export default function RoleRadarChart({ dots, width }: Props) {
           stroke={axisColor} strokeWidth={1.5}
         />
 
-        {/* Bubbles */}
+        {/* Bubbles - numbered (1,2,3...) instead of name labels.
+            Inline names overlapped badly when bubbles clustered, so the
+            chart now uses a numbered legend below to keep the surface
+            readable at any density. */}
         {positions.map((dot, i) => (
           <React.Fragment key={i}>
             <Circle
               cx={dot.x} cy={dot.y} r={dot.r}
               fill={bubbleColor(dot.ai_pct)}
-              opacity={0.82}
+              opacity={0.85}
+              stroke="#fff"
+              strokeWidth={1.5}
             />
-            {/* Label above bubble if space allows */}
             <SvgText
-              x={dot.x} y={dot.y - dot.r - 3}
-              textAnchor="middle" fontSize={8.5} fill={theme.surface.t2} fontWeight="700"
+              x={dot.x} y={dot.y + 3.5}
+              textAnchor="middle" fontSize={10} fill="#fff" fontWeight="900"
             >
-              {dot.label.length > 12 ? dot.label.slice(0, 10) + '…' : dot.label}
+              {i + 1}
             </SvgText>
           </React.Fragment>
         ))}
@@ -159,7 +163,7 @@ export default function RoleRadarChart({ dots, width }: Props) {
         <Text style={[s.axisLabel, { color: theme.surface.t3 }]}>more listings →</Text>
       </View>
 
-      {/* Legend */}
+      {/* Color legend */}
       <View style={s.legend}>
         {[
           { color: '#FF453A', label: '70%+ AI required' },
@@ -170,6 +174,26 @@ export default function RoleRadarChart({ dots, width }: Props) {
           <View key={label} style={s.legendItem}>
             <View style={[s.legendDot, { backgroundColor: color }]} />
             <Text style={[s.legendText, { color: theme.surface.t3 }]}>{label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Numbered role key - 2 columns so 12 roles fit without
+          eating vertical space. Each row is a colored chip with the
+          dot's number, then the role name. This is what makes the
+          chart actually readable. */}
+      <View style={s.keyRow}>
+        {positions.map((dot, i) => (
+          <View key={i} style={s.keyItem}>
+            <View style={[s.keyChip, { backgroundColor: bubbleColor(dot.ai_pct) }]}>
+              <Text style={s.keyChipText}>{i + 1}</Text>
+            </View>
+            <Text
+              style={[s.keyLabel, { color: theme.surface.t2 }]}
+              numberOfLines={1}
+            >
+              {dot.label}
+            </Text>
           </View>
         ))}
       </View>
@@ -206,4 +230,28 @@ const s = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 10, fontWeight: '700' },
+  keyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 14,
+    paddingLeft: PAD.left,
+    paddingRight: 4,
+    rowGap: 6,
+  },
+  keyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '50%',
+    paddingRight: 8,
+    gap: 6,
+  },
+  keyChip: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyChipText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  keyLabel: { flex: 1, fontSize: 11, fontWeight: '600' },
 })

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Dimensions, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
@@ -9,9 +9,12 @@ import { useResolvedTheme } from '../../hooks/useTheme';
 import { CERTIFICATIONS, type Certification } from '../../data/certifications';
 import type { AppMode } from '../../lib/appMode';
 import { dilly } from '../../lib/dilly';
+import { showToast } from '../../lib/globalToast';
 
 const SAVED_KEY = 'cert_saved_ids_v1';
 const COMPLETED_KEY = 'cert_completed_ids_v1';
+// Map cert id -> profile_facts.id so we can DELETE on toggle-off.
+const COMPLETED_FACT_MAP_KEY = 'cert_completed_fact_ids_v1';
 const CARD_W = Dimensions.get('window').width * 0.78;
 
 type FilterMode = 'free' | 'all' | 'paid';
@@ -98,6 +101,10 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
   const [filter, setFilter] = useState<FilterMode>('free');
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  // cert.id -> profile_facts.id (server-assigned). Lets us DELETE the
+  // achievement when the user untoggles "I completed this" instead of
+  // leaving an orphan row.
+  const [factIdMap, setFactIdMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     AsyncStorage.getItem(SAVED_KEY)
@@ -105,6 +112,9 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
       .catch(() => {});
     AsyncStorage.getItem(COMPLETED_KEY)
       .then(raw => { if (raw) setCompletedIds(new Set(JSON.parse(raw))); })
+      .catch(() => {});
+    AsyncStorage.getItem(COMPLETED_FACT_MAP_KEY)
+      .then(raw => { if (raw) setFactIdMap(JSON.parse(raw)); })
       .catch(() => {});
   }, []);
 
@@ -118,13 +128,42 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
     });
   }, []);
 
-  // Mark a cert as completed: persist locally so the badge sticks
-  // across sessions, and POST a profile_facts achievement so it
-  // shows up under My Dilly's Achievements category and feeds into
-  // resume generation. Best-effort - if the network call fails, the
-  // local badge still shows so the user is not blocked.
-  const markCompleted = useCallback((cert: Certification) => {
-    if (completedIds.has(cert.id)) return;
+  // Toggle cert completion. First tap: write achievement to
+  // profile_facts (surfaces under My Dilly Achievements + feeds
+  // resume generation). Second tap: DELETE that fact and clear the
+  // local badge. All feedback happens via the in-app global toast -
+  // no OS Alert.alert.
+  const toggleCompleted = useCallback(async (cert: Certification) => {
+    const isCompleted = completedIds.has(cert.id);
+    if (isCompleted) {
+      // Optimistic local removal first so the button flips immediately.
+      setCompletedIds(prev => {
+        const next = new Set(prev);
+        next.delete(cert.id);
+        AsyncStorage.setItem(COMPLETED_KEY, JSON.stringify([...next])).catch(() => {});
+        return next;
+      });
+      const factId = factIdMap[cert.id];
+      // Drop the local mapping right away so a re-tap (re-add) does
+      // not re-DELETE the same id.
+      setFactIdMap(prev => {
+        const next = { ...prev };
+        delete next[cert.id];
+        AsyncStorage.setItem(COMPLETED_FACT_MAP_KEY, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+      if (factId) {
+        try {
+          await dilly.fetch(`/memory/items/${factId}`, { method: 'DELETE' });
+        } catch {
+          // Server delete failed but the local badge is gone. The user
+          // can prune the fact from My Dilly directly if it persists.
+        }
+      }
+      showToast({ message: `Removed ${cert.name} from your profile.`, type: 'info' });
+      return;
+    }
+    // Optimistic add.
     setCompletedIds(prev => {
       const next = new Set(prev);
       next.add(cert.id);
@@ -132,17 +171,33 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
       return next;
     });
     const isoDate = new Date().toISOString().slice(0, 10);
-    dilly.fetch('/memory/items', {
-      method: 'POST',
-      body: JSON.stringify({
-        category: 'achievement',
-        label: cert.name.slice(0, 80),
-        value: `${cert.provider} certification, completed ${isoDate}.`.slice(0, 400),
-      }),
-    })
-      .then(() => Alert.alert('Added to your profile', `${cert.name} is now on your Dilly profile under Achievements.`))
-      .catch(() => Alert.alert('Saved locally', 'We marked this complete on your device. It will sync to your profile next time you are online.'));
-  }, [completedIds]);
+    try {
+      const res = await dilly.fetch('/memory/items', {
+        method: 'POST',
+        body: JSON.stringify({
+          category: 'achievement',
+          label: cert.name.slice(0, 80),
+          value: `${cert.provider} certification, completed ${isoDate}.`.slice(0, 400),
+        }),
+      });
+      if (res?.ok) {
+        const body = await res.json().catch(() => null);
+        const newId = body?.item?.id || body?.id || '';
+        if (newId) {
+          setFactIdMap(prev => {
+            const next = { ...prev, [cert.id]: String(newId) };
+            AsyncStorage.setItem(COMPLETED_FACT_MAP_KEY, JSON.stringify(next)).catch(() => {});
+            return next;
+          });
+        }
+        showToast({ message: `${cert.name} added to your Dilly profile.`, type: 'success' });
+      } else {
+        showToast({ message: 'Saved locally - will sync next time you are online.', type: 'info' });
+      }
+    } catch {
+      showToast({ message: 'Saved locally - will sync next time you are online.', type: 'info' });
+    }
+  }, [completedIds, factIdMap]);
 
   const openCert = useCallback(async (url: string) => {
     await WebBrowser.openBrowserAsync(url, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
@@ -231,7 +286,7 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
             theme={theme}
             onStart={() => openCert(cert.url)}
             onSave={() => toggleSave(cert.id)}
-            onComplete={() => markCompleted(cert)}
+            onComplete={() => toggleCompleted(cert)}
           />
         ))}
       </ScrollView>
@@ -317,13 +372,13 @@ function CertCard({ cert, saved, completed, whyText, theme, onStart, onSave, onC
         </TouchableOpacity>
       </View>
 
-      {/* Mark as completed - separate row so it does not crowd the
-          primary Start CTA. Once tapped it locks in (re-tapping does
-          nothing) and writes an Achievement to the Dilly profile. */}
+      {/* Mark / un-mark completion. Tapping toggles - first tap adds
+          an Achievement to the Dilly profile + shows an in-app toast,
+          second tap removes it (DELETE on /memory/items). The button
+          label flips so the user always knows what tapping will do. */}
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={onComplete}
-        disabled={completed}
         style={[
           cardStyles.completeBtn,
           { borderColor: completed ? theme.accent : theme.accentBorder },
@@ -331,12 +386,12 @@ function CertCard({ cert, saved, completed, whyText, theme, onStart, onSave, onC
         ]}
       >
         <Ionicons
-          name={completed ? 'checkmark-circle' : 'checkmark-circle-outline'}
+          name={completed ? 'close-circle' : 'checkmark-circle-outline'}
           size={14}
           color={theme.accent}
         />
         <Text style={[cardStyles.completeText, { color: theme.accent }]}>
-          {completed ? 'On your profile' : 'I completed this'}
+          {completed ? 'Remove from profile' : 'I completed this'}
         </Text>
       </TouchableOpacity>
     </View>

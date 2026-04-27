@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
+import { showToast } from '../../lib/globalToast';
 import { authHeaders } from '../../lib/auth';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { CAREER_FIELDS as CAREER_FIELD_OPTIONS, ALL_COHORTS, MAJOR_TO_COHORTS, detectCohorts } from '../../lib/cohorts';
@@ -552,11 +553,11 @@ function SeekerProfileScreen() {
       const asset = result.assets[0];
       const nameLower = asset.name.toLowerCase();
       if (!nameLower.endsWith('.pdf') && !nameLower.endsWith('.docx')) {
-        Alert.alert('Unsupported file', 'Please upload a PDF or DOCX file.');
+        showToast({ message: 'Please upload a PDF or DOCX file.', type: 'error' });
         return;
       }
       if ((asset.size ?? 0) > 10 * 1024 * 1024) {
-        Alert.alert('File too large', 'Resume must be under 10 MB.');
+        showToast({ message: 'Resume must be under 10 MB.', type: 'error' });
         return;
       }
       setResumeUploading(true);
@@ -578,10 +579,10 @@ function SeekerProfileScreen() {
         setProfile(prev => ({ ...prev, gs_resume: true }));
       } else {
         const body = await res.json().catch(() => ({}));
-        Alert.alert('Upload failed', body?.detail || 'Something went wrong. Try again.');
+        showToast({ message: body?.detail || 'Upload failed. Try again.', type: 'error' });
       }
     } catch {
-      Alert.alert('Upload failed', 'Something went wrong. Try again.');
+      showToast({ message: 'Upload failed. Try again.', type: 'error' });
     } finally {
       setResumeUploading(false);
     }
@@ -681,10 +682,10 @@ function SeekerProfileScreen() {
         setProfile((prev: any) => ({ ...prev, transcript_uploaded_at: body.transcript?.uploaded_at ?? new Date().toISOString() }));
         router.push('/(app)/transcript-review' as any);
       } else {
-        Alert.alert('Upload failed', 'Something went wrong. Try again with the digital PDF from your school portal.');
+        showToast({ message: 'Upload failed. Try again with the digital PDF from your school portal.', type: 'error' });
       }
     } catch {
-      Alert.alert('Upload failed', 'Could not read the file. Make sure it is a PDF or DOCX.');
+      showToast({ message: 'Could not read the file. Make sure it is a PDF or DOCX.', type: 'error' });
     } finally {
       setUploadingTranscript(false);
     }

@@ -1957,7 +1957,7 @@ function SeekerHome() {
               // "What We Think" removed. It was an on-demand LLM button that
               // could be hammered. Replaced with the weekly Chapters ritual
               // surfaced via ChapterCard higher up on Home.
-              { icon: 'sparkles' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
+              { icon: 'document-text' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
               { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar' as any) },
