@@ -1,6 +1,6 @@
 import { safeBack } from '../../../lib/navigation';
 /**
- * Chapter schedule — pick which day and hour your weekly Chapter lands.
+ * Chapter schedule - pick which day and hour your weekly Chapter lands.
  *
  * Defaults to Sunday 7pm. Users change this once and almost never
  * again; the UI reflects that by keeping it a single, calm screen

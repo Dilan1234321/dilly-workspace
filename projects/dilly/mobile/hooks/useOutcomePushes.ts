@@ -1,5 +1,5 @@
 /**
- * useOutcomePushes — local scheduled notifications for user-logged
+ * useOutcomePushes - local scheduled notifications for user-logged
  * outcomes (interviews, offers, deadlines, homework).
  *
  * Same pattern as useChapterNotifications but for events the user
@@ -12,7 +12,7 @@
  *  - T-18h: "<title> is tomorrow. Here's how Dilly can help you prep."
  *    Opens the AI chat overlay seeded with the event title so the
  *    user lands in a prep conversation on tap.
- *  - T:     "Good luck — <title> is now." Opens to Home.
+ *  - T:     "Good luck - <title> is now." Opens to Home.
  *
  * Zero LLM cost. Pure client-side timers. No server dispatch.
  *
@@ -24,7 +24,7 @@ let Notifications: any = null;
 try {
   Notifications = require('expo-notifications');
 } catch {
-  // Native module unavailable — hook becomes a no-op silently.
+  // Native module unavailable - hook becomes a no-op silently.
 }
 
 const OUTCOME_NOTIF_ID_PREFIX = 'outcome-';
@@ -75,7 +75,7 @@ export async function scheduleOutcomePushes(event: OutcomeEvent): Promise<boolea
         identifier: OUTCOME_NOTIF_ID_PREFIX + event.id + '-pre',
         content: {
           title: `${event.title} is tomorrow`,
-          body: "Open Dilly tonight — she'll help you prep.",
+          body: "Open Dilly tonight - she'll help you prep.",
           data: {
             route: '/(app)',
             overlaySeed: event.prepPrompt || `I have ${event.title} tomorrow. Help me prep.`,
@@ -91,7 +91,7 @@ export async function scheduleOutcomePushes(event: OutcomeEvent): Promise<boolea
     await Notifications.scheduleNotificationAsync({
       identifier: OUTCOME_NOTIF_ID_PREFIX + event.id + '-at',
       content: {
-        title: `${event.title} — good luck`,
+        title: `${event.title} - good luck`,
         body: "You've got this. Dilly will be here after.",
         data: { route: '/(app)' },
         sound: 'default',
@@ -119,7 +119,7 @@ export async function cancelOutcomePushes(id: string): Promise<void> {
         .map((n: any) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
     );
   } catch {
-    // Swallow — cancellation failures are acceptable (worst case: a
+    // Swallow - cancellation failures are acceptable (worst case: a
     // stale notification fires; the user dismisses it).
   }
 }

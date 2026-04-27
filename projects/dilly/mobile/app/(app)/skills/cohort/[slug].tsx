@@ -1,5 +1,5 @@
 /**
- * Skills cohort page — redesigned (build 355).
+ * Skills cohort page - redesigned (build 355).
  *
  * The first pass looked like a list with a filter bar on top. Too
  * clinical. This redesign is magazine-like:
@@ -43,7 +43,7 @@ const COHORTS: Record<string, CohortMeta> = {
   'software-engineering-cs':          { title: 'Software Engineering & CS',        tagline: 'Build systems that scale.',                         icon: 'code-slash' },
   'data-science-analytics':           { title: 'Data Science & Analytics',         tagline: 'Make numbers speak.',                              icon: 'stats-chart' },
   'cybersecurity-it':                 { title: 'Cybersecurity & IT',               tagline: 'Defend what matters; break what should break.',   icon: 'shield-checkmark' },
-  'electrical-computer-engineering':  { title: 'Electrical & Computer Engineering',tagline: 'Signal, circuit, silicon — the metal layer.',      icon: 'hardware-chip' },
+  'electrical-computer-engineering':  { title: 'Electrical & Computer Engineering',tagline: 'Signal, circuit, silicon - the metal layer.',      icon: 'hardware-chip' },
   'mechanical-aerospace-engineering': { title: 'Mechanical & Aerospace Engineering',tagline: 'Solids, fluids, the discipline of flight.',       icon: 'airplane' },
   'civil-environmental-engineering':  { title: 'Civil & Environmental Engineering',tagline: 'The built world.',                                 icon: 'business' },
   'chemical-biomedical-engineering':  { title: 'Chemical & Biomedical Engineering',tagline: 'Reactions, devices, the life sciences.',           icon: 'flask' },
@@ -174,10 +174,10 @@ export default function CohortScreen() {
       contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
     >
-      {/* Hero — tinted backdrop the full width of the screen. The
+      {/* Hero - tinted backdrop the full width of the screen. The
           accent is muted (accentSoft) so the cohort feels like a
           destination but doesn't shout. Icon, title, tagline,
-          counts — nothing else competes. */}
+          counts - nothing else competes. */}
       <View style={[styles.hero, { backgroundColor: theme.accentSoft, paddingTop: insets.top + 8 }]}>
         <View style={styles.heroTopRow}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
@@ -218,7 +218,7 @@ export default function CohortScreen() {
         </View>
       </View>
 
-      {/* Start here — horizontal carousel */}
+      {/* Start here - horizontal carousel */}
       {startHere.length > 0 ? (
         <>
           <View style={styles.sectionHeader}>
@@ -283,7 +283,7 @@ export default function CohortScreen() {
         id="skills_cohort_v1"
         iconName="layers"
         headline="One cohort, one curated list"
-        subline="Start here is the warm-up path. Below it, every video in this cohort — filter by length or sort by newest."
+        subline="Start here is the warm-up path. Below it, every video in this cohort - filter by length or sort by newest."
       />
     </ScrollView>
   );

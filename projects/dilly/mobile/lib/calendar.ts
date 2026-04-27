@@ -31,7 +31,7 @@ import { syncReminderForEvent } from './reminders';
 // least once on this device". When true, the Subscribe button on the
 // Calendar page hides itself (user is already subscribed in iOS) and
 // an Unsubscribe row surfaces in Settings. Clearing the flag brings
-// the Subscribe button back. iOS owns the actual subscription — this
+// the Subscribe button back. iOS owns the actual subscription - this
 // flag is just a UX hint so we don't show a "Subscribe" CTA to a
 // user who already subscribed.
 const CAL_SUBSCRIBED_KEY = 'dilly_cal_subscribed_v1';

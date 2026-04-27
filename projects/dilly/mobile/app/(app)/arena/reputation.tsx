@@ -1,6 +1,6 @@
 /**
- * Reputation Drift — holder tile. Reads the user's public-profile
- * settings + memory surface to compute a "visibility score" —
+ * Reputation Drift - holder tile. Reads the user's public-profile
+ * settings + memory surface to compute a "visibility score" -
  * essentially how hard it would be for a recruiter to find what
  * makes the user rare. Actionable: each row is a fix.
  */
@@ -74,7 +74,7 @@ export default function ReputationDrift() {
       {
         label: 'Learning profile is on',
         pass: ws.learning_profile_visible !== false,
-        fix: 'Your learning receipt proves intent. Keep it on — recruiters love to see active learning.',
+        fix: 'Your learning receipt proves intent. Keep it on - recruiters love to see active learning.',
         route: '/(app)/skills/profile-settings',
       },
     ]

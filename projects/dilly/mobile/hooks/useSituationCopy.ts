@@ -1,5 +1,5 @@
 /**
- * useSituationCopy — per-user_path copy for shared surfaces.
+ * useSituationCopy - per-user_path copy for shared surfaces.
  *
  * The /profile response now carries a `situation_copy` object
  * populated server-side from dilly_core/situation_copy.py. This hook

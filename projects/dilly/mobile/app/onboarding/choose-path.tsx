@@ -134,7 +134,7 @@ export default function ChoosePathScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero. Tightened per tester feedback — the old subtitle was
+        {/* Hero. Tightened per tester feedback - the old subtitle was
             marketing-y and the footer repeated the same idea. One line
             here is enough; the email field itself tells users what
             this screen is for. */}
@@ -315,7 +315,7 @@ export default function ChoosePathScreen() {
           </>
         ) : null}
 
-        {/* Footer removed per tester feedback — the sentence was
+        {/* Footer removed per tester feedback - the sentence was
             repeating the value prop already on the splash screen
             and was contributing to the 'wordy' complaint. The email
             field is self-explanatory; nothing extra needed here. */}

@@ -1,10 +1,10 @@
 /**
- * Jobs — second rebuild pass (build 353).
+ * Jobs - second rebuild pass (build 353).
  *
  * Build 352 stabilized the structure (DillyNoticed strip, hero, bands,
  * fit stories). This pass adds back the product-power features the
  * user called out: company logos, fit narratives, tailor-a-resume,
- * apply-with-tracking, Ask Dilly. Each is additive — the stable
+ * apply-with-tracking, Ask Dilly. Each is additive - the stable
  * 352 skeleton is preserved.
  *
  * Key design decisions:
@@ -98,7 +98,7 @@ interface Profile {
   // user_type drives the default job-type filter. Students should see
   // internships by default (that's what they're looking for); everyone
   // else sees 'all'. This is the fix for "every job says I'm not a
-  // good fit" — we were showing full-time roles to students who had
+  // good fit" - we were showing full-time roles to students who had
   // told Dilly they want internships.
   user_type?: string;
   graduation_year?: number | string;
@@ -253,7 +253,7 @@ function buildNoticedLines(jobs: Listing[], profile: Profile | null): string[] {
 // "Salt in water" goal: every expanded job card surfaces ONE curated
 // Skills video tied to a real gap between what the job asks for and
 // what the user has proven. No gap → no video (so we never patronize
-// strong candidates). Zero LLM — the whole thing runs off a keyword
+// strong candidates). Zero LLM - the whole thing runs off a keyword
 // table per cohort plus a simple score.
 //
 // Pipeline:
@@ -261,7 +261,7 @@ function buildNoticedLines(jobs: Listing[], profile: Profile | null): string[] {
 //   2. look at the job title + first ~400 chars of description
 //   3. for each cohort skill-keyword (from the playbook), check if
 //      the job mentions it AND the user does NOT have it
-//   4. rank candidate gaps — prefer title hits over description hits,
+//   4. rank candidate gaps - prefer title hits over description hits,
 //      and longer phrases over short ones
 //   5. pick the top gap, rank the trending-video pool against its
 //      tokens, return the best match
@@ -356,7 +356,7 @@ export default function JobsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [noticeIndex, setNoticeIndex] = useState(0);
 
-  // Skills integration inputs. Both are best-effort and lazy — if
+  // Skills integration inputs. Both are best-effort and lazy - if
   // either fails to load, the jobs feed still works; we just don't
   // surface a skill-gap video under the fit narrative.
   //   facts: user's profile facts (from /memory). We only
@@ -366,7 +366,7 @@ export default function JobsScreen() {
   const [facts, setFacts] = useState<Array<{ category?: string; label?: string; value?: string }>>([]);
   const [skillsPool, setSkillsPool] = useState<SkillVid[]>([]);
 
-  // Filters. Client-side only — the server already returns up to 60
+  // Filters. Client-side only - the server already returns up to 60
   // ranked jobs, filtering here is instant, and gives us the room to
   // show a per-filter match count on each chip.
   //   cityFilter: null = every city, or a lowercased city string
@@ -374,7 +374,7 @@ export default function JobsScreen() {
   //   remoteFilter: 'any' | 'remote' | 'in_person'
   const [cityFilter, setCityFilter] = useState<string | null>(null);
   // Start with null so we know whether the user has explicitly picked
-  // a type yet. Once profile loads we pick a sensible default — students
+  // a type yet. Once profile loads we pick a sensible default - students
   // get 'internship', everyone else gets 'all'. A user who actively
   // taps a chip wins over the auto-default.
   const [typeFilter, setTypeFilter] = useState<TypeFilter | null>(null);
@@ -418,7 +418,7 @@ export default function JobsScreen() {
     try {
       // Fetch everything in parallel. Feed + profile are the critical
       // path (failure blocks the screen). Facts + skill pool are
-      // additive — we catch their errors and default to empty, so a
+      // additive - we catch their errors and default to empty, so a
       // slow memory endpoint or trending cache miss never blocks jobs.
       const [feedRes, profileRes, factsRes, poolRes] = await Promise.all([
         dilly.get('/v2/internships/feed?tab=all&limit=60&sort=rank').catch(() => null),
@@ -434,7 +434,7 @@ export default function JobsScreen() {
 
       // /memory returns either a { items: [...] } wrapper or
       // a raw array depending on build; handle both. We only need
-      // category/label/value — everything else is discarded.
+      // category/label/value - everything else is discarded.
       const factArr = Array.isArray(factsRes?.items)
         ? factsRes.items
         : Array.isArray(factsRes) ? factsRes : [];
@@ -466,7 +466,7 @@ export default function JobsScreen() {
     // Restrict the city picker to the cities the user has actually
     // named on their profile (profile.job_locations). This keeps the
     // filter aligned with Dilly's "we search where you want to be"
-    // promise — picking a random city the feed happens to surface
+    // promise - picking a random city the feed happens to surface
     // is noise, not signal. Profile cities with zero current matches
     // are still shown (with n=0) so the user can see the full list
     // of places they told Dilly about.
@@ -510,7 +510,7 @@ export default function JobsScreen() {
   // Otherwise, default based on user_type:
   //   - student → 'internship' (they told us they want internships)
   //   - everyone else → 'all'
-  // This fixes the "every job says not a good fit" demo blocker —
+  // This fixes the "every job says not a good fit" demo blocker -
   // the feed was showing full-time roles to students, and the fit
   // narrative correctly flagged them as stretches/not-a-fit.
   const effectiveTypeFilter: TypeFilter = useMemo(() => {
@@ -546,7 +546,7 @@ export default function JobsScreen() {
     if (r === 'any') return true;
     const mode = (j.work_mode || '').toLowerCase();
     // Strict remote: the listing explicitly says remote OR the boolean
-    // flag is true. Hybrid does NOT count as remote — users who want
+    // flag is true. Hybrid does NOT count as remote - users who want
     // remote want remote, not hybrid.
     const isRemote = !!j.remote || /\bremote\b/.test(mode);
     const isHybrid = /\bhybrid\b/.test(mode);
@@ -570,7 +570,7 @@ export default function JobsScreen() {
   // Skill-gap -> video map, keyed by job id. Computed once per data
   // change. The heavy lifting is O(jobs * cohortKeywords) which is
   // tiny (60 jobs * ~15 keywords = 900 ops) and pure, so a single
-  // memo covers us — no per-card re-computation.
+  // memo covers us - no per-card re-computation.
   const gapVideoByJob = useMemo(() => {
     const out: Record<string, string> = {}
     if (!jobs.length || !skillsPool.length) return out
@@ -603,7 +603,7 @@ export default function JobsScreen() {
 
   // Count a filter as "active" only when the user has explicitly
   // narrowed from the default. The student-internship default is not
-  // counted — it's the baseline, not a filter the user applied.
+  // counted - it's the baseline, not a filter the user applied.
   const activeFilterCount =
     (cityFilter ? 1 : 0) +
     (typeFilterTouched && effectiveTypeFilter !== 'all' ? 1 : 0) +
@@ -652,7 +652,7 @@ export default function JobsScreen() {
   const toggleExpanded = useCallback((job: Listing) => {
     setExpandedId(current => {
       if (current === job.id) return null;
-      // Fire-and-forget narrative fetch. No await — the card expands
+      // Fire-and-forget narrative fetch. No await - the card expands
       // immediately and shows a skeleton while the request is in flight.
       ensureNarrative(job);
       return job.id;
@@ -680,7 +680,7 @@ export default function JobsScreen() {
 
   const askDilly = useCallback((job: Listing) => {
     // Seed Dilly with the full job context so it can answer ANY
-    // question the user asks from this point — qualifications,
+    // question the user asks from this point - qualifications,
     // deadlines, salary, how to frame a cold email, pivot stories,
     // whatever. We pass company, title, location, work mode, and the
     // full description (truncated at 4,000 chars so very long JDs
@@ -703,7 +703,7 @@ export default function JobsScreen() {
 
     const seed =
       `I'm looking at this role and I want your read on it. Here is the ` +
-      `full posting — please use it to answer whatever I ask next:\n\n` +
+      `full posting - please use it to answer whatever I ask next:\n\n` +
       context +
       `\n\nTo start: how well do I fit this role, and what would you push ` +
       `me on to be competitive? I may follow up with specific questions.`;
@@ -833,7 +833,7 @@ export default function JobsScreen() {
           />
         </TouchableOpacity>
 
-        {/* Type chips — each type is its own button so the user can
+        {/* Type chips - each type is its own button so the user can
             one-tap the one they want. "All" clears the type filter. */}
         {(['all', 'internship', 'entry_level', 'full_time', 'part_time'] as TypeFilter[]).map(t => {
           const active = effectiveTypeFilter === t;
@@ -891,7 +891,7 @@ export default function JobsScreen() {
         ) : null}
       </ScrollView>
 
-      {/* City picker modal — opened by the City chip. Lists every
+      {/* City picker modal - opened by the City chip. Lists every
           city present in the current feed with a match count per
           row, plus an "All cities" reset row at the top. */}
       <Modal
@@ -1200,7 +1200,7 @@ function ExpandedDetails({ job, theme, narrative, gapVideoId, onApply, onAsk, on
   // Default to the action only ("What to do"). The full read (What
   // you have + What's missing) is one tap away but hidden by default
   // so users aren't staring at a wall of text. Most of the value is
-  // the action — strengths and gaps are the "why" behind it.
+  // the action - strengths and gaps are the "why" behind it.
   const [showFullRead, setShowFullRead] = useState(false);
 
   return (
@@ -1229,7 +1229,7 @@ function ExpandedDetails({ job, theme, narrative, gapVideoId, onApply, onAsk, on
 
       {data ? (
         <View style={{ gap: 10 }}>
-          {/* Action first (default visible). This is the payoff — what
+          {/* Action first (default visible). This is the payoff - what
               should the user actually do with this role. */}
           {data.what_to_do ? (
             <NarrativeRow label="What to do" body={data.what_to_do} color={theme.accent} theme={theme} />
@@ -1268,7 +1268,7 @@ function ExpandedDetails({ job, theme, narrative, gapVideoId, onApply, onAsk, on
         </View>
       ) : null}
 
-      {/* Inline Skills — only renders when we detected a real gap
+      {/* Inline Skills - only renders when we detected a real gap
           between this job's ask and the user's profile AND we found a
           curated video for it. When the user already has the cohort
           skills this job cares about, we skip the card entirely. */}
@@ -1387,7 +1387,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 11, fontWeight: '800' },
 
-  // City picker bottom sheet. Fully transparent backdrop — the sheet
+  // City picker bottom sheet. Fully transparent backdrop - the sheet
   // should feel like it emerged from the content, not like the screen
   // went dark. Dismiss on tap-away still works (the backdrop is a
   // TouchableOpacity that fills the space around the sheet).

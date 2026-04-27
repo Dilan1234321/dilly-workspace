@@ -254,7 +254,7 @@ export default function ProfileProScreen() {
         )}
 
         {/* "What are you looking for?" field removed per product
-            direction — users asked for it to go. targetKey still
+            direction - users asked for it to go. targetKey still
             lives in state and defaults to 'new_role' so the POST
             body shape is unchanged. If we need per-user targeting
             later we'll ask contextually, not upfront. */}

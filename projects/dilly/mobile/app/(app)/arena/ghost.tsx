@@ -1,5 +1,5 @@
 /**
- * Ghost Move — holder tile. Computes a "stealth check" — what your
+ * Ghost Move - holder tile. Computes a "stealth check" - what your
  * market would look like if you wanted to move, without tipping your
  * current employer. Three parts: anchor companies hiring for your
  * level, a low-signal comp update, and a stealth prep checklist.
@@ -17,11 +17,11 @@ import { deriveSignals, type Listing, type Application, type Signals } from '../
 import { compactUsd } from '../../../lib/arena/value'
 
 const CHECKLIST = [
-  { text: 'Scrub your LinkedIn headline — specific titles only draw cold inbound from your current company\'s recruiters.', done: false },
+  { text: 'Scrub your LinkedIn headline - specific titles only draw cold inbound from your current company\'s recruiters.', done: false },
   { text: 'Use personal email for applications. Work email is searchable.', done: false },
-  { text: 'Set your LinkedIn to "not open to work" while warm-DMing — it tips faster than an indicator.', done: false },
+  { text: 'Set your LinkedIn to "not open to work" while warm-DMing - it tips faster than an indicator.', done: false },
   { text: 'Take reference calls from personal phone, off the clock.', done: false },
-  { text: 'Do not update your resume file on Google Drive — your manager may have access through a shared folder.', done: false },
+  { text: 'Do not update your resume file on Google Drive - your manager may have access through a shared folder.', done: false },
 ]
 
 export default function GhostMove() {
@@ -62,7 +62,7 @@ export default function GhostMove() {
     <ArenaPage
       eyebrow="GHOST · MOVE"
       title="A stealth look at your exit."
-      subtitle="What the market would offer if you wanted to leave — computed locally, no signal sent."
+      subtitle="What the market would offer if you wanted to leave - computed locally, no signal sent."
     >
       {/* Top anchors hiring */}
       <Text style={[s.section, { color: theme.surface.t3 }]}>ANCHORS HIRING YOU</Text>

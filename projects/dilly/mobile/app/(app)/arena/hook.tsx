@@ -1,8 +1,8 @@
 /**
- * The Hook — seeker tile. For each of the user's top 3 target
+ * The Hook - seeker tile. For each of the user's top 3 target
  * companies, renders a first-line email / message opening that
  * blends the company's cohort angle with a fact from the user's
- * profile. Zero LLM — templated with profile substitution.
+ * profile. Zero LLM - templated with profile substitution.
  */
 
 import { useEffect, useState, useMemo } from 'react'
@@ -122,9 +122,9 @@ function buildHook(
   const fname = profile?.first_name || ''
   // Pick a template based on whether we have a real strong fact.
   if (strongFact) {
-    return `Hi — I'm ${fname || 'a ' + playbook.shortName + ' candidate'}. I noticed ${company} is shipping into a space I've been building in. I recently ${lowerStart(strongFact)}, and I thought your team might be the one it translates best into. Would you be open to a 15-minute call next week?`
+    return `Hi - I'm ${fname || 'a ' + playbook.shortName + ' candidate'}. I noticed ${company} is shipping into a space I've been building in. I recently ${lowerStart(strongFact)}, and I thought your team might be the one it translates best into. Would you be open to a 15-minute call next week?`
   }
-  return `Hi — I've been following ${company} for a while, and the shape of the ${playbook.shortName} work your team is doing is exactly the problem I want to work on. I'd love a brief intro call to learn how you think about the role you're hiring for.`
+  return `Hi - I've been following ${company} for a while, and the shape of the ${playbook.shortName} work your team is doing is exactly the problem I want to work on. I'd love a brief intro call to learn how you think about the role you're hiring for.`
 }
 
 function lowerStart(s: string): string {

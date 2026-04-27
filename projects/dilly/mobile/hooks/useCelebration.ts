@@ -12,7 +12,7 @@ const STORAGE_KEY = 'dilly_celebrated_milestones';
 // detector, Stripe-success handler) can call triggerCelebration() and
 // any mounted CelebrationPortal will show the overlay. Subscribers add
 // themselves to the listener set on mount and remove on unmount. If no
-// one is mounted the call is a no-op — that's fine, milestones are
+// one is mounted the call is a no-op - that's fine, milestones are
 // persisted to AsyncStorage and will fire on the next Settings mount.
 type Listener = (m: MilestoneType) => void;
 const _listeners = new Set<Listener>();
@@ -44,7 +44,7 @@ export default function useCelebration() {
    *    reward progression that can only happen once.
    */
   const celebrate = useCallback(async (milestone: MilestoneType) => {
-    // Always-fire milestones — re-show every time, not one-shot.
+    // Always-fire milestones - re-show every time, not one-shot.
     //   Subscription unlocks: user should feel the moment on every
     //     conversion (first signup, resubscribe, promo upgrade).
     //   Wins: every interview / offer / milestone is its own event;
@@ -59,7 +59,7 @@ export default function useCelebration() {
       // (streak broken, then rebuilt to day 7 again). Earning it the
       // second time should feel earned the second time.
       milestone.startsWith('pulse-streak-') ||
-      // Chapter milestones re-fire too — a user who pauses Chapters
+      // Chapter milestones re-fire too - a user who pauses Chapters
       // for 6 months and returns should feel the 4/12/26/52-week
       // moments the second time they earn them.
       milestone.startsWith('chapter-');
@@ -74,7 +74,7 @@ export default function useCelebration() {
       setActiveMilestone(milestone);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...seen, milestone]));
     } catch {
-      // Storage failure — show anyway so the student doesn't miss their moment
+      // Storage failure - show anyway so the student doesn't miss their moment
       setActiveMilestone(milestone);
     }
   }, []);
@@ -92,7 +92,7 @@ export default function useCelebration() {
   }, [celebrate]);
 
   /**
-   * CelebrationPortal — render this component in the screen's root View JSX.
+   * CelebrationPortal - render this component in the screen's root View JSX.
    * It mounts the CelebrationOverlay when a milestone is active.
    * Wrapped in useCallback so its identity only changes when activeMilestone
    * changes, preventing unnecessary remounts of child components.

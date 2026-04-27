@@ -1,5 +1,5 @@
 /**
- * Shared animation utilities for Dilly — subtle, professional animations
+ * Shared animation utilities for Dilly - subtle, professional animations
  * that make every interaction feel polished.
  *
  * Uses React Native Reanimated for performant worklet-based animations.

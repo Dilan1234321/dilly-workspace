@@ -241,7 +241,7 @@ export default function SettingsScreen() {
     return () => clearTimeout(t);
   }, [settingsBanner, bannerAnim]);
 
-  // Goodbye modal — shown AFTER a successful cancel instead of a
+  // Goodbye modal - shown AFTER a successful cancel instead of a
   // plain "subscription cancelled" alert. Gives the moment the
   // weight it deserves + offers a 60s uncancel window.
   const [goodbyeState, setGoodbyeState] = useState<{
@@ -263,7 +263,7 @@ export default function SettingsScreen() {
   const [webProfileOn, setWebProfileOn] = useState(true);
   const [webSlug, setWebSlug] = useState('');
   const [webPrefix, setWebPrefix] = useState('s');
-  // Public learning profile — the /s/<slug> surface on
+  // Public learning profile - the /s/<slug> surface on
   // skills.hellodilly.com. Stored inside web_profile_settings as
   // learning_profile_visible (default true when the main profile is
   // visible). Separate toggle so the user can keep their career
@@ -324,7 +324,7 @@ export default function SettingsScreen() {
   useEffect(() => { fetchProfile(); }, []);
 
   // Scroll to top whenever Settings gains focus. Without this, the
-  // ScrollView preserves position from the last visit — so a user
+  // ScrollView preserves position from the last visit - so a user
   // who scrolled to Delete Account, then tapped Settings from the
   // header icon, would land back at the bottom instead of seeing
   // Edit Profile / Plan first. Tester feedback: "pressing the
@@ -400,10 +400,10 @@ export default function SettingsScreen() {
         setSettingsBanner({ kind: 'error', message: msg });
         return;
       }
-      // Success — refresh local plan + collapse the input. Fire the
+      // Success - refresh local plan + collapse the input. Fire the
       // celebration overlay on an UPGRADE to a paid tier. For starter
       // codes (like DILLYTAMPAFREE which flips back to free) we skip
-      // the celebration and show the in-app banner instead — nothing
+      // the celebration and show the in-app banner instead - nothing
       // to celebrate about going free.
       const newPlan = body?.plan || plan;
       setPlan(newPlan);
@@ -436,7 +436,7 @@ export default function SettingsScreen() {
           // Clear cached mode + session data so the next user doesn't
           // inherit this user's mode, dashboard, or market radar.
           await clearAppModeCache();
-          // Theme is now server-backed and tied to account — clear the
+          // Theme is now server-backed and tied to account - clear the
           // local cache so the next sign-in hydrates from THEIR profile,
           // not the prior user's accent/surface choices.
           await clearThemeCache();
@@ -463,7 +463,7 @@ export default function SettingsScreen() {
   }
 
   async function handleCancelSubscription() {
-    // Standalone cancel — ends Stripe billing but keeps the account
+    // Standalone cancel - ends Stripe billing but keeps the account
     // and all data. Tester feedback: the iOS "Subscription cancelled"
     // system alert felt like a stock OS confirmation instead of part
     // of Dilly, which broke the premium feel. Confirmation step still
@@ -507,7 +507,7 @@ export default function SettingsScreen() {
             // Flip the local plan state immediately so the Plan
             // section re-renders as Starter without a manual reload.
             setPlan('starter');
-            // Goodbye modal takes over from here — replaces the
+            // Goodbye modal takes over from here - replaces the
             // plain Alert with a calm, considered moment that names
             // what the user is pausing and offers a 60s uncancel.
             setGoodbyeState({ visible: true, previousPlan: prevPlan });
@@ -519,7 +519,7 @@ export default function SettingsScreen() {
 
   // Reverse a cancel by reopening the checkout flow. Called from the
   // goodbye modal's "Actually, keep my subscription" link. This is
-  // the same path as a normal upgrade — the user just goes back
+  // the same path as a normal upgrade - the user just goes back
   // through Stripe checkout. Cost to them: a second card charge,
   // but Stripe prorates so they're not double-billed.
   async function handleUncancel() {
@@ -553,7 +553,7 @@ export default function SettingsScreen() {
               onPress: async () => {
                 // Hit the real endpoint and actually wait for confirmation.
                 // Backend cancels Stripe before deleting data and returns
-                // 503 if Stripe is unreachable — in that case we must NOT
+                // 503 if Stripe is unreachable - in that case we must NOT
                 // clear local auth, otherwise the user ends up locked out
                 // of an account that still exists and is still billing.
                 let res: Response | null = null;
@@ -567,7 +567,7 @@ export default function SettingsScreen() {
                   return;
                 }
                 if (!res.ok) {
-                  // Most likely 503 — Stripe cancel failed. Show the
+                  // Most likely 503 - Stripe cancel failed. Show the
                   // server's message if present so the user knows to retry.
                   let msg = 'Please try again in a minute.';
                   try {
@@ -579,7 +579,7 @@ export default function SettingsScreen() {
                   Alert.alert('Could not delete account', msg);
                   return;
                 }
-                // Success — wipe local state and route to onboarding.
+                // Success - wipe local state and route to onboarding.
                 await clearAuth();
                 try {
                   const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
@@ -737,7 +737,7 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* Plan — 3 visual states (starter / dilly / pro). Starter
+        {/* Plan - 3 visual states (starter / dilly / pro). Starter
             gets a dedicated upgrade hero. Paid tiers get a premium
             status card celebrating what they already have.
 
@@ -830,7 +830,7 @@ export default function SettingsScreen() {
                 $9.99/mo. Cancel anytime.
               </Text>
 
-              {/* Promo code row — keeps the 'Have a promo code?' affordance
+              {/* Promo code row - keeps the 'Have a promo code?' affordance
                   accessible even inside the upgrade hero. */}
               <View style={{ height: 1, backgroundColor: theme.accentBorder, marginVertical: 14 }} />
               {!promoOpen ? (
@@ -913,7 +913,7 @@ export default function SettingsScreen() {
               </View>
 
               {/* Dilly users see a subtle Pro upsell. Pro users get
-                  no upsell — they're already at the top. */}
+                  no upsell - they're already at the top. */}
               {plan === 'dilly' && (
                 <AnimatedPressable
                   style={{
@@ -1038,7 +1038,7 @@ export default function SettingsScreen() {
           </FadeInView>
         )}
 
-        {/* Appearance — deep customization lives in its own studio.
+        {/* Appearance - deep customization lives in its own studio.
             The entry point here is intentionally hero-sized because
             the feature is a brand-new differentiator. */}
         <FadeInView delay={40}>
@@ -1096,7 +1096,7 @@ export default function SettingsScreen() {
               const profileUrl = `https://hellodilly.com/${webPrefix}/${slug}`;
               return (
                 <>
-                  {/* Public profile is now managed on its own page —
+                  {/* Public profile is now managed on its own page -
                       same pattern as the public learning profile. The
                       row pushes to /public-profile-settings where the
                       master toggle, section toggles, and per-fact
@@ -1125,7 +1125,7 @@ export default function SettingsScreen() {
                     </>
                   ) : null}
 
-                  {/* Public LEARNING profile — the skills.hellodilly.com
+                  {/* Public LEARNING profile - the skills.hellodilly.com
                       /s/<slug> surface. Separate toggle so the user
                       can keep their career profile public while hiding
                       the learning receipt (or vice versa). Visibility
@@ -1182,7 +1182,7 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* Dilly Calendar — Reminders toggle is always surfaced so the
+        {/* Dilly Calendar - Reminders toggle is always surfaced so the
             user can opt in before/after subscribing to the feed. The
             unsubscribe row only appears once they've subscribed. */}
         <FadeInView delay={155}>
@@ -1242,7 +1242,7 @@ export default function SettingsScreen() {
           <Text style={[s.versionText, { color: theme.surface.t3 }]}>Dilly v{APP_VERSION}</Text>
         </FadeInView>
 
-        {/* Cancel subscription — ONLY for paid users. Placed above
+        {/* Cancel subscription - ONLY for paid users. Placed above
             Sign out / Delete so a user looking for a way out finds
             the least-destructive option first. Tester feedback:
             cancellation used to be buried inside Delete Account,
@@ -1290,7 +1290,7 @@ export default function SettingsScreen() {
           successful cancel. Replaces the plain Alert with a calm,
           considered treatment that names what the user is pausing
           and offers a 60s uncancel link. Intentionally designed
-          NOT to be a retention trap — just a dignified goodbye. */}
+          NOT to be a retention trap - just a dignified goodbye. */}
       {goodbyeState && (
         <CancelGoodbyeModal
           visible={goodbyeState.visible}

@@ -1,5 +1,5 @@
 /**
- * FieldPulseCard — the weekly-return anchor on AI Arena.
+ * FieldPulseCard - the weekly-return anchor on AI Arena.
  *
  * Wraps the existing Weekly Signal with three retention-forcing
  * affordances:

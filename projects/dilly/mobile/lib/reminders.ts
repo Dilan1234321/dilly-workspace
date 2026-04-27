@@ -34,7 +34,7 @@ const ID_MAP_KEY = 'dilly_reminder_id_map_v1';
 // ── Lazy-load expo-calendar ──────────────────────────────────────────
 // Static import at module level caused native crash on startup (see
 // commit ccdff51). Dynamic import defers native module access until
-// the function is first called — after the bridge is fully initialized.
+// the function is first called - after the bridge is fully initialized.
 
 let _Cal: any = null;
 async function Cal(): Promise<any> {
@@ -128,7 +128,7 @@ export async function syncReminderForEvent(
   const key = reminderKey(title, date);
   const map = await loadIdMap();
 
-  // Already created — skip.
+  // Already created - skip.
   if (map[key]) return map[key];
 
   try {

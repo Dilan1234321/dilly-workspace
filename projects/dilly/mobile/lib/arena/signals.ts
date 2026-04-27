@@ -1,5 +1,5 @@
 /**
- * Arena/signals — derived signals across the three arena surfaces.
+ * Arena/signals - derived signals across the three arena surfaces.
  *
  * Cheap stats we compute once from the user's profile + /applications
  * + /v2/internships/feed + /memory so every arena tile stops
@@ -161,7 +161,7 @@ export function deriveSignals(
   }
 }
 
-/** Small helper — what rejection pattern does this user fit? Feeds the
+/** Small helper - what rejection pattern does this user fit? Feeds the
  *  Rejection Pattern Map tile. */
 export function rejectionPattern(s: Signals): {
   label: string
@@ -172,7 +172,7 @@ export function rejectionPattern(s: Signals): {
   if (s.rejectionsLast30 >= 8 && s.interviewsCount === 0) {
     return {
       label: 'Resume-stage rejections',
-      diagnosis: 'You are getting rejected before the phone screen. The problem is not the interview — it is the top-of-funnel read.',
+      diagnosis: 'You are getting rejected before the phone screen. The problem is not the interview - it is the top-of-funnel read.',
       move: 'Rewrite the top third of your resume this week. Lead with outcomes and the companies you want, not a chronology.',
     }
   }
@@ -185,7 +185,7 @@ export function rejectionPattern(s: Signals): {
   }
   if (s.rejectionsLast30 >= 3) {
     return {
-      label: 'Pattern unclear — more data needed',
+      label: 'Pattern unclear - more data needed',
       diagnosis: 'Your recent rejections do not cluster yet. Before you change strategy, make sure you are applying enough to distinguish bad luck from bad fit.',
       move: 'Track exactly where in the funnel each one dies. Pattern will emerge inside a week of honest logging.',
     }

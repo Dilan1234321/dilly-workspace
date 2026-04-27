@@ -1,9 +1,9 @@
 /**
- * Future Pulse — the student centerpiece.
+ * Future Pulse - the student centerpiece.
  *
  * A simulated day-in-the-life in the user's cohort three years out.
  * Four scenes (morning, midday, late afternoon, ceiling). Each scene
- * is a paragraph the user can sit with — specific, lived-in, not
+ * is a paragraph the user can sit with - specific, lived-in, not
  * generic. Below: the comp range at that future point, plus three
  * Dilly Skills videos to make it real this week.
  *
@@ -74,7 +74,7 @@ export default function FuturePulse() {
 
   // When we have a name, use it in both greeting form ("Hey Dilan") and
   // possessive ("Dilan's Tuesday"). Without a name we must NOT fall
-  // back to 'you' — that produces "you's Tuesday". Use "there" for
+  // back to 'you' - that produces "you's Tuesday". Use "there" for
   // greetings ("Hey there") and "Your" for titles.
   const hasName = !!profile?.first_name
   const fname = hasName ? (profile!.first_name as string) : 'there'

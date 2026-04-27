@@ -1,5 +1,5 @@
 /**
- * Arena/value — compute the user's market value range + 30-day trend
+ * Arena/value - compute the user's market value range + 30-day trend
  * WITHOUT any LLM call or paid server history.
  *
  * Strategy:
@@ -193,7 +193,7 @@ export function computeValue(
 
 /** Format USD to a short compact label (e.g. "$245K"). */
 export function compactUsd(n: number): string {
-  if (!Number.isFinite(n) || n <= 0) return '—'
+  if (!Number.isFinite(n) || n <= 0) return '-'
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `$${Math.round(n / 1_000)}K`
   return `$${n}`

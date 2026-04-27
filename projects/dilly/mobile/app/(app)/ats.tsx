@@ -161,7 +161,7 @@ function KeywordRow({ keyword, count, status }: { keyword: string; count: number
 export default function ATSScreen() {
   const insets = useSafeAreaInsets();
   // Customize Dilly theme. ATS had 41 frozen colors refs and zero
-  // theme integration — threading useResolvedTheme so the shell
+  // theme integration - threading useResolvedTheme so the shell
   // (root, navbar, tab selector) picks up the user's surface choice.
   const theme = useResolvedTheme();
   const toast = useInlineToast();

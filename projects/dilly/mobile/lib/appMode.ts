@@ -1,20 +1,20 @@
 /**
- * appMode — Dilly's primary product-mode primitive.
+ * appMode - Dilly's primary product-mode primitive.
  *
  * Three modes, one profile. This is the switch that reshapes the entire
  * app for the audience without forking the data layer.
  *
- *   holder  — has a job, wants to stay ahead of AI + plan their career
+ *   holder  - has a job, wants to stay ahead of AI + plan their career
  *             Default tabs: Arena / Chat / The Market / My Career
  *             Hero feature: Arena (threat report, peer signals, weekly pulse)
  *             Tone: sharp strategist, not cheerleader
  *
- *   seeker  — actively looking for work they don't have yet
+ *   seeker  - actively looking for work they don't have yet
  *             Default tabs: Career Center / Arena / My Dilly / Jobs
  *             Hero feature: Jobs feed with fit narratives
  *             Tone: honest coach, path-specific (dropout, veteran, etc.)
  *
- *   student — in school, working toward a first role
+ *   student - in school, working toward a first role
  *             Default tabs: Career Center / Arena / My Dilly / Jobs
  *             Hero feature: journey + internships
  *             Tone: cohort-aware, aspirational but direct
@@ -27,7 +27,7 @@
  * Override:
  *   profile.app_mode can explicitly override the derived value. Set when
  *   the user flips a toggle in settings or accepts a Dilly prompt
- *   ("Looks like you're job hunting — switch to Job Search mode?").
+ *   ("Looks like you're job hunting - switch to Job Search mode?").
  *
  * Mode is derived at render time from profile. No separate state to sync.
  */
@@ -46,7 +46,7 @@ export interface ProfileLike {
 export function getAppMode(profile: ProfileLike | null | undefined): AppMode {
   if (!profile) return 'seeker';
 
-  // Explicit override wins — the user told us what mode they want.
+  // Explicit override wins - the user told us what mode they want.
   const override = (profile.app_mode || '').trim().toLowerCase();
   if (override === 'holder' || override === 'seeker' || override === 'student') {
     return override;
@@ -79,5 +79,5 @@ export function modeDescription(mode: AppMode): string {
   }
 }
 
-/** All modes in display order (holder first — reflects default audience). */
+/** All modes in display order (holder first - reflects default audience). */
 export const ALL_MODES: AppMode[] = ['holder', 'seeker', 'student'];

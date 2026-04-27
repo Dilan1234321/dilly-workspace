@@ -133,7 +133,20 @@ def _build_prompt_ctx(
         ctx["overall_smart"] = profile.get("overall_smart") or profile.get("smart_score") or ""
         ctx["overall_grit"] = profile.get("overall_grit") or profile.get("grit_score") or ""
         ctx["overall_build"] = profile.get("overall_build") or profile.get("build_score") or ""
-        ctx["profile_facts"] = profile.get("profile_facts") or profile.get("facts") or []
+        # Drop garbage facts (single-letter/whitespace values like "J",
+        # "S") before they hit the chapter prompt - the LLM faithfully
+        # quotes whatever lands in profile_facts, producing lines like
+        # `you were interested in "J"` that read as a glitch. Validator
+        # was added in build 409, but legacy rows may still exist.
+        def _is_quotable_fact(f: dict) -> bool:
+            value = str((f or {}).get("value") or "").strip()
+            label = str((f or {}).get("label") or "").strip()
+            if len(value) < 3 or len(label) < 3:
+                return False
+            # Require some letter content - reject "...", "---", numbers-only.
+            return any(c.isalpha() for c in value)
+        raw_facts = profile.get("profile_facts") or profile.get("facts") or []
+        ctx["profile_facts"] = [f for f in raw_facts if _is_quotable_fact(f)]
         ctx["skill_tags"] = profile.get("skill_tags") or profile.get("skills") or []
 
         # Audit findings (most recent audit)

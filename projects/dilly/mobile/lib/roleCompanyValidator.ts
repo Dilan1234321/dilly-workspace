@@ -6,7 +6,7 @@
  * Runs 100% on-device. No network calls, no LLM, no server hit.
  * Spammable with zero cost. Scales to any number of users for free.
  *
- * This won't catch adversarial inputs like 'asdf manager' — a user
+ * This won't catch adversarial inputs like 'asdf manager' - a user
  * determined to put garbage in will find a way. It's designed to
  * stop the common accidental garbage ('oeitoighjswogiwsogpih',
  * ')*#&%()*%', 'aaaaaa') without forcing any server traffic.

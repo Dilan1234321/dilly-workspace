@@ -1,6 +1,6 @@
 import { safeBack } from '../../../lib/navigation';
 /**
- * Skills — Ask page (build 354).
+ * Skills - Ask page (build 354).
  *
  * Second pass. The first pass fetched trending once and filtered
  * client-side against the query, but trending is cross-cohort and
@@ -59,7 +59,7 @@ const EXAMPLES = [
 ];
 
 // Slug → keyword triggers. Multi-word phrases weigh more (tokenize and
-// match against the query). Tunable — add niches as we notice misses.
+// match against the query). Tunable - add niches as we notice misses.
 const COHORT_KEYWORDS: Record<string, string[]> = {
   'software-engineering-cs': [
     'software', 'engineer', 'programming', 'code', 'leetcode', 'algorithm',

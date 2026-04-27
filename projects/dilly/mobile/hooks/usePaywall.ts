@@ -1,6 +1,6 @@
 /**
  * Global paywall singleton. Same module-level pub/sub pattern as
- * useDillyOverlay — so `lib/dilly.ts` can trigger the paywall from
+ * useDillyOverlay - so `lib/dilly.ts` can trigger the paywall from
  * outside React (on a 402 response) without needing context.
  *
  * Any paid feature that returns 402 flows through here. The response

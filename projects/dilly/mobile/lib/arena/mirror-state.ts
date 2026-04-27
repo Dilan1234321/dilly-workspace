@@ -1,5 +1,5 @@
 /**
- * Honest Mirror state — shared computation.
+ * Honest Mirror state - shared computation.
  *
  * Previously the rubric scoring was inlined inside arena/mirror.tsx.
  * We now also send the result along with every Dilly AI chat request

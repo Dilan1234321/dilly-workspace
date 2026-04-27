@@ -1,5 +1,5 @@
 /**
- * Cohort playbook — the zero-cost knowledge base the AI Arena draws on.
+ * Cohort playbook - the zero-cost knowledge base the AI Arena draws on.
  *
  * Every tool in the new Arena (Market Value Live, Conviction Builder,
  * Future Pulse, Threat Radar, Honest Mirror, Cold Email Studio, etc.)
@@ -11,7 +11,7 @@
  * Source of truth rules:
  *   - Comp bands are 2026-grade US anchors for early-career (0-3 yrs
  *     post-grad) and mid-career (3-8 yrs) roles at reputable
- *     employers. These are NOT precise — they are the range a
+ *     employers. These are NOT precise - they are the range a
  *     well-informed friend-of-a-friend would quote. We never claim
  *     precision.
  *   - Skill gaps list the things a cohort hiring manager most often
@@ -54,7 +54,7 @@ export interface CohortPlaybook {
   /** Three skill-keyword phrases we send to the Skills search to
    *  surface curated videos. Phrases, not single words. */
   skillQueries: string[]
-  /** Three threat categories specific to this cohort — used by the
+  /** Three threat categories specific to this cohort - used by the
    *  Threat Radar tile. Each is one concrete risk, not a platitude. */
   threats: { title: string; body: string }[]
   /** Day-in-the-life vignette used by Future Pulse. One scene per
@@ -111,7 +111,7 @@ const COHORTS: Record<string, CohortPlaybook> = {
       tier2: ['Databricks', 'Snowflake', 'Stripe', 'Uber', 'DoorDash'],
       scaleup: ['Ramp', 'Anthropic', 'Scale AI', 'Mercury', 'Hex'],
     },
-    coreSkills: ['SQL — deep', 'Experiment design', 'Product sense', 'Python + pandas', 'Storytelling with data'],
+    coreSkills: ['SQL - deep', 'Experiment design', 'Product sense', 'Python + pandas', 'Storytelling with data'],
     rubric: [
       'Can you define the right metric, not just pull the one asked',
       'Can you design an experiment without being told the primary',
@@ -183,7 +183,7 @@ const COHORTS: Record<string, CohortPlaybook> = {
     ],
     skillQueries: ['dcf modeling', 'lbo modeling', 'financial statement analysis'],
     threats: [
-      { title: 'IBD grind ceiling', body: 'The first two years teach you modeling and endurance. After that you either move to the buy side or become a career banker — make the choice intentionally.' },
+      { title: 'IBD grind ceiling', body: 'The first two years teach you modeling and endurance. After that you either move to the buy side or become a career banker - make the choice intentionally.' },
       { title: 'Fintech wage undercut', body: 'Fintech will pay you $180K and call it senior. The path to real comp still runs through PE/HF.' },
       { title: 'Losing technical edge in corp', body: 'Moving to corp dev or corp strat is a career luxury, not a promotion. Your modeling atrophies fast.' },
     ],
@@ -338,9 +338,9 @@ const COHORTS: Record<string, CohortPlaybook> = {
     ],
     skillQueries: ['digital design', 'verilog', 'embedded systems'],
     threats: [
-      { title: 'Software gravity', body: 'Every ECE grad is tempted into SWE. Fine — but be explicit. If you are doing SWE, be a SWE. Hybrid identities get paid like neither.' },
+      { title: 'Software gravity', body: 'Every ECE grad is tempted into SWE. Fine - but be explicit. If you are doing SWE, be a SWE. Hybrid identities get paid like neither.' },
       { title: 'Cycle downturns', body: 'Semi hiring is cyclical. If you plan your first 5 years without a contingency, a down-cycle can strand you.' },
-      { title: 'Toolchain lock-in', body: 'Cadence, Synopsys, proprietary tools — great in-house, rusty skills when you leave. Keep one open-source project you contribute to on the side.' },
+      { title: 'Toolchain lock-in', body: 'Cadence, Synopsys, proprietary tools - great in-house, rusty skills when you leave. Keep one open-source project you contribute to on the side.' },
     ],
     vignette: {
       morning: 'You stand up at a new silicon board, run your bring-up checklist, and find the DDR alignment issue the lead assumed was a software bug.',
@@ -468,7 +468,7 @@ const COHORTS: Record<string, CohortPlaybook> = {
     ],
     vignette: {
       morning: 'You read a new paper on the train in, catch an assumption you can exploit, and have code running by 10.',
-      midday: 'You sit with a senior quant and walk through the backtest. Your results hold. He nods — the closest thing you will get to applause.',
+      midday: 'You sit with a senior quant and walk through the backtest. Your results hold. He nods - the closest thing you will get to applause.',
       lateafternoon: 'You write a one-page memo for the PM explaining why the signal decays with capacity. You leave knowing it will be read.',
       ceiling: 'Partner at a top quant fund, or a chaired professorship at a top department, or both, consecutively.',
     },
@@ -576,7 +576,7 @@ const COHORTS: Record<string, CohortPlaybook> = {
       tier2: ['Bloomberg', 'NPR', 'The Washington Post', 'ProPublica', 'Axios'],
       scaleup: ['Substack', 'Puck', '404 Media', 'The Information', 'Semafor'],
     },
-    coreSkills: ['Clear writing', 'Source cultivation', 'Fact-checking discipline', 'Understanding a beat', 'Voice — your own'],
+    coreSkills: ['Clear writing', 'Source cultivation', 'Fact-checking discipline', 'Understanding a beat', 'Voice - your own'],
     rubric: [
       'Can you lede in a sentence',
       'Do you have a source who will pick up at 11pm',
@@ -679,7 +679,7 @@ const COHORTS: Record<string, CohortPlaybook> = {
     ],
     skillQueries: ['legal writing', 'contract drafting', 'case law research'],
     threats: [
-      { title: 'Biglaw attrition', body: 'First-year classes halve by year five. Know your exit — in-house, government, or partnership — before your burnout picks it for you.' },
+      { title: 'Biglaw attrition', body: 'First-year classes halve by year five. Know your exit - in-house, government, or partnership - before your burnout picks it for you.' },
       { title: 'Speciality lock-in', body: 'Picking a speciality too early narrows your book. Picking it too late stalls your comp.' },
       { title: 'Reputation fragility', body: 'One missed filing or misunderstood ethics rule can end a career. The margin for error is narrower than it looks.' },
     ],

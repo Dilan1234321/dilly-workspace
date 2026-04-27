@@ -38,7 +38,7 @@ export function parseCohortScores(raw: Record<string, any> | null | undefined): 
   const levelOrder: Record<string, number> = { primary: 0, major: 1, minor: 2, interest: 3 };
   return Object.entries(raw)
     .filter(([_, v]) => v && typeof v === 'object' && (v.smart != null || v.grit != null || v.build != null))
-    // Only show major/minor/primary cohorts in the switcher — interest-level
+    // Only show major/minor/primary cohorts in the switcher - interest-level
     // cohorts are tangential and would confuse users. They can still be seen
     // on the score-detail deep-dive page.
     .filter(([_, v]) => (v.level || 'interest') !== 'interest')

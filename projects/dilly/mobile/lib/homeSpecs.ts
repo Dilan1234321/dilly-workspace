@@ -1,5 +1,5 @@
 /**
- * Tier-2 Home specs — per-user_path data blocks that feed a shared
+ * Tier-2 Home specs - per-user_path data blocks that feed a shared
  * render. 10 paths that don't warrant a full Rung-3 bespoke Home
  * (VeteranHome, ParentReturningHome etc live in SituationHomes.tsx)
  * still deserve to feel written-for-them. Same visual grammar as
@@ -48,7 +48,7 @@ export const DEFAULT_SPEC: HomeSpec = {
   hero: {
     kicker: 'WHERE TO START',
     head: "Here's the honest\npicture of your week.",
-    body: "Pick one thing. Do it. Tell Dilly how it went. That's the whole loop — and it's the only one that compounds.",
+    body: "Pick one thing. Do it. Tell Dilly how it went. That's the whole loop - and it's the only one that compounds.",
     ctaLabel: 'Talk to Dilly',
     seed: "Help me figure out what's actually worth focusing on this week. Ask me what I've already been chewing on.",
   },
@@ -65,7 +65,7 @@ export const DEFAULT_SPEC: HomeSpec = {
 
 
 export const HOME_SPECS: Record<string, HomeSpec> = {
-  // Default student — keep SeekerHome vibe but with spec-driven
+  // Default student - keep SeekerHome vibe but with spec-driven
   // tailoring that explicitly acknowledges where they are.
   student: {
     eyebrow: 'STUDENT MODE',
@@ -99,11 +99,11 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
       head: "The skills you had\nare part of the pitch.",
       body: "You are not starting over. You are translating. Every real pivot lands somewhere that values the through-line from your old field to the new one. Find the bridge role, not the dream role, first.",
       ctaLabel: "Name the bridge role",
-      seed: "I'm switching careers. Help me find the bridge role — the one that values what I already did AND points at where I'm going. Ask me what I'm switching from and into.",
+      seed: "I'm switching careers. Help me find the bridge role - the one that values what I already did AND points at where I'm going. Ask me what I'm switching from and into.",
     },
     prompts: [
       { text: "Which of my old skills actually transfer?",
-        seed: "Help me list the skills from my previous career that legitimately transfer into my target field. Be honest — if some don't, say so. Ask me what I did before." },
+        seed: "Help me list the skills from my previous career that legitimately transfer into my target field. Be honest - if some don't, say so. Ask me what I did before." },
       { text: "What's the one-sentence story for why I'm switching?",
         seed: "Help me write a clean, non-defensive one-sentence answer to 'why are you leaving X for Y' that I can use in every interview. Ask me the real reason." },
       { text: "Who will hire a switcher in my target field?",
@@ -121,11 +121,11 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
       head: "The career map was\nnever taught in class.",
       body: "You are doing something nobody in your family has done. That's real and hard and you are still doing it. Dilly is the person who explains the parts nobody said out loud.",
       ctaLabel: "Explain the unwritten rules",
-      seed: "I'm a first-generation college student or first-in-family professional. Help me understand the unwritten career rules — how hiring actually works, what to ask recruiters, when to negotiate. Ask me where I'm stuck first.",
+      seed: "I'm a first-generation college student or first-in-family professional. Help me understand the unwritten career rules - how hiring actually works, what to ask recruiters, when to negotiate. Ask me where I'm stuck first.",
     },
     prompts: [
       { text: "What does the hiring process actually look like?",
-        seed: "Walk me through what a real hiring process looks like in my field — recruiter screen, interview loops, how long it takes. Ask me my target field." },
+        seed: "Walk me through what a real hiring process looks like in my field - recruiter screen, interview loops, how long it takes. Ask me my target field." },
       { text: "How do I negotiate a salary offer?",
         seed: "Help me prepare to negotiate a salary offer. I've never done this. Ask me what the offer is or what field I'm in." },
       { text: "What's a warm intro, and how do I get one?",
@@ -147,7 +147,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
     },
     prompts: [
       { text: "What office skills have I already been doing?",
-        seed: "Help me name the office skills I've already been doing in my trade — scheduling, budgeting, coordinating crews, talking to customers, safety. Ask me about a typical day on the job." },
+        seed: "Help me name the office skills I've already been doing in my trade - scheduling, budgeting, coordinating crews, talking to customers, safety. Ask me about a typical day on the job." },
       { text: "How do I write a resume that passes a desk-job screener?",
         seed: "Help me rewrite my trade-work resume so it passes a white-collar ATS screener. Specific bullets, dollar numbers, team size. Ask me my most recent job." },
       { text: "Which white-collar roles should a trades background aim for?",
@@ -215,9 +215,9 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
       { text: "What interview questions reveal real accessibility?",
         seed: "Give me interview questions that expose whether a workplace's accessibility is real. Ask me what I specifically need to know about (physical access, flexible hours, remote, assistive tech)." },
       { text: "How do I decide what to disclose, and when?",
-        seed: "Help me think through disclosure strategy — what to tell whom, at what stage of the process. This is mine to decide. Ask me what I'm weighing." },
+        seed: "Help me think through disclosure strategy - what to tell whom, at what stage of the process. This is mine to decide. Ask me what I'm weighing." },
       { text: "Which employers actually walk the accessibility walk?",
-        seed: "Suggest 5 employers in my field with genuinely strong disability inclusion. Point at evidence — reviews, programs, policies — not marketing. Ask my field if needed." },
+        seed: "Suggest 5 employers in my field with genuinely strong disability inclusion. Point at evidence - reviews, programs, policies - not marketing. Ask my field if needed." },
     ],
     marketLabel: "roles Dilly is tracking in your field",
   },
@@ -229,17 +229,17 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
     hero: {
       kicker: 'REAL INCLUSION READS',
       head: "The brochure is easy.\nThe room tells the truth.",
-      body: "Every company has a page. Many change URLs the moment the political climate shifts. Dilly helps you read the actual signals — leadership representation, benefits that hold up, geographies you'd actually live in, alumni who've been honest.",
+      body: "Every company has a page. Many change URLs the moment the political climate shifts. Dilly helps you read the actual signals - leadership representation, benefits that hold up, geographies you'd actually live in, alumni who've been honest.",
       ctaLabel: "Filter for real inclusion",
-      seed: "I'm LGBTQ+ and trying to land somewhere that actually matches the brochure on inclusion. Help me identify signals I should actually trust. Ask me what matters most for me — benefits, leadership rep, geography, public stance.",
+      seed: "I'm LGBTQ+ and trying to land somewhere that actually matches the brochure on inclusion. Help me identify signals I should actually trust. Ask me what matters most for me - benefits, leadership rep, geography, public stance.",
     },
     prompts: [
       { text: "Which signals of real inclusion should I look for?",
-        seed: "Walk me through concrete signals of real LGBTQ+ inclusion at an employer — executive representation, benefit details, geography of offices, public stance on recent issues. Ask me what my priorities are." },
+        seed: "Walk me through concrete signals of real LGBTQ+ inclusion at an employer - executive representation, benefit details, geography of offices, public stance on recent issues. Ask me what my priorities are." },
       { text: "How do I ask inclusion questions in an interview?",
         seed: "Help me ask inclusion-related interview questions that get real answers without making it the whole conversation. Ask me what I most need to know." },
       { text: "Which employers have the track record, not the marketing?",
-        seed: "Suggest 5 employers in my field with a genuine LGBTQ+ inclusion track record — not HRC-scorecard theater. Explain how each earned the list. Ask my field." },
+        seed: "Suggest 5 employers in my field with a genuine LGBTQ+ inclusion track record - not HRC-scorecard theater. Explain how each earned the list. Ask my field." },
     ],
     marketLabel: "inclusive employers Dilly is tracking",
   },
@@ -273,13 +273,13 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
     hero: {
       kicker: 'THE HIRING SIDE',
       head: "You've seen the company\nfrom the inside of the table.",
-      body: "Most candidates can't see what you can. That visibility is the pitch. Dilly helps you translate founder judgment into roles worth saying yes to — IC, exec, back to building, or a funded bridge.",
+      body: "Most candidates can't see what you can. That visibility is the pitch. Dilly helps you translate founder judgment into roles worth saying yes to - IC, exec, back to building, or a funded bridge.",
       ctaLabel: "Pick the post-founder arc",
       seed: "I'm an ex-founder (or current founder exploring what's next). Help me decide between IC, exec, and returning to building, given my specific company story. Ask me what I built and why I'm thinking about leaving or switching gears.",
     },
     prompts: [
       { text: "How do I explain the company in sixty seconds?",
-        seed: "Help me write a 60-second explanation of what I built that works for interviews — honest about what happened, not over-spun. Ask me what the company did and what the current state is." },
+        seed: "Help me write a 60-second explanation of what I built that works for interviews - honest about what happened, not over-spun. Ask me what the company did and what the current state is." },
       { text: "IC, exec, or founder again?",
         seed: "Help me think through whether my next move is an IC role, an exec role at someone else's company, or founding again. Talk about what I'd actually optimize for. Ask me what I want out of the next two years." },
       { text: "Who hires ex-founders well, and for what?",

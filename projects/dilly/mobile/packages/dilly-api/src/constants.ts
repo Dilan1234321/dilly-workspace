@@ -1,5 +1,5 @@
 /**
- * @dilly/api — Shared constants
+ * @dilly/api - Shared constants
  *
  * Cohort system, brand colors, and automation risk classification.
  * Used by desktop, mobile, and dashboard.

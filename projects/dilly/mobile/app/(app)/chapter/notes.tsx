@@ -1,6 +1,6 @@
 import { safeBack } from '../../../lib/navigation';
 /**
- * Notes for Dilly — things the user wants to bring up in the next Chapter.
+ * Notes for Dilly - things the user wants to bring up in the next Chapter.
  *
  * UX is intentionally paper-thin: a running list of queued notes, a
  * text field at the bottom to add one, and a small counter showing

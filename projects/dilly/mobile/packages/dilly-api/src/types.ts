@@ -1,5 +1,5 @@
 /**
- * @dilly/api — Unified type definitions
+ * @dilly/api - Unified type definitions
  *
  * Single source of truth for all Dilly frontends (desktop, mobile, dashboard).
  * These mirror the Pydantic models in api/schemas.py.
@@ -22,7 +22,7 @@ export interface DimensionScores {
 
 // ─── Audit ────────────────────────────────────────────────────────────────
 
-/** Recommendation row inside an audit — short alias `Rec` available below. */
+/** Recommendation row inside an audit - short alias `Rec` available below. */
 export interface AuditRecommendation {
   type?: "generic" | "line_edit" | "action";
   title: string;
@@ -36,7 +36,7 @@ export interface AuditRecommendation {
 /** Short alias used throughout the dashboard. */
 export type Rec = AuditRecommendation;
 
-/** @deprecated Inline union — prefer AuditRecommendation['type']. Kept for compat. */
+/** @deprecated Inline union - prefer AuditRecommendation['type']. Kept for compat. */
 export type RecommendationType = "generic" | "line_edit" | "action";
 
 export interface AuditV2 {
@@ -75,7 +75,7 @@ export interface AuditHistorySummary {
   created_at: string;
 }
 
-/** Slim row from GET /audit/history — enough to paint score cards before full audit loads. */
+/** Slim row from GET /audit/history - enough to paint score cards before full audit loads. */
 export type AuditHistorySummaryRow = {
   id?: string;
   ts: number;
@@ -253,9 +253,9 @@ export type DillyDeadline = {
   label: string;
   date: string;
   type?: "deadline" | "interview" | "career_fair" | "application";
-  /** camelCase JS convention — preferred. */
+  /** camelCase JS convention - preferred. */
   subDeadlines?: DillySubDeadline[];
-  /** Legacy snake_case alias — prefer subDeadlines. */
+  /** Legacy snake_case alias - prefer subDeadlines. */
   sub_deadlines?: DillySubDeadline[];
   createdBy?: "user" | "dilly" | string;
   completed?: boolean;

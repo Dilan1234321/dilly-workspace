@@ -17,7 +17,7 @@ export interface StudentContext {
   initialMessage?: string;
 }
 
-// ── Module-level pub/sub — no React context needed ────────────────────────────
+// ── Module-level pub/sub - no React context needed ────────────────────────────
 
 type Listener = (open: boolean, ctx?: StudentContext) => void;
 
@@ -39,7 +39,7 @@ export function closeDillyOverlay() {
   _listeners.forEach(l => l(false));
 }
 
-// ── useDillyOverlayState — used internally by DillyOverlay ───────────────────
+// ── useDillyOverlayState - used internally by DillyOverlay ───────────────────
 
 export function useDillyOverlayState() {
   const [visible, setVisible]             = useState(false);
@@ -61,7 +61,7 @@ export function useDillyOverlayState() {
   return { visible, studentContext, close };
 }
 
-// ── Default export — used by screens to trigger the overlay ──────────────────
+// ── Default export - used by screens to trigger the overlay ──────────────────
 
 export default function useDillyOverlay() {
   return { open: openDillyOverlay, close: closeDillyOverlay };

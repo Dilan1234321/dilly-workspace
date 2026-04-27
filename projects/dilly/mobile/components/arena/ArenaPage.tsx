@@ -1,5 +1,5 @@
 /**
- * ArenaPage — the shell used by every arena tool page (12 tiles).
+ * ArenaPage - the shell used by every arena tool page (12 tiles).
  * Keeps typography/padding consistent so the tools read as one system.
  */
 

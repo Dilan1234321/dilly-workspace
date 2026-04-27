@@ -1,5 +1,5 @@
 /**
- * Conviction Builder — the seeker centerpiece.
+ * Conviction Builder - the seeker centerpiece.
  *
  * For the user's top target company (or a cohort anchor fallback):
  *   - ASSETS: facts in the user's profile that serve as evidence
@@ -220,7 +220,7 @@ export default function ConvictionBuilder() {
       {conviction.gaps.length === 0 ? (
         <View style={[s.cardNeutral, { borderColor: theme.surface.border, backgroundColor: theme.surface.s1 }]}>
           <Text style={[s.neutralText, { color: theme.surface.t2 }]}>
-            No obvious gaps from your profile — well-covered. The interviewer will probe depth, not breadth.
+            No obvious gaps from your profile - well-covered. The interviewer will probe depth, not breadth.
           </Text>
         </View>
       ) : (

@@ -1,5 +1,5 @@
 /**
- * SkillsVideoCard — inline card shown under any Dilly AI message that
+ * SkillsVideoCard - inline card shown under any Dilly AI message that
  * mentions a YouTube video. Tap opens the in-app Skills player
  * (/skills/video/<id>) so the user never leaves Dilly.
  *
@@ -8,7 +8,7 @@
  *     (hqdefault.jpg) so we don't need a backend round-trip.
  *   - Title/channel come from /skill-lab/videos/<id> if the video is
  *     in Dilly's curated library. If it isn't, we render a neutral
- *     "Video" label — the card still works, it just doesn't pretend
+ *     "Video" label - the card still works, it just doesn't pretend
  *     to have library metadata it doesn't have.
  */
 
@@ -37,7 +37,7 @@ export default function SkillsVideoCard({ videoId }: { videoId: string }) {
   const [meta, setMeta] = useState<Meta | null>(null);
 
   // Best-effort metadata load. A 404 here (video not in the curated
-  // library) is fine — the card still renders with the thumbnail
+  // library) is fine - the card still renders with the thumbnail
   // and a generic label. No loading spinner to avoid jank in the
   // chat scroll view.
   useEffect(() => {

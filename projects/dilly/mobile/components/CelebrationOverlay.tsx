@@ -40,7 +40,7 @@ interface MilestoneConfig {
   ctaLabel: string;
   // Optional: small list of concrete unlocks shown below the sub-copy.
   // Exists for upgrade milestones so the user sees, at a glance, what
-  // the app can do for them now. Deliberately 3 items max — any more
+  // the app can do for them now. Deliberately 3 items max - any more
   // turns into a feature-list ad, which is what we're trying to avoid.
   // Each entry is a one-line phrase, not a tutorial step.
   unlocks?: string[];
@@ -93,7 +93,7 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
   },
   // Wins celebrations. Triggered when the user logs a manual win from
   // the Wins card on Home. Tone: quiet earned pride, not confetti. The
-  // point is to make the app feel like where good news happens — an
+  // point is to make the app feel like where good news happens - an
   // emotional reason to open it next time.
   'win-interview': {
     eyebrow: 'INTERVIEW LOCKED',
@@ -118,7 +118,7 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
   },
   // Pulse streak milestones. Celebrate the habit itself, quietly. Tone
   // is 'you did something rare', not a shouty trophy. Each milestone
-  // has its own copy so the reward compounds — hitting day 100 doesn't
+  // has its own copy so the reward compounds - hitting day 100 doesn't
   // feel like day 3.
   'pulse-streak-3': {
     eyebrow: 'THREE IN A ROW',
@@ -144,7 +144,7 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
   'pulse-streak-30': {
     eyebrow: 'ONE MONTH',
     headline: "A full month\nof you.",
-    sub: "Thirty pulses. That's not a streak anymore — that's a practice. This is the window people look back on and say things changed here.",
+    sub: "Thirty pulses. That's not a streak anymore - that's a practice. This is the window people look back on and say things changed here.",
     accentColor: colors.gold,
     ctaLabel: 'Keep going',
   },
@@ -162,7 +162,7 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
     accentColor: colors.gold,
     ctaLabel: 'Keep going',
   },
-  // Chapter streak milestones — weekly ritual completions. Different
+  // Chapter streak milestones - weekly ritual completions. Different
   // cadence from Pulse (monthly+) so the copy lands differently: this
   // is about the depth of the relationship, not the habit count.
   'chapter-4': {
@@ -195,7 +195,7 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
   },
   // Subscription unlocks. These are the moments the user becomes a paying
   // customer (or jumps tiers). Tone here is earned-pride, not celebration
-  // for the sake of it. Copy says: "most people stay free — you didn't,
+  // for the sake of it. Copy says: "most people stay free - you didn't,
   // that was the right move, here's what's yours now." No "🎉 Yay!!"
   // shouting; this is supposed to feel like the quiet pride of someone
   // who just made a decisive career move.
@@ -437,7 +437,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
           <Text style={[s.headline, { color: theme.surface.t1 }]}>{cfg.headline}</Text>
           <Text style={[s.sub, { color: theme.surface.t2 }]}>{cfg.sub}</Text>
 
-          {/* Unlocks list — only present for upgrade milestones.
+          {/* Unlocks list - only present for upgrade milestones.
               Deliberately quiet styling: no icon flourishes, no "NEW"
               badges, just a clean 3-row list that says "here's what
               this version of Dilly does for you." Functions as a

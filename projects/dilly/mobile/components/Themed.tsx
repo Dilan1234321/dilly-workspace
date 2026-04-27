@@ -1,10 +1,10 @@
 /**
- * Themed primitives — drop-in replacements for common View/Button/
+ * Themed primitives - drop-in replacements for common View/Button/
  * TextInput patterns that actually read the user's ResolvedTheme.
  *
  * Use these on hero surfaces (homes, profile header, chat bubbles,
  * Forge / Room done panels). Everything else can keep the static
- * tokens — we deliberately don't blanket-swap the whole app, that
+ * tokens - we deliberately don't blanket-swap the whole app, that
  * would destroy the signature look of the dark Room / dark Arena
  * (which are intentional per-screen decisions, not user preferences).
  *
@@ -56,13 +56,13 @@ export function useSpacing() {
 
 interface ThemedCardProps {
   children?: ReactNode;
-  /** sm | md | lg — defaults to md. */
+  /** sm | md | lg - defaults to md. */
   radius?: 'sm' | 'md' | 'lg';
-  /** 'bg' | 's1' | 's2' — defaults to s1 (card on bg). */
+  /** 'bg' | 's1' | 's2' - defaults to s1 (card on bg). */
   level?: 'bg' | 's1' | 's2';
   /** true to draw the default border, false to skip. */
   bordered?: boolean;
-  /** Accent tint — card bg becomes accent+10%, border accent+30%. */
+  /** Accent tint - card bg becomes accent+10%, border accent+30%. */
   accentTinted?: boolean;
   style?: ViewStyle;
 }

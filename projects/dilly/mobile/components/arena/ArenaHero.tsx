@@ -1,5 +1,5 @@
 /**
- * ArenaHero — the big centerpiece card at the top of each arena mode.
+ * ArenaHero - the big centerpiece card at the top of each arena mode.
  *
  * Shared shell around three very different payloads (Market Value Live
  * for holders, Conviction Builder for seekers, Future Pulse for
@@ -9,7 +9,7 @@
  *   - a body area we fill in with the mode-specific visual
  *   - a CTA chip that deep-links to the full centerpiece page
  *
- * The hero is always tappable — tap anywhere → full centerpiece.
+ * The hero is always tappable - tap anywhere → full centerpiece.
  */
 
 import { ReactNode } from 'react'

@@ -1,5 +1,5 @@
 /**
- * CancelGoodbyeModal — a premium "here's what's going back to Dilly"
+ * CancelGoodbyeModal - a premium "here's what's going back to Dilly"
  * moment shown AFTER a successful subscription cancel.
  *
  * Design intent:
@@ -7,18 +7,18 @@
  *   - Honest inventory of what the user is losing, shown as a calm
  *     goodbye. Some users will reconsider. The ones who don't will
  *     remember that Dilly treated the end with the same care as the
- *     start — which matters when they decide whether to resubscribe
+ *     start - which matters when they decide whether to resubscribe
  *     or recommend you.
  *
  * Treatment:
  *   - Full-screen modal with a fade-in.
  *   - Dilly avatar at top, slightly dimmed (the "Dilly is stepping
  *     back" visual cue).
- *   - Three lines of concrete losses — not features, actual things
+ *   - Three lines of concrete losses - not features, actual things
  *     the user has built inside the product.
  *   - Two actions: "Come back anytime" (primary, closes modal) and
  *     "Actually, keep my subscription" (secondary, reverses the
- *     cancel — only shown for the first 60 seconds after cancel to
+ *     cancel - only shown for the first 60 seconds after cancel to
  *     avoid being a retention-trap pattern).
  *
  * Called from settings.tsx after /subscription/cancel returns 200.
@@ -37,10 +37,10 @@ const { width: SCREEN_W } = Dimensions.get('window');
 interface Props {
   visible: boolean;
   // The tier the user was on before cancelling. Used to tailor the
-  // losses copy — Pro users had more, so they see slightly more.
+  // losses copy - Pro users had more, so they see slightly more.
   previousPlan: 'dilly' | 'pro';
   // Number of extracted facts in their Dilly Profile. If >0, we name
-  // the actual count — "Dilly will stop learning from your 47 facts"
+  // the actual count - "Dilly will stop learning from your 47 facts"
   // hits different than "Dilly will stop learning." Concrete is
   // more honest AND more impactful.
   factCount?: number;
@@ -77,10 +77,10 @@ export function CancelGoodbyeModal({
       useNativeDriver: true,
     }).start();
     // Face fades in slightly after the container so the user sees
-    // the modal land, THEN Dilly appears — makes her feel present
+    // the modal land, THEN Dilly appears - makes her feel present
     // rather than painted on.
     Animated.timing(faceOpacity, {
-      toValue: 0.55,  // deliberately dimmed — she's stepping back
+      toValue: 0.55,  // deliberately dimmed - she's stepping back
       duration: 800,
       delay: 200,
       useNativeDriver: true,
@@ -92,7 +92,7 @@ export function CancelGoodbyeModal({
     return () => clearInterval(tick);
   }, [visible, fadeAnim, faceOpacity]);
 
-  // Losses — named concretely. Not marketing copy. Things the user
+  // Losses - named concretely. Not marketing copy. Things the user
   // has actually built that will stop working.
   const losses: string[] = [];
   if (factCount && factCount > 0) {
@@ -140,7 +140,7 @@ export function CancelGoodbyeModal({
             },
           ]}
         >
-          {/* Dilly, dimmed. Reads as "stepping back" — the same face
+          {/* Dilly, dimmed. Reads as "stepping back" - the same face
               you saw celebrating your upgrade is now quieter. */}
           <Animated.View style={{ opacity: faceOpacity, alignItems: 'center', marginTop: 8 }}>
             <DillyFace size={72} mood="calm" />
@@ -189,7 +189,7 @@ export function CancelGoodbyeModal({
 
           {/* Escape hatch: reverse the cancel. Only shown for 60s so
               this doesn't become a retention-trap pattern. After the
-              window it disappears — the user has already processed
+              window it disappears - the user has already processed
               the cancel and shouldn't be pulled back. */}
           {secondsLeft > 0 && onUncancel && (
             <TouchableOpacity

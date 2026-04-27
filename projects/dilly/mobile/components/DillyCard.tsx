@@ -632,7 +632,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   }
 
   // Swipe-to-flip gesture. Previous version used onMoveShouldSetPanResponder
-  // on the outer wrapper — but the inner TouchableOpacity claims the gesture
+  // on the outer wrapper - but the inner TouchableOpacity claims the gesture
   // on Touch Start first, so the outer pan responder never saw the horizontal
   // swipe. Fix: use the CAPTURE variant so we grab the gesture on the capture
   // phase BEFORE children get a chance. Taps (dx<10) still pass through to
@@ -643,7 +643,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   handleFlipRef.current = handleFlip;
   const panResponder = useRef(
     PanResponder.create({
-      // Capture phase — runs before TouchableOpacity's grab. Return true
+      // Capture phase - runs before TouchableOpacity's grab. Return true
       // ONLY for meaningful horizontal drags so we don't eat taps or
       // vertical scrolls meant for the parent ScrollView.
       onMoveShouldSetPanResponderCapture: (_e, g) =>

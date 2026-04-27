@@ -1,5 +1,5 @@
 /**
- * Threat Radar — holder tile. Surfaces the cohort's top three live
+ * Threat Radar - holder tile. Surfaces the cohort's top three live
  * threats in a prioritized list, each with a concrete "move" the
  * user can take this week. Zero LLM; purely the cohort playbook.
  */
@@ -41,7 +41,7 @@ export default function ThreatRadar() {
           <Text style={[s.body, { color: theme.surface.t1 }]}>{t.body}</Text>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => openDillyOverlay({ initialMessage: `Help me think through this threat: "${t.title}". Dilly said: "${t.body}" — what should I actually do about it in the next two weeks?` })}
+            onPress={() => openDillyOverlay({ initialMessage: `Help me think through this threat: "${t.title}". Dilly said: "${t.body}" - what should I actually do about it in the next two weeks?` })}
             style={[s.cta, { backgroundColor: theme.accent }]}
           >
             <Ionicons name="chatbubbles" size={13} color="#FFF" />

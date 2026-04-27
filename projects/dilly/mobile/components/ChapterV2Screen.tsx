@@ -1,14 +1,14 @@
 /**
- * ChapterV2Screen — The V2 Chapter advisor 5-screen arc.
+ * ChapterV2Screen - The V2 Chapter advisor 5-screen arc.
  *
  * Session flow (standard, 5 screens):
- *   Screen 1 — Welcome back      (warm / attentive)
- *   Screen 2 — What's on your mind (thoughtful / concerned)
- *   Screen 3 — Here's what I'm seeing (focused / confident)
- *   Screen 4 — Let's pick one thing  (direct)
- *   Screen 5 — Recap & commit        (settled / proud)
+ *   Screen 1 - Welcome back      (warm / attentive)
+ *   Screen 2 - What's on your mind (thoughtful / concerned)
+ *   Screen 3 - Here's what I'm seeing (focused / confident)
+ *   Screen 4 - Let's pick one thing  (direct)
+ *   Screen 5 - Recap & commit        (settled / proud)
  *
- * First-session flow inserts Screen 0 (Intake) before Screen 1 — 6 total.
+ * First-session flow inserts Screen 0 (Intake) before Screen 1 - 6 total.
  *
  * Mobile renders what the API returns. No persona logic client-side.
  * DillyFace mood comes from the `dilly_mood` field in every API response.
@@ -51,7 +51,7 @@ interface RecapData {
 const CHARS_PER_SEC = 38;
 const PUNCT_PAUSE: Record<string, number> = {
   '.': 260, '!': 300, '?': 300, ',': 120,
-  ';': 160, ':': 160, '—': 200, '\n': 320,
+  ';': 160, ':': 160, '-': 200, '\n': 320,
 };
 
 const SCREEN_LABEL: Record<number, string> = {
@@ -88,6 +88,24 @@ function parseMood(raw?: string, fallback: DillyMood = 'curious'): DillyMood {
 let _msgCounter = 0;
 const nextMsgId = () => ++_msgCounter;
 
+// LLM responses sometimes include markdown emphasis (**bold**, *italic*,
+// _underscore_) and stray heading hashes that read as literal characters
+// in <Text>. Strip them at the API boundary so neither the typewriter
+// nor the recap card ever surfaces formatting marks. Backticks are
+// stripped too since chapter copy is conversational, not code.
+function stripFormatting(s: string): string {
+  if (!s) return '';
+  return s
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')   // ***bold-italic***
+    .replace(/\*\*(.+?)\*\*/g, '$1')       // **bold**
+    .replace(/(^|[\s(])\*(?!\s)([^*\n]+?)\*(?=[\s).,!?;:]|$)/g, '$1$2') // *italic*
+    .replace(/(^|[\s(])_(?!\s)([^_\n]+?)_(?=[\s).,!?;:]|$)/g, '$1$2')   // _italic_
+    .replace(/`([^`]+)`/g, '$1')           // `code`
+    .replace(/^#{1,6}\s+/gm, '')           // ### heading
+    .replace(/^[ \t]*[-*+]\s+/gm, '')      // - bullets
+    .trim();
+}
+
 // ─── RecapCard ────────────────────────────────────────────────────────
 
 function RecapCard({
@@ -117,7 +135,7 @@ function RecapCard({
   return (
     <View style={[rc.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
       <Text style={[rc.date, { color: theme.surface.t3 }]}>
-        CHAPTER RECAP — {today.toUpperCase()}
+        CHAPTER RECAP - {today.toUpperCase()}
       </Text>
       <View style={[rc.rule, { backgroundColor: theme.surface.border }]} />
 
@@ -355,7 +373,7 @@ export default function ChapterV2Screen() {
         const mood = parseMood(d.dilly_mood, SCREEN_MOOD[si] ?? 'warm');
         setTurnMax(si === 6 ? 0 : si === 5 ? 3 : 5);
         setPhase('session');
-        transitionToScreen(si, mood, d.opening_message || '');
+        transitionToScreen(si, mood, stripFormatting(d.opening_message || ''));
       } catch {
         setErrorMsg('Could not start your Chapter session. Please try again.');
         setPhase('error');
@@ -399,15 +417,17 @@ export default function ChapterV2Screen() {
         const d = await res.json();
         setRecap({
           recapId: d.recap_id || '',
-          headline: d.recap?.headline || '',
-          observations: Array.isArray(d.recap?.observations) ? d.recap.observations : [],
-          commitment: d.recap?.commitment || commitment,
+          headline: stripFormatting(d.recap?.headline || ''),
+          observations: Array.isArray(d.recap?.observations)
+            ? d.recap.observations.map((o: any) => stripFormatting(String(o || '')))
+            : [],
+          commitment: stripFormatting(d.recap?.commitment || commitment),
           commitmentDeadline: d.recap?.commitment_deadline || null,
-          betweenSessionsPrompt: d.recap?.between_sessions_prompt || '',
+          betweenSessionsPrompt: stripFormatting(d.recap?.between_sessions_prompt || ''),
           nextChapterAt: d.next_chapter_at || null,
         });
       } catch {
-        // Non-fatal — recap card just won't render.
+        // Non-fatal - recap card just won't render.
       } finally {
         setRecapLoading(false);
       }
@@ -433,7 +453,7 @@ export default function ChapterV2Screen() {
       if (!res.ok) {
         const blocked =
           res.status === 402 || res.status === 429
-            ? "You've reached the turn limit — tap Continue to move on."
+            ? "You've reached the turn limit - tap Continue to move on."
             : 'Dilly stepped away. Tap Continue when ready.';
         setChatBlocked(blocked);
         return;
@@ -443,7 +463,7 @@ export default function ChapterV2Screen() {
       setTurnMax(d.screen_turn_max ?? turnMax);
       setCanAdvance(!!d.can_advance);
       setScreenMood(parseMood(d.dilly_mood, screenMood));
-      addAndTypeAssistant(d.content || '');
+      addAndTypeAssistant(stripFormatting(d.content || ''));
     } catch {
       setChatBlocked('Dilly stepped away. Tap Continue when ready.');
     } finally {
@@ -473,7 +493,7 @@ export default function ChapterV2Screen() {
 
     if (screenIndex === 4) {
       const lastDilly = [...messages].reverse().find(m => m.role === 'assistant');
-      if (lastDilly?.content) setCommitment(lastDilly.content);
+      if (lastDilly?.content) setCommitment(stripFormatting(lastDilly.content));
     }
 
     if (!sessionIdRef.current) return;
@@ -489,7 +509,7 @@ export default function ChapterV2Screen() {
       const nextIdx: number = d.next_screen ?? screenIndex + 1;
       const mood = parseMood(d.dilly_mood, SCREEN_MOOD[nextIdx] ?? 'warm');
       const nextTurnMax = nextIdx === 6 ? 0 : nextIdx === 5 ? 3 : 5;
-      transitionToScreen(nextIdx, mood, d.opening_message || '', nextTurnMax);
+      transitionToScreen(nextIdx, mood, stripFormatting(d.opening_message || ''), nextTurnMax);
     } catch {
       setChatBlocked('Could not continue. Please try again.');
     } finally {
@@ -637,7 +657,7 @@ export default function ChapterV2Screen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* DillyFace — fades in on each screen transition */}
+        {/* DillyFace - fades in on each screen transition */}
         <Animated.View style={[s.faceWrap, { opacity: fadeAnim }]}>
           <DillyFace size={faceSize} mood={faceMood} accessory={faceAccessory} />
         </Animated.View>
@@ -748,7 +768,7 @@ export default function ChapterV2Screen() {
         </View>
       </ScrollView>
 
-      {/* Chat input — hidden on Screen 6 (recap) and when blocked/at limit */}
+      {/* Chat input - hidden on Screen 6 (recap) and when blocked/at limit */}
       {!isScreen6 && !chatBlocked && !atTurnLimit && (
         <View
           style={[

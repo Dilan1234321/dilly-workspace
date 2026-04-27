@@ -1,5 +1,5 @@
 /**
- * ThemeMocks — pixel-parity mock renders of the five hero surfaces,
+ * ThemeMocks - pixel-parity mock renders of the five hero surfaces,
  * used exclusively inside the Customize Dilly studio preview.
  *
  * Why these are mocks, not the real screens:
@@ -35,7 +35,7 @@ export const MOCK_SCREENS: MockScreenMeta[] = [
 ];
 
 /* ─────────────────────────────────────────────────────────────── */
-/* Shared primitives — all read from theme                         */
+/* Shared primitives - all read from theme                         */
 /* ─────────────────────────────────────────────────────────────── */
 
 function useHeroTextStyle(t: ResolvedTheme): TextStyle {

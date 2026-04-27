@@ -1,5 +1,5 @@
 /**
- * Slim profile cache — stores a few high-signal fields from the full
+ * Slim profile cache - stores a few high-signal fields from the full
  * /profile response so SplashScreen can generate personalized greeting
  * variants without a network call on cold open.
  *

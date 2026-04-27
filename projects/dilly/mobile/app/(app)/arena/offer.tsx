@@ -1,5 +1,5 @@
 /**
- * Offer Stand-In — seeker tile. A negotiation rehearsal with canned
+ * Offer Stand-In - seeker tile. A negotiation rehearsal with canned
  * scripts for the four moments people freeze: getting the offer,
  * asking for the range, countering, and the silent pause.
  */
@@ -42,7 +42,7 @@ export default function OfferStandIn() {
     {
       label: 'They give you a number first',
       moment: 'The call where they say "we\'d like to extend an offer of X."',
-      say: `"Thank you. I'm excited about the role. Before I respond, I want to be sure I understand the full picture — what's the base, sign-on, equity target, and the band for this level?"`,
+      say: `"Thank you. I'm excited about the role. Before I respond, I want to be sure I understand the full picture - what's the base, sign-on, equity target, and the band for this level?"`,
       do: 'Do not accept on the call. Do not counter on the call. Thank them, ask for 48 hours in writing, and hang up.',
     },
     {
@@ -73,7 +73,7 @@ export default function OfferStandIn() {
     >
       {scripts.map((sc, i) => (
         <View key={i} style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
-          <Text style={[s.momentLabel, { color: theme.accent }]}>0{i + 1} — {sc.label.toUpperCase()}</Text>
+          <Text style={[s.momentLabel, { color: theme.accent }]}>0{i + 1} - {sc.label.toUpperCase()}</Text>
           <Text style={[s.moment, { color: theme.surface.t2 }]}>{sc.moment}</Text>
           <Text style={[s.say, { color: theme.surface.t1 }]}>{sc.say}</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
@@ -84,7 +84,7 @@ export default function OfferStandIn() {
           </View>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => openDillyOverlay({ initialMessage: `Rehearse with me. You are the recruiter. Simulate "${sc.moment}" — ask me what you would ask, and push me where I\'m weak.` })}
+            onPress={() => openDillyOverlay({ initialMessage: `Rehearse with me. You are the recruiter. Simulate "${sc.moment}" - ask me what you would ask, and push me where I\'m weak.` })}
             style={[s.cta, { backgroundColor: theme.accent }]}
           >
             <Ionicons name="chatbubbles" size={13} color="#FFF" />

@@ -1,5 +1,5 @@
 /**
- * AhaPrompt — one-shot, once-ever prompt that collects the user's
+ * AhaPrompt - one-shot, once-ever prompt that collects the user's
  * "aha moment" during their first session.
  *
  * Product context:
@@ -18,9 +18,9 @@
  *
  * Design:
  *   - One free-text field. No LLM. No multi-select. No "how likely
- *     are you to recommend" — that's NPS and it'd pollute the signal.
+ *     are you to recommend" - that's NPS and it'd pollute the signal.
  *   - One question: "What's starting to make sense for you about Dilly?"
- *   - Submit button: "Share" (not "Submit" — less clinical).
+ *   - Submit button: "Share" (not "Submit" - less clinical).
  *   - Skip button: small, grey, below the card. A skip is itself
  *     data ("this user bounced before aha landed").
  *   - No branding, no Dilly face, no celebration. This is a quiet
@@ -29,7 +29,7 @@
  * Render site:
  *   Mounted at the root of (app)/_layout.tsx so it lives on top of
  *   whichever home screen the user happens to be on at the 5-min
- *   mark. Does its own visibility logic internally — callers just
+ *   mark. Does its own visibility logic internally - callers just
  *   mount it and forget it.
  */
 import { useEffect, useState, useRef } from 'react';
@@ -65,7 +65,7 @@ export function AhaPrompt() {
         if (localShown === '1') return;
 
         // Stamp first-open time if missing. This is per-device
-        // because AsyncStorage is local — a user who reinstalls
+        // because AsyncStorage is local - a user who reinstalls
         // restarts the 5-minute clock. Acceptable: reinstallers
         // are a different cohort and their "aha" is worth re-asking.
         let firstOpen = await AsyncStorage.getItem(FIRST_OPEN_KEY);
@@ -84,7 +84,7 @@ export function AhaPrompt() {
           const waitMs = (MIN_MINUTES_BEFORE_PROMPT - elapsedMinutes) * 60000;
           const t = setTimeout(async () => {
             if (cancelled) return;
-            // Re-check the server — a request from another device
+            // Re-check the server - a request from another device
             // could have already logged a response.
             const res = await dilly.fetch('/aha/status').catch(() => null);
             if (res?.ok) {
@@ -96,7 +96,7 @@ export function AhaPrompt() {
           return () => clearTimeout(t);
         }
 
-        // Already past threshold — check server before showing.
+        // Already past threshold - check server before showing.
         const res = await dilly.fetch('/aha/status').catch(() => null);
         if (res?.ok) {
           const data = await res.json();

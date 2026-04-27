@@ -2,13 +2,13 @@
  * Cross-screen signal for the "Dilly is writing this down" moment.
  *
  * When the chat overlay closes, it calls /ai/chat/flush to extract
- * new facts from the session. That call returns `{added: [...]}` —
+ * new facts from the session. That call returns `{added: [...]}` -
  * the newly captured fact objects. My Dilly watches this signal: if
  * it's mounted when extraction is in-flight OR when `added` lands, it
  * shows a transparent overlay with DillyFace writing, then fades out
  * and reveals the new facts one at a time on a 300ms stagger.
  *
- * Module-level pub/sub — same pattern as useDillyOverlay and
+ * Module-level pub/sub - same pattern as useDillyOverlay and
  * usePaywall so the overlay can poke profile screens from outside
  * React. Plays nice with Expo Router remounts.
  */
@@ -59,7 +59,7 @@ export function resolveExtraction(added: ExtractionAddedFact[]) {
   _broadcast();
 }
 
-/** Called if the flush request fails — just clear pending, no adds. */
+/** Called if the flush request fails - just clear pending, no adds. */
 export function abortExtraction() {
   _state = { ..._state, pending: false };
   _broadcast();

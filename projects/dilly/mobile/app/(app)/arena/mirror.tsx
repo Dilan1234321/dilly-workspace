@@ -1,5 +1,5 @@
 /**
- * Honest Mirror — student tile. Reads the rubric hiring managers in
+ * Honest Mirror - student tile. Reads the rubric hiring managers in
  * the user's field actually use, and shows which items the user's
  * profile already substantiates (green) vs which still need evidence
  * (empty). Tap a missing row to open Dilly asking about that one
@@ -46,9 +46,9 @@ export default function HonestMirror() {
     <ArenaPage
       eyebrow="HONEST MIRROR"
       title={`${state.total} things ${state.shortName} recruiters want to see.`}
-      subtitle={`Green means your profile already shows it. Empty means Dilly hasn't seen proof yet — tap any empty row to tell her about it.`}
+      subtitle={`Green means your profile already shows it. Empty means Dilly hasn't seen proof yet - tap any empty row to tell her about it.`}
     >
-      {/* Status card — one sentence, plain English. Drops the
+      {/* Status card - one sentence, plain English. Drops the
           big-number read ("YOUR PROFILE COVERS 3 of 5") because
           testers said it read like a grade. */}
       <View style={[s.statusCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
@@ -76,7 +76,7 @@ export default function HonestMirror() {
               })
             } else {
               openDillyOverlay({
-                initialMessage: `My Honest Mirror says I don't yet show proof for "${r.text}" in ${state.shortName}. Walk me through it — one concrete example I could add to my profile.`,
+                initialMessage: `My Honest Mirror says I don't yet show proof for "${r.text}" in ${state.shortName}. Walk me through it - one concrete example I could add to my profile.`,
               })
             }
           }}

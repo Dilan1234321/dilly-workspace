@@ -1,5 +1,5 @@
 /**
- * WinsCard — positive-reinforcement retention lever on Home.
+ * WinsCard - positive-reinforcement retention lever on Home.
  *
  * Opening the app to log good news builds an association: "this is
  * where my progress lives." The card also shows your 3 most recent
@@ -74,7 +74,7 @@ export default function WinsCard() {
       const r = (await dilly.get('/wins?limit=3')) as WinsResponse;
       setData(r);
     } catch (_e) {
-      // Silent — this is a secondary surface.
+      // Silent - this is a secondary surface.
     }
   }, []);
 
@@ -175,7 +175,7 @@ export function LogWinSheet({
   const [company, setCompany] = useState('');
   const [note, setNote]       = useState('');
   // Optional upcoming-event date for interviews / offers. YYYY-MM-DD
-  // free-text — kept simple because adding a native date picker pulls
+  // free-text - kept simple because adding a native date picker pulls
   // in a dependency we don't need for v1. Validated before scheduling.
   const [upcomingDate, setUpcomingDate] = useState('');
   const [saving, setSaving]   = useState(false);

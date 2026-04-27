@@ -1,5 +1,5 @@
 /**
- * useRecentUpgrade — returns true for the first 24 hours after a
+ * useRecentUpgrade - returns true for the first 24 hours after a
  * successful upgrade to a paid tier.
  *
  * Home screens use this to render a subtle "Welcome to Dilly" line

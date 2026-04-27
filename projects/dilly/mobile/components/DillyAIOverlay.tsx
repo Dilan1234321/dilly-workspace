@@ -150,7 +150,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
 
   // Apple Intelligence-style edge glow: a THIN line hugging the
   // device edge with a narrow soft bloom. Not a thick ring. Total
-  // visual width is ~4px + a few pixels of fade — any thicker and
+  // visual width is ~4px + a few pixels of fade - any thicker and
   // it reads as a "border," which isn't the vibe.
   //
   // Path runs ALONG the actual viewport edge (INSET = 0). The Svg
@@ -193,7 +193,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   const [input,    setInput]    = useState(''); // kept for backward compat but not used for display
   const inputRef = useRef('');
   const inputFieldRef = useRef<any>(null);
-  // Stable conversation id — created on first send of a fresh session,
+  // Stable conversation id - created on first send of a fresh session,
   // sent with every /ai/chat so the backend groups turns correctly, and
   // sent with /ai/chat/flush on close so extraction targets this exact
   // session. Cleared when the overlay closes.
@@ -209,13 +209,13 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
    *  this session, POST to /ai/chat/flush (one Haiku per session,
    *  cheaper than the per-turn extraction). Fires a global "pending"
    *  signal so My Dilly can show the writing-down overlay if mounted.
-   *  Non-blocking — the overlay closes immediately, flush runs in the
+   *  Non-blocking - the overlay closes immediately, flush runs in the
    *  background. */
   // AsyncStorage keys for persisting the active chat across close/
   // reopen. When the user taps a Skills video card inside a chat
   // message, the overlay closes while the Skills route opens; when
   // they come back, we want them in the same conversation they were
-  // having — not a fresh session. Only the LIVE chat is persisted;
+  // having - not a fresh session. Only the LIVE chat is persisted;
   // once the user explicitly starts a new chat ("+"), the live blob
   // is cleared.
   const LIVE_CHAT_KEY = 'dilly_ai_live_chat_v1';
@@ -225,7 +225,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
     const msgs = messagesRef.current;
     const userMsgCount = msgs.filter(m => m.role === 'user').length;
     // Persist so reopening the overlay continues the same conversation.
-    // We DO NOT clear convIdRef here any more — it is cleared only
+    // We DO NOT clear convIdRef here any more - it is cleared only
     // when the user taps the explicit "New chat" button.
     if (convId && msgs.length > 0) {
       AsyncStorage.setItem(LIVE_CHAT_KEY, JSON.stringify({
@@ -262,7 +262,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   }, [rawOnClose]);
   const [mode,     setMode]     = useState<ChatMode>('coaching');
   const [isTyping, setIsTyping] = useState(false);
-  // Per-mode message stashes — when the user switches from coaching
+  // Per-mode message stashes - when the user switches from coaching
   // to practice mid-response, we save coaching's thread (including
   // any in-flight assistant stream) so they can switch back later
   // and pick up exactly where they left. Previously, switching wiped
@@ -275,7 +275,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   // Arena state we send alongside every chat message so Dilly knows
   // the user's current rubric coverage without the user having to
   // recite the page. Populated on overlay open from /profile +
-  // /memory. Null until the fetch returns — the backend treats
+  // /memory. Null until the fetch returns - the backend treats
   // null as "no data available" and falls back to generic advice.
   const [arenaState, setArenaState] = useState<null | {
     honest_mirror: {
@@ -489,11 +489,11 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         const errData = await res.json().catch(() => ({}));
         const detail = errData.detail;
 
-        // 402 — global paywall wrapper (lib/dilly.ts) already
+        // 402 - global paywall wrapper (lib/dilly.ts) already
         // surfaced the elegant full-screen paywall. We just stop
         // spinning, remove the pending user message, and bail.
         // Never show "Server error 402" or a duplicate inline
-        // upgrade bubble — one paywall, clean exit.
+        // upgrade bubble - one paywall, clean exit.
         if (res.status === 402) {
           setIsTyping(false);
           // Roll back the optimistic user message so the next chat
@@ -503,7 +503,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         }
 
         // Daily quota hit (paid tier exhausted). Never expose the
-        // raw cap number — that reads like a paywall and our paid
+        // raw cap number - that reads like a paywall and our paid
         // users reacted badly to it. Soft, in-character message;
         // Dilly "needs a breather" and everything resumes tomorrow.
         if (res.status === 429 && typeof detail === 'object' && detail?.code === 'DAILY_CHAT_CAP') {
@@ -520,7 +520,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           return;
         }
 
-        // Soft error — never surface raw status codes to the user.
+        // Soft error - never surface raw status codes to the user.
         // They're alarming, look like a bug, and say nothing useful.
         const errMsg = typeof detail === 'string' ? detail
           : typeof detail === 'object' && detail?.message ? detail.message
@@ -561,12 +561,12 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       // rather than an advisor thinking things through. We hold the
       // typing indicator for a minimum floor (~1.4s) so every turn
       // feels considered. Only applies when the response came back
-      // faster than the floor — no delay added on already-slow
+      // faster than the floor - no delay added on already-slow
       // responses.
       // Bumped from 1400ms -> 2200ms per product direction: user
       // wants Dilly to "think" a bit longer to sell the illusion
       // of deliberation. Only applies when the server came back
-      // faster than the floor — slow responses pass through
+      // faster than the floor - slow responses pass through
       // unchanged.
       const MIN_THINK_MS = 2200;
       const thinkStart = (sendMessageWithTextStartedAt.current || Date.now());
@@ -616,7 +616,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       const isAuth = errMsg === 'auth' || errMsg.includes('Sign in') || errMsg.includes('session') || errMsg.includes('401');
       const isTimeout = err?.name === 'AbortError';
       // Never surface "Server error" or a raw status code. Generic
-      // friendly message — the kind of thing you'd say to a friend.
+      // friendly message - the kind of thing you'd say to a friend.
       const msg = isAuth
         ? 'Your session expired. Close this and reopen Dilly to reconnect.'
         : isTimeout
@@ -661,7 +661,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           try {
             const raw = await AsyncStorage.getItem(LIVE_CHAT_KEY);
             if (!raw) {
-              // No saved chat — show the normal opening suggestions.
+              // No saved chat - show the normal opening suggestions.
               timeoutsRef.current.push(setTimeout(() => {
                 const chips = getInitialSuggestions(studentContext, 'coaching');
                 setSuggestions(chips);
@@ -717,7 +717,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       // Fetch rich context, the recent-signal callback, and the
       // proactive greeting in parallel. The "Dilly Remembered" card
       // used to live on Home; per product direction, that callback
-      // is now the AI opener — presence in the moment the user
+      // is now the AI opener - presence in the moment the user
       // engages, not a block competing on Home.
       (async () => {
         try {
@@ -877,7 +877,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          {/* Header — cleaned up. One row, three zones:
+          {/* Header - cleaned up. One row, three zones:
               left: close / back,
               center: Dilly logo wordmark (tinted accent),
               right: compact actions (new chat + history).
@@ -899,7 +899,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, width: 80, justifyContent: 'flex-end' }}>
-              {/* New chat — clears the live conversation and starts a
+              {/* New chat - clears the live conversation and starts a
                   fresh thread. Use when the user wants to switch
                   topics without losing history (still saved on the
                   backend via /ai/chat-history and accessible via the
@@ -923,7 +923,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 onPress={async () => {
                   try {
                     // /ai/chat-history returns threads recorded by the
-                    // chat endpoint itself. Cap at 10 now — we give the
+                    // chat endpoint itself. Cap at 10 now - we give the
                     // user a full tabbed drawer, so more is useful.
                     const res = await dilly.fetch('/ai/chat-history?limit=10');
                     if (res.ok) {
@@ -960,13 +960,13 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                   // (final) reply once it lands. Streaming updates
                   // flow through a setMessages(prev => ...) closure so
                   // they keep writing into the SAME array reference
-                  // that the stash now holds — when the user switches
+                  // that the stash now holds - when the user switches
                   // back, they'll see the completed response.
                   stashedMessages.current[mode] = messages;
                   // Abort the in-flight stream so the new-mode chat
                   // doesn't inherit a half-written reply from the old
                   // mode. (setIsTyping stays true until the stream
-                  // actually settles on its own — if the user switches
+                  // actually settles on its own - if the user switches
                   // back before then, they'll see the typing indicator
                   // resume on the correct thread.)
                   if (activeControllerRef.current) {
@@ -979,7 +979,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                   setMessages(restored);
                   setRichContext(null);
                   // Only show starter suggestions when the restored
-                  // thread is empty — otherwise the user is resuming
+                  // thread is empty - otherwise the user is resuming
                   // a conversation and doesn't need intro chips.
                   if (restored.length === 0) {
                     setSuggestions(getInitialSuggestions(studentContext, m));
@@ -1020,7 +1020,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                   </>
                 ) : (
                   <>
-                    {/* No ring — DillyFace is always rendered clean.
+                    {/* No ring - DillyFace is always rendered clean.
                         The face itself carries the personality. */}
                     <View style={{ width: 90, height: 90, alignItems: 'center', justifyContent: 'center' }}>
                       <DillyFace size={70} />
@@ -1070,7 +1070,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                           {/* Any YouTube URL in the AI response becomes
                               a tappable "Watch in Dilly Skills" card that
                               routes to /skills/video/<id>. Dilly AI never
-                              sends the user out to YouTube — the whole
+                              sends the user out to YouTube - the whole
                               learning experience stays in the app. */}
                           {extractAllYouTubeIds(msg.content).map(videoId => (
                             <SkillsVideoCard key={videoId} videoId={videoId} />
@@ -1108,7 +1108,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                     screen edge. */}
                 <DillyFace size={52} mood="writing" accessory="pencil" />
                 {/* Label height matches the smaller DillyFace ring
-                    (52) — user asked for a more compact typing
+                    (52) - user asked for a more compact typing
                     indicator. Centered vertically so the baseline
                     sits at the middle of the ring. */}
                 <View style={{ height: 52, justifyContent: 'center' }}>
@@ -1120,7 +1120,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
             )}
           </ScrollView>
 
-          {/* Memory progress pill — shows user how close they are to
+          {/* Memory progress pill - shows user how close they are to
               the threshold where Dilly actually saves things to their
               profile on chat close. Matches LLM_EXTRACTION_MIN_USER_MSGS
               on the backend (currently 5). Framed as Dilly "listening"
@@ -1240,7 +1240,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               <Ionicons name="close" size={20} color={theme.surface.t2} />
             </TouchableOpacity>
           </View>
-          {/* Explainer strip. The 5-cap is real product policy — saves
+          {/* Explainer strip. The 5-cap is real product policy - saves
               disk and keeps the list scannable. The Keep button exists
               so users don't lose the one chat that mattered. */}
           <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: theme.accentSoft, borderBottomWidth: 1, borderBottomColor: theme.accentBorder }}>
@@ -1261,7 +1261,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 //
                 // Chapter threads use conv_id 'chapter-<id>-q' and
                 // their first_user_message is whatever the user
-                // typed in the Chapter question screen — which on
+                // typed in the Chapter question screen - which on
                 // its own reads identical to a normal chat. Tag
                 // them explicitly so users can find their Chapter
                 // follow-up conversations in the history list.
@@ -1288,7 +1288,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                       // current message list so the user can actually
                       // read what was said. Threads stored before the
                       // full-transcript field was added will come back
-                      // empty — fall back to just closing in that case.
+                      // empty - fall back to just closing in that case.
                       if (!item.conv_id) { setShowHistory(false); return; }
                       // If Dilly is mid-reply when the user opens
                       // another thread, kill the in-flight stream

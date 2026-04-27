@@ -1,18 +1,18 @@
 /**
- * AI Field Intelligence — the redesigned AI Arena center screen.
+ * AI Field Intelligence - the redesigned AI Arena center screen.
  *
  * Replaces the old 3-mode arena when EXPO_PUBLIC_ARENA_V2=true.
  * Answers: "How is AI changing my field, and what should I do about it?"
  *
  * 8 sections:
  *   1. Header + framing line (user_path narrator)
- *   2. Cohort Pulse  — live AI fluency % from DB, weekly agg
- *   3. Threat & Opportunity — skills at risk vs skills protected
- *   4. Role Radar   — SVG bubble chart: volume vs AI demand by role
- *   5. Your AI Readiness — entry point to Honest Mirror, reframed
- *   6. AI-Ready Playbook — concrete actions based on cohort data
- *   7. A Day in 2027 — tease of old Future Pulse screen
- *   8. Chapter Hook — talk with Dilly CTA
+ *   2. Cohort Pulse  - live AI fluency % from DB, weekly agg
+ *   3. Threat & Opportunity - skills at risk vs skills protected
+ *   4. Role Radar   - SVG bubble chart: volume vs AI demand by role
+ *   5. Your AI Readiness - entry point to Honest Mirror, reframed
+ *   6. AI-Ready Playbook - concrete actions based on cohort data
+ *   7. A Day in 2027 - tease of old Future Pulse screen
+ *   8. Chapter Hook - talk with Dilly CTA
  *
  * Zero LLM in the default path. One deferred LLM call if user taps
  * "What would it take?" inside Honest Mirror (that's a separate screen).
@@ -73,6 +73,120 @@ interface FieldIntelResponse {
   cross_cohort: { cohort: string; ai_fluency_pct: number; total_listings: number }[]
 }
 
+// Raw shape returned by GET /ai-arena/field-intel - the backend nests
+// everything under `sections` and uses different field names than the
+// UI was originally drafted against. The screen consumes the legacy
+// FieldIntelResponse shape; `adaptFieldIntel` translates raw → legacy
+// so the UI doesn't need to be rewritten.
+interface RawFieldIntel {
+  data_ready: boolean
+  cohort: string
+  cached?: boolean
+  sections?: {
+    cohort_pulse?: {
+      headline?: string
+      disruption_pct?: number
+      trend?: string
+      ai_resistant_skills?: string[]
+    }
+    threat_opportunity?: {
+      threat_pct?: number
+      opportunity_pct?: number
+      threat_label?: string
+      opportunity_label?: string
+    }
+    role_radar?: {
+      roles?: { role_cluster: string; ai_fluency: 'high' | 'medium' | 'low'; count: number }[]
+      cohort?: string
+      note?: string
+    }
+    impact_score?: { score?: number; label?: string; description?: string }
+    playbook?: { skills?: { skill: string; weight: number }[]; data_ready?: boolean }
+    day_in_2027?: { narrative?: string }
+    chapter_prompt?: { prompt?: string }
+  }
+}
+
+function aiFluencyToPct(level: 'high' | 'medium' | 'low'): number {
+  if (level === 'high') return 85
+  if (level === 'medium') return 55
+  return 20
+}
+
+function humanizeRoleCluster(slug: string): string {
+  return slug
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function adaptFieldIntel(raw: RawFieldIntel | null): FieldIntelResponse | null {
+  if (!raw) return null
+  const sections = raw.sections || {}
+  const cp = sections.cohort_pulse || {}
+  const ro = sections.role_radar?.roles || []
+  const imp = sections.impact_score || {}
+
+  const totalListings = ro.reduce((sum, r) => sum + (r.count || 0), 0)
+  const aiListings = ro
+    .filter(r => r.ai_fluency === 'high' || r.ai_fluency === 'medium')
+    .reduce((sum, r) => sum + (r.count || 0), 0)
+  const livePct = totalListings > 0 ? Math.round((aiListings / totalListings) * 100) : 0
+
+  // Pulse: only build when we have either a headline or live volume.
+  // Otherwise keep null so the NotReadyCard surfaces honestly.
+  const pulseReady = !!(cp.headline || totalListings > 0)
+  const pulse: Pulse | null = pulseReady
+    ? {
+        headline: cp.headline || `AI is reshaping ${raw.cohort}.`,
+        ai_fluency_pct: cp.disruption_pct ?? livePct,
+        total_listings: totalListings,
+        ai_listings: aiListings,
+        cross_cohort_rank: 0,
+        cross_cohort_total: 0,
+        above_average: false,
+        week_start: new Date().toISOString().slice(0, 10),
+      }
+    : null
+
+  // Threat & opportunity: derive threats from the highest-fluency role
+  // clusters, opportunities from the cohort's AI-resistant skill list.
+  const threats = ro
+    .filter(r => r.ai_fluency === 'high')
+    .slice(0, 4)
+    .map(r => humanizeRoleCluster(r.role_cluster))
+  const opportunities = (cp.ai_resistant_skills || []).slice(0, 4)
+
+  const threat_opportunity: ThreatOpp = {
+    disruption_pct: cp.disruption_pct ?? imp.score ?? 30,
+    trend: cp.trend || 'rising',
+    headline: cp.headline || `AI is changing how ${raw.cohort} operates.`,
+    threats,
+    opportunities,
+    what_to_do: imp.description || '',
+    live_total_listings: totalListings,
+    live_ai_pct: livePct,
+  }
+
+  // Role radar dots - convert ai_fluency level → numeric percent so the
+  // existing scatter chart can plot them on a continuous Y axis.
+  const role_radar: RadarDot[] = ro.map(r => ({
+    role_cluster: r.role_cluster,
+    label: humanizeRoleCluster(r.role_cluster),
+    vol: r.count,
+    ai_pct: aiFluencyToPct(r.ai_fluency),
+  }))
+
+  return {
+    cohort: raw.cohort,
+    week_start: pulse?.week_start || new Date().toISOString().slice(0, 10),
+    data_ready: !!raw.data_ready,
+    pulse,
+    threat_opportunity,
+    role_radar,
+    cross_cohort: [],
+  }
+}
+
 interface Profile {
   first_name?: string
   cohorts?: string[]
@@ -99,7 +213,7 @@ export default function FieldIntelScreen() {
         dilly.get('/ai-arena/field-intel').catch(() => null),
       ])
       setProfile((prof || {}) as Profile)
-      setIntel(intelRes as FieldIntelResponse | null)
+      setIntel(adaptFieldIntel(intelRes as RawFieldIntel | null))
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -123,8 +237,10 @@ export default function FieldIntelScreen() {
     return (
       <DillyLoadingState
         insetTop={insets.top}
-        mood="thinking"
+        mood="writing"
+        accessory="pencil"
         messages={['Reading your field…', 'Pulling live market data…', 'Mapping threats and openings…']}
+        onRetry={load}
       />
     )
   }
@@ -170,12 +286,14 @@ export default function FieldIntelScreen() {
                 of {cohortName.split(' ')[0]} listings{'\n'}require AI skills
               </Text>
             </View>
-            <View style={[s.rankBadge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-              <Text style={[s.rankNum, { color: theme.accent }]}>#{pulse.cross_cohort_rank}</Text>
-              <Text style={[s.rankSub, { color: theme.accent }]}>
-                of {pulse.cross_cohort_total} fields
-              </Text>
-            </View>
+            {pulse.cross_cohort_total > 0 ? (
+              <View style={[s.rankBadge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                <Text style={[s.rankNum, { color: theme.accent }]}>#{pulse.cross_cohort_rank}</Text>
+                <Text style={[s.rankSub, { color: theme.accent }]}>
+                  of {pulse.cross_cohort_total} fields
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           <Text style={[s.pulseHeadline, { color: theme.surface.t1 }]}>
@@ -253,7 +371,7 @@ export default function FieldIntelScreen() {
       {/* ── Section 4: Role Radar ──────────────────────────────────────── */}
       <SectionLabel label="ROLE RADAR" theme={theme} />
       <Text style={[s.sectionSub, { color: theme.surface.t3 }]}>
-        Job volume vs AI demand — where is your field moving?
+        Job volume vs AI demand - where is your field moving?
       </Text>
       <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, paddingHorizontal: 10, paddingTop: 12, paddingBottom: 8 }]}>
         <RoleRadarChart dots={radarDots} width={SCREEN_W - 64} />

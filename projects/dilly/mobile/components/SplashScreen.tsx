@@ -147,7 +147,7 @@ export default function SplashScreen({ onDismiss }: Props) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // 1. Try a local greeting variant immediately — no network, no skeleton.
+      // 1. Try a local greeting variant immediately - no network, no skeleton.
       //    This runs in parallel with the backend fetch so there's no added delay.
       const [localGreeting, backendResult] = await Promise.allSettled([
         pickSplashGreeting(),

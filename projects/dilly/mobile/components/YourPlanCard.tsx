@@ -1,10 +1,10 @@
 /**
- * YourPlanCard — the anchor card for the "Dilly turns your career
+ * YourPlanCard - the anchor card for the "Dilly turns your career
  * confusion into a plan" product promise.
  *
  * Renders at the top of every home screen (HolderHome, SeekerHome,
  * Senior-reset variant, student variants). The SAME card across all
- * modes — copy varies by mode/path, shape stays constant. That
+ * modes - copy varies by mode/path, shape stays constant. That
  * visual consistency is the clickable-ness of the app: a user
  * flipping between tabs sees "oh, the plan card is here too" and
  * understands the mental model without any tutorial.
@@ -17,7 +17,7 @@
  *     Tapping the card IS the plan editor. Testers won't need to
  *     guess what to do next because there's literally one button.
  *   - Tier-feel aware: Pro gets a thicker border + accent top bar.
- *   - Day-stamp line: "Today · [date]" — reinforces that the plan
+ *   - Day-stamp line: "Today · [date]" - reinforces that the plan
  *     is fresh-today, not stale.
  *
  * What the card does NOT do:
@@ -27,7 +27,6 @@
  *     they tap the CTA and Dilly can expand.
  *   - No "dismiss" button. The plan is always there.
  */
-import { useState, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -40,24 +39,21 @@ import type { YourPlan } from '../hooks/useYourPlan';
 
 interface Props {
   plan: YourPlan | null;
-  // Optional firstName so the chat seed can personalize.
   firstName?: string;
 }
 
+// The plan rotates to a new variant each time the user taps the CTA
+// and returns to home (via the variantIdx bump in markPlanActionTaken
+// + useFocusEffect re-read in useYourPlan). No more "Done for today"
+// state - the card itself is the rotating slot.
 export function YourPlanCard({ plan, firstName }: Props) {
   const theme = useResolvedTheme();
   const feel = useTierFeel();
-  const [taken, setTaken] = useState(plan?.actionTaken ?? false);
-
-  useEffect(() => {
-    setTaken(plan?.actionTaken ?? false);
-  }, [plan?.actionTaken]);
 
   if (!plan) return null;
 
   function handlePress() {
     if (!plan) return;
-    setTaken(true);
     markPlanActionTaken();
     if (plan.destination === 'jobs') {
       router.navigate('/(app)/jobs' as any);
@@ -86,7 +82,7 @@ export function YourPlanCard({ plan, firstName }: Props) {
         overflow: 'hidden',
       }}
     >
-      {/* Pro accent bar across the top — same pattern as the Plan
+      {/* Pro accent bar across the top - same pattern as the Plan
           card in settings. Reads as "this card was made for you". */}
       {feel.proAccentBar && (
         <View
@@ -111,17 +107,11 @@ export function YourPlanCard({ plan, firstName }: Props) {
           fontSize: 10, fontWeight: '900', letterSpacing: 1.6,
           color: theme.accent,
         }}>
-          YOUR PLAN · TODAY
+          YOUR PLAN
         </Text>
-        {taken && (
-          <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Ionicons name="checkmark-circle" size={13} color={theme.accent} />
-            <Text style={{ fontSize: 9, fontWeight: '900', color: theme.accent, letterSpacing: 0.8 }}>DONE</Text>
-          </View>
-        )}
       </View>
 
-      {/* Headline — the action. */}
+      {/* Headline - the action. */}
       <Text
         style={{
           fontSize: 20,
@@ -135,7 +125,7 @@ export function YourPlanCard({ plan, firstName }: Props) {
         {plan.headline}
       </Text>
 
-      {/* Followup line — context / the "why". */}
+      {/* Followup line - context / the "why". */}
       <Text style={{
         fontSize: 13,
         color: theme.surface.t2,
@@ -150,7 +140,7 @@ export function YourPlanCard({ plan, firstName }: Props) {
         marginTop: 4,
       }}>
         <Ionicons
-          name={taken ? 'checkmark-circle' : plan.destination === 'jobs' ? 'briefcase' : 'chatbubble'}
+          name={plan.destination === 'jobs' ? 'briefcase' : 'chatbubble'}
           size={13}
           color={theme.accent}
         />
@@ -158,9 +148,9 @@ export function YourPlanCard({ plan, firstName }: Props) {
           fontSize: 13, fontWeight: '800',
           color: theme.accent, letterSpacing: 0.2,
         }}>
-          {taken ? 'Done for today' : plan.cta}
+          {plan.cta}
         </Text>
-        {!taken && <Ionicons name="arrow-forward" size={13} color={theme.accent} />}
+        <Ionicons name="arrow-forward" size={13} color={theme.accent} />
       </View>
     </AnimatedPressable>
   );

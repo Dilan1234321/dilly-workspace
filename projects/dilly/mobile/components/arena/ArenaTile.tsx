@@ -1,5 +1,5 @@
 /**
- * ArenaTile — one-line card used in the 2x2 (or 2x3) grid below the
+ * ArenaTile - one-line card used in the 2x2 (or 2x3) grid below the
  * hero on each arena mode. Every tool that is not the centerpiece
  * reads as a tile.
  *

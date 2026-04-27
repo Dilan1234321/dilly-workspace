@@ -74,7 +74,7 @@ export default function AnimatedPressable({
       'worklet';
       // Haptic feedback by tier:
       //   haptic === 'medium' (or true from Pro tier via useTierFeel)
-      //     fires the stronger impact — reads as "deliberate / premium"
+      //     fires the stronger impact - reads as "deliberate / premium"
       //   haptic === 'light' / unset / false → default light impact
       // We always fire SOMETHING so the press still feels responsive,
       // but Pro gets the meatier version. Cost to add: one extra API

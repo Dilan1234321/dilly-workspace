@@ -37,7 +37,7 @@ export default function ChapterSessionScreen() {
   return <ChapterV1 />;
 }
 
-// ─── V1 (original slot-based Chapter — preserved verbatim from build 404) ──
+// ─── V1 (original slot-based Chapter - preserved verbatim from build 404) ──
 
 interface Screen { slot: string; body: string; }
 interface Chapter {
@@ -87,7 +87,7 @@ function stripMd(s: string): string {
 
 const PUNCT_PAUSE_MS: Record<string, number> = {
   '.': 260, '!': 300, '?': 300, ',': 120,
-  ';': 160, ':': 160, '—': 200, '\n': 320,
+  ';': 160, ':': 160, '-': 200, '\n': 320,
 };
 
 interface _PushOnVid {
@@ -225,7 +225,7 @@ function ChapterV1() {
   // own close handler to call /ai/chat/flush, but the Chapter screen
   // uses its own inline chat with a private conv_id. Without this
   // cleanup, anything the user typed on the question screen never
-  // extracted — they'd talk to Dilly and see no new facts on the
+  // extracted - they'd talk to Dilly and see no new facts on the
   // profile after the Chapter closed. Fires only if the user sent
   // at least one message AND the chapter has an id.
   useEffect(() => {
@@ -479,7 +479,7 @@ function ChapterV1() {
       const date = new Date(); date.setDate(date.getDate() + 7); date.setHours(9, 0, 0, 0);
       const title = `Chapter homework: ${oneMove.body.slice(0, 60)}`;
       await dilly.fetch('/calendar/events', { method: 'POST', body: JSON.stringify({ title, notes: oneMove.body, type: 'deadline', date_iso: date.toISOString() }) }).catch(() => {});
-      scheduleOutcomePushes({ id: `chapter-move-${chapter.id || 'session'}-${date.toISOString().slice(0, 10)}`, title, at: date, prepPrompt: `My Chapter homework is due tomorrow: "${oneMove.body}". Help me prep — what should I actually do in the next hour to make sure I do this?` }).catch(() => {});
+      scheduleOutcomePushes({ id: `chapter-move-${chapter.id || 'session'}-${date.toISOString().slice(0, 10)}`, title, at: date, prepPrompt: `My Chapter homework is due tomorrow: "${oneMove.body}". Help me prep - what should I actually do in the next hour to make sure I do this?` }).catch(() => {});
       Alert.alert('Added', "I've put this on your calendar for next week.");
     } catch { Alert.alert('Not now', 'Could not add that right now. Try again.'); }
   }

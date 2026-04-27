@@ -1,5 +1,5 @@
 /**
- * Skills — Trending.
+ * Skills - Trending.
  * Hot curated videos across every cohort. Simple ranked list.
  * Backed by GET /skill-lab/trending?limit=.
  */
@@ -75,7 +75,7 @@ export default function TrendingScreen() {
         </View>
       ) : videos.length === 0 ? (
         <Text style={[styles.empty, { color: theme.surface.t2 }]}>
-          Nothing to show yet. The library is being seeded — check back soon.
+          Nothing to show yet. The library is being seeded - check back soon.
         </Text>
       ) : (
         videos.map(v => (

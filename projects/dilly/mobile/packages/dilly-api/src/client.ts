@@ -1,5 +1,5 @@
 /**
- * @dilly/api — Shared API client
+ * @dilly/api - Shared API client
  *
  * Works on web (Next.js) and React Native (Expo) with identical behavior.
  * Each platform plugs in its own TokenProvider for storage.

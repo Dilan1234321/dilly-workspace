@@ -70,7 +70,7 @@ export default function ModeSwitchScreen() {
   // Bug fix: the earlier version ran a 1.2s SEQUENCED fade (face
   // 500 + text 400 + CTA 300) so the CTA was invisible/untappable
   // for over a second after arriving. Users tapped and nothing
-  // happened — looked like the app froze. Starting fadeCta at 1
+  // happened - looked like the app froze. Starting fadeCta at 1
   // (fully visible) removes the perceived freeze entirely.
   const fadeFace  = useRef(new Animated.Value(0)).current;
   const fadeText  = useRef(new Animated.Value(0)).current;
@@ -177,7 +177,7 @@ export default function ModeSwitchScreen() {
       // Route into the mode-specific tutorial with a transition hint.
       // Tutorial uses the `transition` param to play a dedicated
       // 5-card acknowledgement deck (congrats on the new role / sorry
-      // you're here) instead of the generic mode tour — a generic
+      // you're here) instead of the generic mode tour - a generic
       // product-feature deck in a moment that carries real emotional
       // weight would feel tone-deaf. We cleared `dilly_tutorial_shown`
       // above so tutorial will play.
@@ -282,7 +282,7 @@ export default function ModeSwitchScreen() {
           {err ? <Text style={s.err}>{err}</Text> : null}
 
           {/* Big bottom padding so the last field scrolls past the
-              fixed CTA when the keyboard is up. Was 24 — on iPhone
+              fixed CTA when the keyboard is up. Was 24 - on iPhone
               with the company field focused, the CTA + keyboard
               together covered the input. 120 gives enough slack so
               the user can always see what they're typing. */}

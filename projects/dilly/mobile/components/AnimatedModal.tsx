@@ -1,5 +1,5 @@
 /**
- * AnimatedModal — a drop-in wrapper around RN's <Modal> that adds
+ * AnimatedModal - a drop-in wrapper around RN's <Modal> that adds
  * smooth custom fade+scale in/out animation instead of RN's built-in
  * animationType (which is either jarringly "slide" or rough "fade").
  *
@@ -18,7 +18,7 @@
  *     feels responsive, not sluggish.
  *   - Backdrop fades in sync with the card.
  *   - Taps on backdrop call onDismiss (caller controls whether this
- *     is blocked — pass backdropDismissable={false} to disable).
+ *     is blocked - pass backdropDismissable={false} to disable).
  *
  * Usage:
  *   <AnimatedModal visible={x} onDismiss={close}>
@@ -27,7 +27,7 @@
  *
  * The child is rendered at the center of the screen with horizontal
  * padding. If you need a full-screen layout (top-to-bottom takeover),
- * use RN's Modal directly — this component is for cards/sheets.
+ * use RN's Modal directly - this component is for cards/sheets.
  */
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -43,7 +43,7 @@ interface Props {
    *  confirmations) so a stray tap can't dismiss. */
   backdropDismissable?: boolean;
   /** Darkness of the backdrop when dark-mode-aware callers want to
-   *  override. Default 0.45 — firm enough to focus the card, not
+   *  override. Default 0.45 - firm enough to focus the card, not
    *  so dark it reads as a blocking dialog. */
   backdropOpacity?: number;
 }

@@ -4,7 +4,7 @@
  * `colors` is exported as a Proxy so reads like `colors.t1` return the
  * dark-mode value when the active theme surface is dark, and the
  * light-mode value otherwise. This lets every screen keep using
- * `colors.X` without touching each file individually — the Proxy
+ * `colors.X` without touching each file individually - the Proxy
  * route-reads the active mode at property access time.
  *
  * Caveats:

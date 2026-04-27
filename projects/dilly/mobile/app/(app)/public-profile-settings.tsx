@@ -1,6 +1,6 @@
 import { safeBack } from '../../lib/navigation';
 /**
- * Public Profile settings — dedicated management screen.
+ * Public Profile settings - dedicated management screen.
  *
  * Mirrors /skills/profile-settings in structure. Settings tab used to
  * toggle the public career profile inline; per product direction, the
@@ -8,13 +8,13 @@ import { safeBack } from '../../lib/navigation';
  * control visibility, sections, and per-fact shows/hides in one place.
  *
  * Controls, all persisted through existing backend endpoints:
- *   - public_profile_visible         (PATCH /profile) — master toggle
- *   - web_profile_settings.sections  (PATCH /profile) — which sections
+ *   - public_profile_visible         (PATCH /profile) - master toggle
+ *   - web_profile_settings.sections  (PATCH /profile) - which sections
  *                                     render on the public page
  *   - web_profile_settings.hidden_fact_ids (POST
- *     /profile/web/hide-fact | show-fact) — atomic per-fact toggle
+ *     /profile/web/hide-fact | show-fact) - atomic per-fact toggle
  *
- * We do NOT duplicate the learning-profile toggles here — those live
+ * We do NOT duplicate the learning-profile toggles here - those live
  * at /skills/profile-settings. The Settings tab links to both pages.
  */
 
@@ -137,7 +137,7 @@ export default function PublicProfileSettingsScreen() {
 
   const profileUrl = slug ? `https://hellodilly.com/${prefix}/${slug}` : '';
 
-  /** Immediate save — no debounce. Every switch writes right away so
+  /** Immediate save - no debounce. Every switch writes right away so
    *  the public page updates the moment the user flips it. */
   const saveMaster = useCallback(async (v: boolean) => {
     setSaveState('saving');
@@ -214,7 +214,7 @@ export default function PublicProfileSettingsScreen() {
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
       contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 80 }}
     >
-      {/* Header — back arrow, eyebrow + title, slug line. */}
+      {/* Header - back arrow, eyebrow + title, slug line. */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
@@ -271,7 +271,7 @@ export default function PublicProfileSettingsScreen() {
           <SectionTitle theme={theme} text="WHICH FACTS" />
           <Text style={[styles.sectionSub, { color: theme.surface.t2 }]}>
             Tap a fact to hide it from your public profile. Hidden facts stay in
-            your Dilly profile — only the public page is affected.
+            your Dilly profile - only the public page is affected.
           </Text>
 
           {showableItems.length === 0 ? (

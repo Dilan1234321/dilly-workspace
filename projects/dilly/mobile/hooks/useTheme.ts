@@ -1,5 +1,5 @@
 /**
- * useTheme — multi-axis personalization.
+ * useTheme - multi-axis personalization.
  *
  * Six independent axes, each a small enum. Every surface that
  * subscribes reads from `useResolvedTheme()` (or the lighter
@@ -29,7 +29,7 @@ import { setColorsDarkMode } from '../lib/tokens';
 
 const STORAGE_KEY = 'dilly_theme_v2';
 // When the current user's theme was written, we stamp the email they
-// were signed in as. On next cold-boot we read both — if the email
+// were signed in as. On next cold-boot we read both - if the email
 // matches the currently authed user, we apply locally IMMEDIATELY
 // (no flash to default). If it's a different user or unknown, we wait
 // for the /profile sync. This is what "remember my customize immediately
@@ -81,7 +81,7 @@ export interface AccentPreset {
    *  accent-background buttons invisible (white bg + white text). */
   darkColor?: string;
   /** Display name shown in Customize Dilly when the resolved dark-mode color
-   *  is significantly different from the stored color. Purely cosmetic — the
+   *  is significantly different from the stored color. Purely cosmetic - the
    *  stored preference id never changes. */
   darkLabel?: string;
 }
@@ -104,7 +104,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 export interface SurfacePreset {
   id: SurfaceId;
   label: string;
-  /** True if this is a dark surface — used to flip text colors. */
+  /** True if this is a dark surface - used to flip text colors. */
   dark: boolean;
   /** Primary page background. */
   bg: string;
@@ -248,7 +248,7 @@ export interface TypePreset {
 export const TYPE_PRESETS: Record<TypeId, TypePreset> = {
   // Dilly = Cinzel (Roman capitals, serif, carved-in-stone feel).
   // Editorial = Playfair Display (high-contrast serif, magazine/book
-  // feel — totally different shape language from Cinzel). Tester
+  // feel - totally different shape language from Cinzel). Tester
   // feedback flagged that the two presets looked identical because
   // they were both Cinzel with tracking tweaks. Now genuinely distinct.
   dilly:     { id: 'dilly',     label: 'Dilly',     display: 'Cinzel_700Bold',          body: undefined, heroTracking: -0.4, heroWeight: '700' },
@@ -294,7 +294,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
 };
 
 /* ─────────────────────────────────────────────────────────────── */
-/* Resolved theme — what components actually consume                */
+/* Resolved theme - what components actually consume                */
 /* ─────────────────────────────────────────────────────────────── */
 
 export interface ResolvedTheme {
@@ -367,7 +367,7 @@ export function resolveTheme(config: ThemeConfig, systemIsDark: boolean): Resolv
   const surface = SURFACE_PRESETS[surfaceId];
 
   // Resolve the accent. When the surface is dark and the chosen accent
-  // is very dark (luminance < 0.05 — covers graphite, navy, and any
+  // is very dark (luminance < 0.05 - covers graphite, navy, and any
   // near-black the user might have picked), use the preset's darkColor
   // override. Previously this fell back to '#FFFFFF', which made any
   // button using backgroundColor:accent + white text invisible
@@ -381,7 +381,7 @@ export function resolveTheme(config: ThemeConfig, systemIsDark: boolean): Resolv
   // Flip the global `colors` Proxy to dark when the resolved surface
   // is dark. Every file that reads `colors.t1` / `colors.bg` will now
   // read from the dark palette without needing per-screen theme wiring.
-  // This is the one side-effect in resolveTheme — kept here so the
+  // This is the one side-effect in resolveTheme - kept here so the
   // switch happens in the same frame as the theme change, avoiding a
   // flash of the wrong palette.
   setColorsDarkMode(!!surface.dark);
@@ -414,7 +414,7 @@ let _hydrated = false;
 async function _hydrate() {
   if (_hydrated) return;
   _hydrated = true;
-  // 1. Local cache first — but only if it's tagged to the currently
+  // 1. Local cache first - but only if it's tagged to the currently
   // authed user. Previously we applied the last stored theme blindly,
   // which meant user A's theme would flash to user B on sign-in. Now
   // we compare the stored email tag against the token's email.
@@ -437,7 +437,7 @@ async function _hydrate() {
       _listeners.forEach(l => l(_config));
     }
   } catch {}
-  // 2. Server profile — authoritative across devices. If the user
+  // 2. Server profile - authoritative across devices. If the user
   // signs in on a new device, this is how their theme follows them.
   // Fire-and-forget, swallow any auth/network error so no-auth boot
   // doesn't break anything.
@@ -493,17 +493,17 @@ export async function patchTheme(patch: Partial<ThemeConfig>) {
       if (em) await AsyncStorage.setItem(STORAGE_USER_KEY, em);
     } catch {}
   } catch {}
-  // Don't await — let the UI update instantly, PATCH happens in the
+  // Don't await - let the UI update instantly, PATCH happens in the
   // background. The server copy is eventual; AsyncStorage is the hot path.
   _persistToBackend(_config);
 }
 
-/** Clear cached theme — call on sign-out so the next account on this
+/** Clear cached theme - call on sign-out so the next account on this
  * device hydrates from their own profile, not the previous user's.
  *
  * Important: we KEEP the AsyncStorage copy. The stored theme is tagged
  * to the user email that wrote it (STORAGE_USER_KEY). Next sign-in
- * checks that tag — if it matches, the theme restores instantly; if
+ * checks that tag - if it matches, the theme restores instantly; if
  * it doesn't, _hydrate waits for server and overwrites. This is what
  * lets a returning user see their customized theme immediately on
  * sign-in without flashing the default first. */
@@ -514,7 +514,7 @@ export async function clearThemeCache() {
   // Intentionally do NOT remove STORAGE_KEY / STORAGE_USER_KEY here.
 }
 
-/** Legacy shim — kept so the simple swatch picker in Settings still works. */
+/** Legacy shim - kept so the simple swatch picker in Settings still works. */
 export async function setTheme(accentId: string) {
   await patchTheme({ accent: accentId as AccentId });
 }
@@ -533,7 +533,7 @@ export async function surpriseTheme() {
     shape: rand(Object.values(SHAPE_PRESETS)).id,
     type: rand(Object.values(TYPE_PRESETS)).id,
     accentStyle: rand(Object.values(ACCENT_STYLE_PRESETS)).id,
-    // density stays where the user put it — too jarring to flip
+    // density stays where the user put it - too jarring to flip
   });
 }
 
@@ -565,13 +565,13 @@ export function useResolvedTheme(): ResolvedTheme {
   return resolveTheme(cfg, systemIsDark);
 }
 
-/** Convenience wrappers — common shortcuts. */
+/** Convenience wrappers - common shortcuts. */
 export function useAccent(): string {
   return useResolvedTheme().accent;
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* Legacy API — preserves existing Settings swatch picker behavior. */
+/* Legacy API - preserves existing Settings swatch picker behavior. */
 /* ─────────────────────────────────────────────────────────────── */
 
 export interface Theme {

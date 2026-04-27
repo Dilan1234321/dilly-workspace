@@ -1,5 +1,5 @@
 /**
- * Market Value Live — the holder centerpiece.
+ * Market Value Live - the holder centerpiece.
  *
  * Loads the user's value reading, sparkline, peer percentile, today's
  * anchor-company pressure, and renders it all in one read. Zero LLM.
@@ -13,7 +13,7 @@
  *   4. "Window" state: "open" means Dilly thinks this is the moment
  *      to move. Clear readout either way.
  *   5. Inline Skills videos to reinforce the rarity of the user's
- *      cohort — "These are the things the top 10% in your band know."
+ *      cohort - "These are the things the top 10% in your band know."
  */
 
 import { useEffect, useState, useCallback } from 'react'
@@ -263,7 +263,7 @@ export default function MarketValueLive() {
         />
       </View>
 
-      {/* Skills inline — the rarity moat */}
+      {/* Skills inline - the rarity moat */}
       {videoIds.length > 0 ? (
         <>
           <Text style={[s.sectionTitle, { color: theme.surface.t3 }]}>

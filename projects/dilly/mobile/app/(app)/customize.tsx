@@ -1,9 +1,9 @@
 import { safeBack } from '../../lib/navigation';
 /**
- * Customize Dilly — the theming studio.
+ * Customize Dilly - the theming studio.
  *
  * Full-screen modal with three zones:
- *   1. Screen picker (dropdown chips — switch which mock renders)
+ *   1. Screen picker (dropdown chips - switch which mock renders)
  *   2. Live mock preview (pixel-parity, theme-bound)
  *   3. Customization panel with tabbed axes
  *
@@ -47,7 +47,7 @@ const AXES: { id: AxisId; label: string; icon: any }[] = [
   { id: 'type',    label: 'Type',    icon: 'text' },
   { id: 'density', label: 'Density', icon: 'resize' },
   { id: 'style',   label: 'Style',   icon: 'sparkles' },
-  // The advisor axis is NOT a theme config field — it writes to
+  // The advisor axis is NOT a theme config field - it writes to
   // profile.advisor_persona via /profile PATCH. It shapes the
   // Chapter prompt's voice (warm / sharp / direct) without changing
   // any visual theme. Lives in Customize so users have one place
@@ -61,7 +61,7 @@ export default function CustomizeStudio() {
   const systemScheme = useColorScheme();
   const systemIsDark = systemScheme === 'dark';
 
-  // PENDING theme — edits stay here until Save.
+  // PENDING theme - edits stay here until Save.
   const [pending, setPending] = useState<ThemeConfig>(committed);
   const [axis, setAxis] = useState<AxisId>('accent');
   // Only one mock preview now ('career' = Home). Kept as a const so
@@ -100,7 +100,7 @@ export default function CustomizeStudio() {
   }
 
   async function handleReset() {
-    // Reset is itself an edit — apply live + pulse.
+    // Reset is itself an edit - apply live + pulse.
     patch(DEFAULT_CONFIG);
   }
 
@@ -121,7 +121,7 @@ export default function CustomizeStudio() {
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
-      {/* First-visit coach — Customize Dilly. Clarifies this is
+      {/* First-visit coach - Customize Dilly. Clarifies this is
           aesthetic-only (product rule: customization changes LOOK,
           not behavior). Tester confusion risk: "did I break
           something?" after picking a theme. */}
@@ -129,15 +129,15 @@ export default function CustomizeStudio() {
         id="customize-v1"
         iconName="color-palette"
         headline="Make Dilly look how you want."
-        subline="Color, shape, type, density — your choices. None of this changes what Dilly does."
+        subline="Color, shape, type, density - your choices. None of this changes what Dilly does."
       />
 
       {/* Top bar. Reads theme so the Customize studio itself respects
-          the user's current surface — on Midnight, the top bar and
+          the user's current surface - on Midnight, the top bar and
           container become dark; on Mint, pastel.
 
           UX: everything auto-saves. Left nav is a back arrow (not an
-          X) because there is nothing to discard — changes already
+          X) because there is nothing to discard - changes already
           committed. The right side is a live "Saved" indicator: it
           fades in with a filled check after every patch, holds for
           about a second, then fades out. High-tech "we handled it"
@@ -194,7 +194,7 @@ export default function CustomizeStudio() {
         </AnimatedPressable>
       </View>
 
-      {/* Live preview — phone frame clamped so it never blocks the
+      {/* Live preview - phone frame clamped so it never blocks the
           top bar. The preview area uses a subtle surface tint so the
           phone frame reads against it in both light and dark modes. */}
       <View style={[s.previewWrap, { backgroundColor: theme.surface.s1 }]}>
@@ -211,7 +211,7 @@ export default function CustomizeStudio() {
       <View style={[s.panel, { paddingBottom: Math.max(insets.bottom, 12), backgroundColor: theme.surface.bg, borderTopColor: theme.surface.border }]}>
         {/* Axis tabs. Wrapped in a relative container with a right-
             edge gradient mask so the user sees the row is scrollable
-            — the last visible tab fades out, making it obvious there
+            - the last visible tab fades out, making it obvious there
             are more tabs off-screen to the right. showsHorizontal
             ScrollIndicator stays off for cleanliness; the fade is
             the affordance. */}
@@ -267,7 +267,7 @@ export default function CustomizeStudio() {
           {axis === 'advisor' && <AdvisorPanel theme={theme} pulseSaved={pulseSaved} />}
         </View>
 
-        {/* Footer — reset */}
+        {/* Footer - reset */}
         <View style={s.footer}>
           <AnimatedPressable onPress={handleReset} scaleDown={0.95} style={s.resetBtn}>
             <Ionicons name="refresh" size={13} color={theme.surface.t3} />
@@ -291,7 +291,7 @@ interface AxisProps {
 }
 
 function AccentPanel({ pending, patch, theme }: AxisProps) {
-  // Horizontal-scroll swatch strip. Previously a wrap grid — users
+  // Horizontal-scroll swatch strip. Previously a wrap grid - users
   // didn't know there were more colors than the first row. Now:
   // single row, swipe to discover, with a "more →" fade indicator
   // on the right edge so the scroll is obvious.
@@ -345,7 +345,7 @@ function AccentPanel({ pending, patch, theme }: AxisProps) {
 }
 
 function SurfacePanel({ pending, patch, theme }: AxisProps) {
-  // Appearance mode — Auto / Light / Dark.
+  // Appearance mode - Auto / Light / Dark.
   // Auto   = autoDark=true + whatever light surface the user picked
   // Light  = autoDark=false + user's light surface (never a dark surface)
   // Dark   = autoDark=false + a dark surface
@@ -457,7 +457,7 @@ function SurfacePanel({ pending, patch, theme }: AxisProps) {
         </View>
       )}
 
-      {/* Dark surface grid — shown in both Dark and Auto modes */}
+      {/* Dark surface grid - shown in both Dark and Auto modes */}
       {showDarkGrid && (
         <View>
           {mode === 'auto' && (
@@ -658,7 +658,7 @@ function StylePanel({ pending, patch, theme }: AxisProps) {
 /* ─────────────────────────────────────────────────────────────── */
 
 /**
- * AdvisorPanel — Chapter persona picker.
+ * AdvisorPanel - Chapter persona picker.
  *
  * Not a theme-config axis. Saves to profile.advisor_persona via
  * /profile PATCH so the Chapter prompt on the backend can inject
@@ -678,7 +678,7 @@ function AdvisorPanel({ theme, pulseSaved }: { theme: ResolvedTheme; pulseSaved:
         const p: any = await dilly.get('/profile');
         setSelected(String(p?.advisor_persona || '').toLowerCase());
       } catch (_e) {
-        // Fail soft — leave blank. User can still pick.
+        // Fail soft - leave blank. User can still pick.
       } finally {
         setLoading(false);
       }
@@ -701,7 +701,7 @@ function AdvisorPanel({ theme, pulseSaved }: { theme: ResolvedTheme; pulseSaved:
   ];
 
   const commit = async (id: string) => {
-    // Optimistic — paint the new selection instantly, pulse the
+    // Optimistic - paint the new selection instantly, pulse the
     // Saved badge, then write to the server. If the write fails we
     // silently roll the selection back so the user notices next
     // Chapter that nothing changed. Matches the other axes' feel.
@@ -791,7 +791,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)',
-    // Always above the phone preview — on short screens the preview
+    // Always above the phone preview - on short screens the preview
     // could overflow its container and paint over the close button.
     // Explicit zIndex + solid background guards against that.
     zIndex: 10,

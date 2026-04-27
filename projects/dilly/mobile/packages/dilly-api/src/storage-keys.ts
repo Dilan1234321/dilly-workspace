@@ -1,8 +1,8 @@
 /**
- * @dilly/api — Shared localStorage key constants
+ * @dilly/api - Shared localStorage key constants
  *
  * Single source of truth for every key written to localStorage across
- * dashboard, desktop, and mobile. Import from here — never hard-code
+ * dashboard, desktop, and mobile. Import from here - never hard-code
  * key strings in application code.
  *
  * Naming convention: all keys follow the "dilly_<noun>" pattern.
@@ -10,12 +10,12 @@
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
-/** JWT / session token — written on login, deleted on logout (dashboard + mobile). */
+/** JWT / session token - written on login, deleted on logout (dashboard + mobile). */
 export const AUTH_TOKEN_KEY = "dilly_auth_token";
 
 /**
  * Desktop app localStorage token key.
- * Intentionally different from AUTH_TOKEN_KEY — desktop and web apps share a
+ * Intentionally different from AUTH_TOKEN_KEY - desktop and web apps share a
  * machine but maintain independent sessions to avoid cross-app auth interference.
  */
 export const DESKTOP_AUTH_TOKEN_KEY = "dilly_token";
@@ -28,7 +28,7 @@ export const AUTH_USER_KEY = "dilly_user";
 /** Set to "1" once onboarding is complete; never cleared by clearAuth(). */
 export const HAS_ONBOARDED_KEY = "dilly_has_onboarded";
 
-/** Pending file upload path — survives auth clear so upload can resume after re-login. */
+/** Pending file upload path - survives auth clear so upload can resume after re-login. */
 export const PENDING_UPLOAD_KEY = "dilly_pending_upload";
 
 /** Last audit result cached on device. */
@@ -89,7 +89,7 @@ export const VOICE_FROM_CERT_HANDOFF_KEY = "dilly_voice_cert_handoff";
 
 // ─── Audit / Score state ─────────────────────────────────────────────────────
 
-/** Last completed audit result (base key — suffix with user id if needed). */
+/** Last completed audit result (base key - suffix with user id if needed). */
 export const DILLY_STORAGE_KEY_BASE = "dilly_last_audit";
 
 /** Last ATS scan score, persisted so the badge shows without a refetch. */

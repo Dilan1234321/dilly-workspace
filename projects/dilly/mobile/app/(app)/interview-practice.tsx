@@ -1,6 +1,6 @@
 import { safeBack } from '../../lib/navigation';
 /**
- * Interview Practice — "The Room"
+ * Interview Practice - "The Room"
  *
  * Not a chatbot. Not a prompt wrapper. A simulated interview room
  * built from the job description, with live performance feedback
@@ -13,7 +13,7 @@ import { safeBack } from '../../lib/navigation';
  *   - Live STAR coverage bar + answer-duration meter beneath every
  *     answer. You see your Situation/Task/Action/Result chips light
  *     up as you type, and a color-coded length meter nudges you
- *     toward the 40-90s sweet spot. No chatbot can do this — it's
+ *     toward the 40-90s sweet spot. No chatbot can do this - it's
  *     reactive in real time as characters land.
  *   - Narrated loader stages ("reading the description → identifying
  *     what they'll test → calibrating difficulty") so the user feels
@@ -24,7 +24,7 @@ import { safeBack } from '../../lib/navigation';
  *   - Your-answer / stronger-answer side-by-side on each question,
  *     so the user sees the specific gap and closes it.
  *
- * The API contract (prep-deck → feedback) is unchanged — this is a
+ * The API contract (prep-deck → feedback) is unchanged - this is a
  * pure UI rewrite. If the backend ever ships voice transcription, the
  * practice surface is already shaped for it.
  */
@@ -52,7 +52,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Palette — dark mode is only used during the immersive practice
+// Palette - dark mode is only used during the immersive practice
 // phase. Setup and debrief stay in the light Dilly brand.
 const INDIGO = '#2B3A8E';
 const NIGHT_BG = '#0B0F1E';
@@ -104,7 +104,7 @@ const VERDICT_CONFIG = {
   needs_work: { label: 'Not there yet.', sub: "One more session at this rubric and you're close.", color: CORAL },
 };
 
-// Loader narration — the user sees the machine working. Each line
+// Loader narration - the user sees the machine working. Each line
 // dwells for ~1.4s. If the API comes back faster, the loader just
 // jumps to the final state. If slower, the last line stays pinned.
 const LOADER_STAGES = [
@@ -121,7 +121,7 @@ const ANALYZING_NARRATION = [
   "Scoring against how they actually hire",
 ];
 
-// STAR keyword detectors. Rough but honest — chosen because they
+// STAR keyword detectors. Rough but honest - chosen because they
 // actually appear in strong answers. Matched case-insensitively,
 // as whole-word fragments, against the current answer text.
 const STAR_PATTERNS: Record<'S' | 'T' | 'A' | 'R', RegExp[]> = {
@@ -149,7 +149,7 @@ const AVG_WORDS_PER_SEC = 2.3;
 export default function InterviewPracticeScreen() {
   const toast = useInlineToast();
   const insets = useSafeAreaInsets();
-  // Interview Prep had zero theme integration — every surface was
+  // Interview Prep had zero theme integration - every surface was
   // frozen at module load via the colors proxy. Pulling the resolved
   // theme here and propagating to child phase components so Customize
   // Dilly actually applies across this screen.
@@ -232,7 +232,7 @@ export default function InterviewPracticeScreen() {
 
   const canGenerate = company.trim().length > 0 && role.trim().length > 0 && jobDescription.trim().length >= 100;
 
-  // JD quality meter — visible signal that "more detail = better prep".
+  // JD quality meter - visible signal that "more detail = better prep".
   const jdLen = jobDescription.trim().length;
   const jdQuality =
     jdLen === 0 ? { pct: 0, label: 'Empty', color: NIGHT_DIM } :
@@ -349,13 +349,13 @@ export default function InterviewPracticeScreen() {
 
       if (!res.ok) {
         // 402 is handled globally by the paywall wrapper in lib/dilly.
-        // We just need to not crash after it surfaces — bail to setup.
+        // We just need to not crash after it surfaces - bail to setup.
         if (res.status === 402) {
           setPhase('setup');
           return;
         }
         const d = await res.json().catch(() => null);
-        // Never surface a raw status — the feedback screen already
+        // Never surface a raw status - the feedback screen already
         // has its own "took too long" fallback UI.
         throw new Error(d?.detail || 'Dilly could not score this round.');
       }
@@ -404,13 +404,13 @@ export default function InterviewPracticeScreen() {
   // Practice phase used to force a dark NIGHT_BG container regardless
   // of the user's Customize Dilly surface. The user asked for the whole
   // interview experience to follow the theme, so the forced-dark flag
-  // is gone — the container and navbar pull directly from the
+  // is gone - the container and navbar pull directly from the
   // resolved theme on every phase.
   const isDark = false;
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
-      {/* First-visit coach — The Room. */}
+      {/* First-visit coach - The Room. */}
       <FirstVisitCoach
         id="interview-room-v1"
         iconName="mic"
@@ -506,7 +506,7 @@ function NavBar({ dark, onBack, phase, currentIdx, total }:
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* Setup — cinematic gateway                                        */
+/* Setup - cinematic gateway                                        */
 /* ─────────────────────────────────────────────────────────────── */
 
 function SetupPhase({
@@ -528,7 +528,7 @@ function SetupPhase({
           sub="You can set up a mock for free. Running the round + feedback unlocks with Dilly."
         />
         <FadeInView delay={0}>
-          {/* Hero — no logo, no chatbot framing. This is a Room. */}
+          {/* Hero - no logo, no chatbot framing. This is a Room. */}
           <View style={s.hero}>
             <View style={[s.heroRingOuter, { backgroundColor: theme.accent + '08' }]}>
               <View style={[s.heroRingInner, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
@@ -552,7 +552,7 @@ function SetupPhase({
           <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>PASTE THE ROLE</Text>
 
           <View style={[s.inputCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-            {/* URL primary — one tap, everything fills. */}
+            {/* URL primary - one tap, everything fills. */}
             <FieldLabel text="Job URL" hint="Fastest way in" theme={theme} />
             <View style={s.urlRow}>
               <TextInput
@@ -679,11 +679,11 @@ function FieldLabel({ text, required, top, hint, inline, theme }:
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* Loading — narrated stages                                        */
+/* Loading - narrated stages                                        */
 /* ─────────────────────────────────────────────────────────────── */
 
 function LoadingPhase({ company, role, stage }: { company: string; role: string; stage: number }) {
-  // Theme-aware — the loading card was frozen to light-mode colors,
+  // Theme-aware - the loading card was frozen to light-mode colors,
   // so Midnight users saw a white card on a dark screen. Every color
   // that was static is now pulled from the resolved theme.
   const theme = useResolvedTheme();
@@ -734,7 +734,7 @@ function LoadingPhase({ company, role, stage }: { company: string; role: string;
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* Practice — immersive dark room                                   */
+/* Practice - immersive dark room                                   */
 /* ─────────────────────────────────────────────────────────────── */
 
 function PracticePhase({
@@ -742,7 +742,7 @@ function PracticePhase({
   currentAnswer, setCurrentAnswer, onSubmit, onSkip, insetsBottom,
 }: any) {
   // Practice used to be a fixed dark "interview room". The user
-  // explicitly asked for it to adjust to Customize Dilly — so it now
+  // explicitly asked for it to adjust to Customize Dilly - so it now
   // follows the theme. Surface text + card bg track the user's
   // theme; we derive a handful of local aliases so the NIGHT_*
   // sprinkled through the rest of this function have theme-aware
@@ -801,7 +801,7 @@ function PracticePhase({
           ))}
         </View>
 
-        {/* Interviewer card — grounds the user in a specific moment */}
+        {/* Interviewer card - grounds the user in a specific moment */}
         <FadeInView delay={0} key={currentIdx}>
           <View style={s.interviewerStrip}>
             <View style={s.interviewerDot} />
@@ -856,7 +856,7 @@ function PracticePhase({
             textAlignVertical="top"
           />
 
-          {/* Live performance bar — the thing no chatbot can do */}
+          {/* Live performance bar - the thing no chatbot can do */}
           <View style={[s.perfBar, { backgroundColor: PRACTICE_CARD, borderColor: PRACTICE_BORDER }]}>
             <View style={s.perfTopRow}>
               <View style={s.perfMetric}>
@@ -879,7 +879,7 @@ function PracticePhase({
               </View>
             </View>
 
-            {/* Duration track — nudges toward 40-90s band */}
+            {/* Duration track - nudges toward 40-90s band */}
             <View style={[s.durationTrack, { backgroundColor: PRACTICE_BORDER }]}>
               <View style={[s.durationBand, {
                 left: `${(TARGET_MIN_SEC / 120) * 100}%`,
@@ -892,7 +892,7 @@ function PracticePhase({
               }]} />
             </View>
 
-            {/* STAR chips — light up as you hit each pillar */}
+            {/* STAR chips - light up as you hit each pillar */}
             <View style={s.starRow}>
               {(['S', 'T', 'A', 'R'] as const).map(letter => (
                 <View
@@ -1004,7 +1004,7 @@ function ReviewPhase({
   feedback, questions, answers, company, role,
   expandedCards, onToggle, onRetry, onDone, insetsBottom,
 }: any) {
-  // Full theme wiring — every card / text / border / CTA in the
+  // Full theme wiring - every card / text / border / CTA in the
   // Review phase was frozen at the colors proxy, so Midnight /
   // Cream / Blush users saw a light-mode debrief inside a themed
   // shell. Inline overrides hang on top of the static StyleSheet.
@@ -1064,7 +1064,7 @@ function ReviewPhase({
   return (
     <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
       <FadeInView delay={0}>
-        {/* Verdict headline — the one thing the user looks at first */}
+        {/* Verdict headline - the one thing the user looks at first */}
         <View style={[s.verdictCard, { backgroundColor: theme.surface.s1, borderColor: verdict.color + '50' }]}>
           <View style={[s.verdictGlyph, { backgroundColor: verdict.color + '15', borderColor: verdict.color + '40' }]}>
             <Ionicons
@@ -1079,7 +1079,7 @@ function ReviewPhase({
           <Text style={[s.verdictBody, { color: theme.surface.t1 }]}>{feedback.overall}</Text>
         </View>
 
-        {/* Scorecard — feels like a hiring rubric */}
+        {/* Scorecard - feels like a hiring rubric */}
         <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>SCORECARD</Text>
         <View style={[s.scorecardCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
           <ScoreRow label="Clarity"     value={scorecard.clarity} theme={theme} />
@@ -1088,7 +1088,7 @@ function ReviewPhase({
           <ScoreRow label="Confidence"  value={scorecard.confidence} theme={theme} />
         </View>
 
-        {/* Strength / Gap — side by side, not buried */}
+        {/* Strength / Gap - side by side, not buried */}
         <View style={s.sgRow}>
           <View style={[s.sgCard, { backgroundColor: theme.surface.s1, borderColor: GREEN + '40' }]}>
             <Text style={[s.sgLabel, { color: GREEN }]}>WHAT WORKED</Text>
@@ -1100,7 +1100,7 @@ function ReviewPhase({
           </View>
         </View>
 
-        {/* Per-question — side-by-side answer upgrade */}
+        {/* Per-question - side-by-side answer upgrade */}
         <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>QUESTION BY QUESTION</Text>
         {questions.map((qq: PrepQuestion, i: number) => {
           const pq = feedback.per_question[i];

@@ -11,7 +11,7 @@
  * Example: a veteran's 'life_context' tile reads "Service & Mission"
  * with a military-style icon. An ex_founder's 'project_detail' tile
  * reads "Company You Built" with a rocket icon. Same underlying
- * facts — the surface just reflects who the user is.
+ * facts - the surface just reflects who the user is.
  *
  * Empty override for a path means use the default. Unknown paths
  * fall through to the default. Callers merge this into the base

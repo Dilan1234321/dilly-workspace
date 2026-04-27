@@ -217,7 +217,7 @@ export default function RichText({ text, baseStyle }: RichTextProps) {
           // The default "gold" highlight (no explicit color prefix) now
           // follows theme.accent so the Customize Dilly accent reaches
           // emphasis text. Named colors (green/amber/blue/coral/red) stay
-          // semantic — they mean success/warning/info/error regardless.
+          // semantic - they mean success/warning/info/error regardless.
           const isDefaultGold = token.color === GOLD;
           style.color      = isDefaultGold ? theme.accent : token.color;
           style.fontWeight = '700';
@@ -225,7 +225,7 @@ export default function RichText({ text, baseStyle }: RichTextProps) {
 
         // Auto-linkify any URLs inside the token text. YouTube links
         // route to the in-app Skills video player instead of the
-        // system browser — Dilly recommendations should never kick
+        // system browser - Dilly recommendations should never kick
         // the user out of the app. Non-YouTube URLs open externally
         // as before.
         const parts = splitWithUrls(token.text);

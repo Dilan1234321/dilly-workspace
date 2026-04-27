@@ -1,11 +1,11 @@
 import { safeBack } from '../../../../lib/navigation';
 /**
- * Skills video detail — in-app playback (build 363).
+ * Skills video detail - in-app playback (build 363).
  *
  * Playback history:
- *   354 — custom WebView + iframe API in local HTML shell → error 5
- *   358 — WebView pointed at /embed URL directly → "config error"
- *   362 — WebView + iframe in HTML shell with baseUrl → "config error"
+ *   354 - custom WebView + iframe API in local HTML shell → error 5
+ *   358 - WebView pointed at /embed URL directly → "config error"
+ *   362 - WebView + iframe in HTML shell with baseUrl → "config error"
  *
  * Switching to react-native-youtube-iframe. This is the
  * battle-tested wrapper that LinkedIn, Udemy, and every other RN app
@@ -242,7 +242,7 @@ export default function VideoScreen() {
             onChangeState={onStateChange}
             onError={onPlayerError}
             initialPlayerParams={{
-              // Keep the player lean — no related-video grid at end,
+              // Keep the player lean - no related-video grid at end,
               // no keyboard controls, captions on if available.
               modestbranding: true,
               rel: false,

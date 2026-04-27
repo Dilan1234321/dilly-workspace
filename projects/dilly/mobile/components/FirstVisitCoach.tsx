@@ -1,5 +1,5 @@
 /**
- * FirstVisitCoach — full-screen "here's what this screen is" flash.
+ * FirstVisitCoach - full-screen "here's what this screen is" flash.
  *
  * Fires the FIRST time a user opens a given screen. One large
  * sentence centered on a dimmed backdrop + one small visual cue.
@@ -9,7 +9,7 @@
  * Design rules:
  *  - ONE sentence. 15-25 words. Large type. Everything else gets cut.
  *  - ONE visual (an Ionicon glyph, 56pt, accent-colored). No screenshots.
- *  - Tap anywhere to dismiss — no Next button, no progress dots.
+ *  - Tap anywhere to dismiss - no Next button, no progress dots.
  *  - Versioned IDs. If copy changes meaningfully later, bump the id
  *    to v2 and the coach re-shows once per user.
  *
@@ -18,7 +18,7 @@
  *    for every screen the user presses".
  *  - An inline pill can be missed. A full-screen flash cannot.
  *  - 400ms delay after mount so the screen renders underneath first
- *    — the user sees the real UI, then the coach lands on top.
+ *    - the user sees the real UI, then the coach lands on top.
  *    Instant-fire would feel like a loading screen.
  *
  * Usage in a screen:
@@ -78,7 +78,7 @@ export function FirstVisitCoach({
         const seen = await AsyncStorage.getItem(STORAGE_PREFIX + id);
         if (seen === '1') return;
         // Delay so the real screen paints first. User sees the
-        // actual UI, then the coach mark lands on top — not a
+        // actual UI, then the coach mark lands on top - not a
         // blank "what is loading" flash.
         setTimeout(() => {
           if (cancelled) return;
@@ -86,7 +86,7 @@ export function FirstVisitCoach({
           setVisible(true);
         }, MOUNT_DELAY_MS);
       } catch {
-        // Storage failure — better to skip than to show on every
+        // Storage failure - better to skip than to show on every
         // open. The user gets the real screen, which is fine.
       }
     })();
@@ -121,7 +121,7 @@ export function FirstVisitCoach({
       await AsyncStorage.setItem(STORAGE_PREFIX + id, '1');
     } catch {
       // Best-effort. If the write fails the user sees it again on
-      // next open — minor cost, no correctness issue.
+      // next open - minor cost, no correctness issue.
     }
   };
 
@@ -137,7 +137,7 @@ export function FirstVisitCoach({
   const isDark = !!theme.surface.dark;
   const backdropColor = isDark
     ? 'rgba(0,0,0,0.78)'
-    // Light themes — use a darkened surface tint at high alpha. This
+    // Light themes - use a darkened surface tint at high alpha. This
     // keeps the overlay feeling like the app rather than a generic
     // black scrim, and preserves enough contrast for white+accent text.
     : 'rgba(18,22,38,0.86)';
@@ -145,7 +145,7 @@ export function FirstVisitCoach({
   const sublineColor = 'rgba(255,255,255,0.78)';
   const hintColor = 'rgba(255,255,255,0.6)';
 
-  // Wrap in a native Modal so the coach overlays EVERYTHING — the
+  // Wrap in a native Modal so the coach overlays EVERYTHING - the
   // tab bar, any floating FABs, etc. Without this, the tab bar sits
   // on top and users see the navbar peeking through the dim, which
   // breaks the "pause, read this one sentence" intent.

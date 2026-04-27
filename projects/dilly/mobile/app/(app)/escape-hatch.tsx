@@ -56,7 +56,7 @@ function fmtDelta(n: number): string {
 export default function EscapeHatchScreen() {
   const insets = useSafeAreaInsets();
   // Theme the root surface so the "sorry you lost your job" flow
-  // respects Customize Dilly. Deep component-level audit deferred —
+  // respects Customize Dilly. Deep component-level audit deferred -
   // root bg is the most visible regression.
   const theme = useResolvedTheme();
   const { data, loading, refreshing, refresh } = useCachedFetch<Data>(

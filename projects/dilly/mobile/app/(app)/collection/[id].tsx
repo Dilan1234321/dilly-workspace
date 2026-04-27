@@ -1,13 +1,13 @@
 import { safeBack } from '../../../lib/navigation';
 /**
- * Collection detail — shows the saved jobs inside a single collection.
+ * Collection detail - shows the saved jobs inside a single collection.
  *
  * Reached via `router.push('/(app)/collection/' + collectionId)` from the
  * My Collections sheet on the Jobs page. Renders the collection name big
  * at the top, a back button, and the saved jobs as cards.
  *
  * Collections only store a slim snapshot per job (id, title, company, url)
- * so the cards here are intentionally lightweight — not the full fit
+ * so the cards here are intentionally lightweight - not the full fit
  * narrative flow. Tapping a card opens the job URL in Safari; there's a
  * remove action on each card so users can curate the collection.
  */
@@ -75,7 +75,7 @@ export default function CollectionDetail() {
     if (!collection) return;
     Alert.alert(
       'Remove from collection?',
-      'The job stays in Dilly — this just takes it out of this collection.',
+      'The job stays in Dilly - this just takes it out of this collection.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

@@ -1,5 +1,5 @@
 /**
- * @dilly/api — Score color system
+ * @dilly/api - Score color system
  *
  * Single source of truth for score-based colors, labels, and thresholds.
  * Used by desktop, mobile, and dashboard.
@@ -69,7 +69,7 @@ export function getScoreCardBg(score: number): string {
   return getScoreBand(score).cardBg;
 }
 
-/** Score milestone detection — returns a label if a threshold was crossed. */
+/** Score milestone detection - returns a label if a threshold was crossed. */
 export function getMilestone(prev: number, curr: number): string | null {
   const thresholds = [60, 70, 75, 80, 85, 90];
   for (const t of thresholds) {

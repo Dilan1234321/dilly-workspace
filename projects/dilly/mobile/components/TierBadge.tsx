@@ -1,5 +1,5 @@
 /**
- * TierBadge — small visible member mark for paid tiers.
+ * TierBadge - small visible member mark for paid tiers.
  *
  * Starter users see nothing (no anti-pattern where free users stare
  * at a locked badge telling them they don't have something). Dilly
@@ -50,7 +50,7 @@ export function TierBadge({ size = 'sm' }: { size?: Size }) {
         height: h,
         paddingHorizontal: 8,
         borderRadius: h / 2,
-        // Pro gets a thicker border — reads as "heavier" visually
+        // Pro gets a thicker border - reads as "heavier" visually
         // without needing extra color. Dilly gets the soft-fill chip
         // treatment that matches the Plan card's member-pride panel.
         backgroundColor: isPro ? 'transparent' : theme.accentSoft,
@@ -72,7 +72,7 @@ export function TierBadge({ size = 'sm' }: { size?: Size }) {
           // mark that feels clean rather than ornate.
           letterSpacing: isPro ? 2.0 : 1.4,
           color: theme.accent,
-          // Match the icon's vertical alignment — the Cinzel-style
+          // Match the icon's vertical alignment - the Cinzel-style
           // caps need a tiny nudge to sit true on the baseline.
           lineHeight: fs + 2,
         }}

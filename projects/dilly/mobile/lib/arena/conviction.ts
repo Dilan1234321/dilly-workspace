@@ -1,5 +1,5 @@
 /**
- * Arena/conviction — compute the Conviction Builder output.
+ * Arena/conviction - compute the Conviction Builder output.
  *
  * For a user + target company, we compute:
  *   - assets: facts in the user's profile that are genuine evidence
@@ -55,7 +55,7 @@ export function buildConviction(
     if (hit && !seenAssetLabels.has(hit.label || '')) {
       assets.push({
         label: hit.label || hit.value || sk,
-        why: `This maps to "${sk}" — one of the first things they ask about.`,
+        why: `This maps to "${sk}" - one of the first things they ask about.`,
       })
       seenAssetLabels.add(hit.label || '')
     }
@@ -67,7 +67,7 @@ export function buildConviction(
     if ((cat === 'achievement' || cat === 'project') && !seenAssetLabels.has(f.label || '')) {
       assets.push({
         label: f.label || f.value || 'An achievement on your profile',
-        why: 'A concrete thing you did — the interviewer will want the story.',
+        why: 'A concrete thing you did - the interviewer will want the story.',
       })
       seenAssetLabels.add(f.label || '')
       if (assets.length >= 6) break
@@ -97,7 +97,7 @@ export function buildConviction(
   const topGaps = gaps.slice(0, 3)
 
   // STORY: choose the strongest achievement/project fact, if any, and
-  // wrap it in a STAR scaffold. We never invent numbers — the user
+  // wrap it in a STAR scaffold. We never invent numbers - the user
   // fills the specifics. We only write the shape.
   const hero = lowered.find(f => (f.category || '').toLowerCase() === 'achievement')
     || lowered.find(f => (f.category || '').toLowerCase() === 'project')
@@ -105,10 +105,10 @@ export function buildConviction(
     ? {
         prompt: 'Tell me about a time you had to do hard work.',
         draft: [
-          `SITUATION — ${hero.label || hero.value}. Walk them through the scope in one sentence. Scale matters: who, how many people affected, what was the deadline.`,
-          `TASK — What specifically was yours to own. Not the team's, yours. This is the line recruiters listen for.`,
-          `ACTION — The two or three concrete moves you made. Name the tools and the trade-offs. This is where you prove you were the one doing the work.`,
-          `RESULT — The outcome in numbers if you have them. If you do not, the human-level impact. Close with what you would do differently now.`,
+          `SITUATION - ${hero.label || hero.value}. Walk them through the scope in one sentence. Scale matters: who, how many people affected, what was the deadline.`,
+          `TASK - What specifically was yours to own. Not the team's, yours. This is the line recruiters listen for.`,
+          `ACTION - The two or three concrete moves you made. Name the tools and the trade-offs. This is where you prove you were the one doing the work.`,
+          `RESULT - The outcome in numbers if you have them. If you do not, the human-level impact. Close with what you would do differently now.`,
         ].join('\n\n'),
       }
     : null
@@ -119,7 +119,7 @@ export function buildConviction(
   const questions: string[] = [
     `What does a strong first 90 days look like for someone in this role at ${company}?`,
     `When an IC here has to push back on a senior decision, how does that usually play out?`,
-    `What would I have to be really good at to get the next promotion here — not what is written down, what actually happens?`,
+    `What would I have to be really good at to get the next promotion here - not what is written down, what actually happens?`,
   ]
 
   return { assets: assets.slice(0, 5), gaps: topGaps, story, questions }

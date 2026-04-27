@@ -1,5 +1,5 @@
 /**
- * DillyLoadingState — the standard loading surface for any page.
+ * DillyLoadingState - the standard loading surface for any page.
  *
  * Large centered DillyFace with a rotating pulse-fade line of text.
  * Matches the loading experience already used on My Dilly, AI Arena,
@@ -31,7 +31,7 @@ interface Props {
   /** Accessory to render in Dilly's hand (e.g. 'pencil'). */
   accessory?: 'none' | 'pencil';
   /** Optional retry handler. When provided, a "Retry" button appears
-   *  after 20s of loading — escape hatch for stuck screens. */
+   *  after 20s of loading - escape hatch for stuck screens. */
   onRetry?: () => void;
 }
 
@@ -53,7 +53,7 @@ export default function DillyLoadingState({
   const lines = (messages && messages.length > 0) ? messages : DEFAULT_MESSAGES;
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   const [textIdx, setTextIdx] = useState(0);
-  // Retry escape hatch — surfaces after 20s of loading when the caller
+  // Retry escape hatch - surfaces after 20s of loading when the caller
   // has passed onRetry. Stuck loading screens were the #1 "it looks
   // broken" complaint; a visible retry button reframes the wait as
   // recoverable.

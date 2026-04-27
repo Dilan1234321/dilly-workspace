@@ -35,7 +35,7 @@ export default function ResultsScreen() {
     <View style={[s.container, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl }]}>
       {/* Centered content */}
       <View style={s.content}>
-        {/* Excited Dilly. Replaces the old checkmark — Dilly's own
+        {/* Excited Dilly. Replaces the old checkmark - Dilly's own
             face celebrating is a stronger signal than a stock check. */}
         <View style={s.faceHero}>
           <DillyFace size={108} mood="celebrating" />
@@ -78,7 +78,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   // Was a small gold check circle. Now just a centered slot for
-  // DillyFace — no ring, no fill, per the face-is-clean rule.
+  // DillyFace - no ring, no fill, per the face-is-clean rule.
   faceHero: {
     alignItems: 'center',
     justifyContent: 'center',

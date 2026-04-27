@@ -17,7 +17,7 @@ import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
 import { LogWinSheet } from '../../components/WinsCard';
-// DailyPulseCard / RememberedCard / WinsCard imports removed — all
+// DailyPulseCard / RememberedCard / WinsCard imports removed - all
 // three were cut from Home per tester feedback. Wins timeline now
 // lives on My Dilly; the Remembered callback became the Dilly AI
 // opener; Daily Pulse was retired. LogWinSheet stays so the compact
@@ -44,7 +44,7 @@ const INDIGO = '#1B3FA0';
 
 // -- Skeleton -----------------------------------------------------------------
 
-/** Header avatar — renders the uploaded profile photo when
+/** Header avatar - renders the uploaded profile photo when
  *  available, falls back to an accent-ringed initial circle when the
  *  photo is missing or the remote image fails to load. Taps open My
  *  Dilly. The broken-image state is memoized per-instance so one
@@ -260,7 +260,7 @@ function HolderHome() {
   // accent used for icons + CTAs pulls from this so HolderHome tracks
   // the user's theme axis (surface + accent + shape + type) the same
   // way SeekerHome does. Previously HolderHome didn't call this at
-  // all — styles were frozen at module load via the colors proxy, so
+  // all - styles were frozen at module load via the colors proxy, so
   // the page looked the same no matter which theme the user picked.
   const theme = useResolvedTheme();
   // Ambient premium feel: borders, typography, press feedback vary by
@@ -270,7 +270,7 @@ function HolderHome() {
   const feel = useTierFeel();
   // Recent upgrade: true for 24h after a starter→paid transition.
   // Drives a subtle "welcome to Dilly" line under the greeting that
-  // fades out of existence on day two. No dismiss button — it just
+  // fades out of existence on day two. No dismiss button - it just
   // expires. Makes day one feel distinct without becoming an ad.
   const recentUpgrade = useRecentUpgrade();
   // Session-cached: renders instantly from the previous fetch on
@@ -357,7 +357,7 @@ function HolderHome() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
       >
         {/* Greeting + settings. Paid users see a TierBadge next to the
-            eyebrow — the ambient signal that tells them the app they
+            eyebrow - the ambient signal that tells them the app they
             paid for is different from the free one, without being an
             ad in their face every session. */}
         <View style={h.greetRow}>
@@ -394,7 +394,7 @@ function HolderHome() {
         {/* ── 1. YOUR PLAN anchor ─────────────────────────────────
             The product promise in one card: "Dilly turns your
             career confusion into a plan." Sits above every other
-            card on home because that's the mental model — Dilly
+            card on home because that's the mental model - Dilly
             makes the plan, everything else (jobs, arena, profile)
             is where the plan gets executed or sharpened. */}
         <FadeInView delay={20}>
@@ -418,7 +418,7 @@ function HolderHome() {
             ]}
           >
             {/* Pro users get a subtle accent bar across the top of
-                the hero — the same trick the Plan card uses in
+                the hero - the same trick the Plan card uses in
                 settings. Reads as "this card was made for you". */}
             {feel.proAccentBar && (
               <View
@@ -564,8 +564,8 @@ function HolderHome() {
             {[
               { icon: 'chatbubbles' as const, color: theme.accent, label: 'Ask Dilly',
                 onPress: () => openDillyOverlay({ isPaid: true }) },
-              { icon: 'shield-checkmark' as const, color: '#00C853', label: 'Threat',
-                onPress: () => router.push('/(app)/ai-arena' as any) },
+              { icon: 'color-palette' as const, color: '#00C853', label: 'Customize',
+                onPress: () => router.push('/(app)/customize' as any) },
               { icon: 'trending-up' as const, color: colors.blue, label: 'Market',
                 onPress: () => router.push('/(app)/jobs' as any) },
               { icon: 'calendar' as const, color: colors.gold, label: 'Calendar',
@@ -671,8 +671,8 @@ const h = StyleSheet.create({
   trajCtaText: { fontSize: 12, fontWeight: '700', color: INDIGO },
 
   // Tools
-  toolsRow: { flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
-  toolItem: { alignItems: 'center', gap: 6, flex: 1 },
+  toolsRow: { flexDirection: 'row', gap: 16, justifyContent: 'center', alignItems: 'flex-start' },
+  toolItem: { alignItems: 'center', gap: 6, width: 64 },
   toolIcon: {
     width: 48, height: 48, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
@@ -684,7 +684,7 @@ const h = StyleSheet.create({
 // ── SeniorResetHome ──────────────────────────────────────────────────
 // Bespoke Career Center for user_path === 'senior_reset'. Rung-3
 // per-situation surface. The user was just laid off after years in
-// their field. Tone is calm, warm, grounded — never cheerleading,
+// their field. Tone is calm, warm, grounded - never cheerleading,
 // never urgent, never treating them like a new-grad looking for
 // their first job. Every block is designed to:
 //   - acknowledge where they are in the arc (weeks since layoff)
@@ -788,7 +788,7 @@ function SeniorResetHome() {
           </AnimatedPressable>
         </View>
 
-        {/* Your Plan anchor — senior-reset users are searching; the
+        {/* Your Plan anchor - senior-reset users are searching; the
             "warm up one past colleague" copy is exactly right here. */}
         <FadeInView delay={10}>
           <YourPlanCard plan={plan} firstName={firstName} />
@@ -942,7 +942,7 @@ const sr = StyleSheet.create({
     color: colors.t1, letterSpacing: -0.5, lineHeight: 28,
   },
 
-  // Regroup — warm, quiet
+  // Regroup - warm, quiet
   regroupCard: {
     backgroundColor: '#F0FDFA',
     borderWidth: 1, borderColor: '#99F6E4',
@@ -1044,7 +1044,7 @@ function SeekerHome() {
   // Tier feel: starter stays clean, paid tiers lean heavier via
   // headingWeight + letter-spacing and thicker card borders.
   const feel = useTierFeel();
-  // Per-situation copy — greeting, eyebrow, CTA verb, empty states
+  // Per-situation copy - greeting, eyebrow, CTA verb, empty states
   // all key off the user's user_path via sessionCache.
   const situationCopy = useSituationCopy();
   const [profile, setProfile] = useState<any>({});
@@ -1053,7 +1053,7 @@ function SeekerHome() {
   const [dillyTake, setDillyTake] = useState<string | null>(null);
   const [topJobs, setTopJobs] = useState<any[]>([]);
   // Live match counts for the Home Jobs card. Jobs went from a top-
-  // level tab to a card on Home — the card earns its slot by showing
+  // level tab to a card on Home - the card earns its slot by showing
   // how many strong / stretch matches landed today, so users can tell
   // at a glance whether to dig in.
   const [jobCounts, setJobCounts] = useState<{ strong: number; stretch: number; total: number } | null>(null);
@@ -1064,7 +1064,7 @@ function SeekerHome() {
   // Counts toward the "Save your first job" onboarding step so the
   // checkmark flips after saving, not after applying.
   const [savedJobCount, setSavedJobCount] = useState(0);
-  // Home "Log a win" shortcut — the full Wins timeline moved to
+  // Home "Log a win" shortcut - the full Wins timeline moved to
   // My Dilly, but we keep an entry point here so logging a win in
   // the moment stays frictionless.
   const [logWinOpen, setLogWinOpen] = useState(false);
@@ -1084,7 +1084,7 @@ function SeekerHome() {
   } | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
-  // Journey tracking — server-persisted dismissed set + live-state predicates
+  // Journey tracking - server-persisted dismissed set + live-state predicates
   const [gsDismissed, setGsDismissed] = useState<Set<string>>(new Set());
   const [gsProfileDone, setGsProfileDone] = useState(false);
   const [gsTranscript,  setGsTranscript]  = useState(false);
@@ -1208,7 +1208,7 @@ function SeekerHome() {
         }).catch(() => {});
 
         // Saved-jobs count across all collections. Powers the
-        // "Save your first job" onboarding checkmark — previously
+        // "Save your first job" onboarding checkmark - previously
         // that step only flipped when the user APPLIED to something,
         // which is wrong (its subtitle is "start building your
         // pipeline", not "apply").
@@ -1252,7 +1252,7 @@ function SeekerHome() {
           if (data?.headline) setWeeklyBrief(data);
         }).catch(() => {});
 
-        // Journey tracking — server-persisted dismissed set + live predicates
+        // Journey tracking - server-persisted dismissed set + live predicates
         const dismissed: string[] = Array.isArray(profileRes?.getting_started_dismissed)
           ? profileRes.getting_started_dismissed : [];
         setGsDismissed(new Set(dismissed));
@@ -1291,7 +1291,7 @@ function SeekerHome() {
   const firstName = firstNameRaw.replace(/@.*$/, '');
 
   // Your Plan for this week. Anchor card at the top of every home.
-  // Mode here is inferred from is_student — anyone who hits SeekerHome
+  // Mode here is inferred from is_student - anyone who hits SeekerHome
   // is either an actual seeker (laid-off, career-switch, parent-
   // returning, etc.) or a student. The user_path value drives the
   // path-specific copy inside the plan generator.
@@ -1318,7 +1318,7 @@ function SeekerHome() {
     }).catch(() => {});
   }
 
-  // Journey steps — predicates evaluated server-side, returned in /profile.
+  // Journey steps - predicates evaluated server-side, returned in /profile.
   // Completed = server predicate true OR permanently dismissed in DB.
   const gsPredicates: Record<string, boolean> = {
     profile:    gsProfileDone,
@@ -1344,7 +1344,7 @@ function SeekerHome() {
       onPress: () => router.push('/(app)/my-dilly-profile'),
     },
     {
-      id: 'win', title: 'Log your first win', subtitle: 'Applications, interviews, offers — they all count.',
+      id: 'win', title: 'Log your first win', subtitle: 'Applications, interviews, offers - they all count.',
       icon: 'trophy', color: colors.amber,
       completed: gsPredicates.win || gsDismissed.has('win'),
       onPress: () => router.push('/(app)/my-dilly-profile'),
@@ -1456,7 +1456,7 @@ function SeekerHome() {
         {/* DillyFace + pull-quote + talk CTA.
             Moved here per product direction: above Chapter but below
             Your Plan. Reads as "Dilly speaks to you" before the
-            weekly ritual card — a warm invitation, not competing with
+            weekly ritual card - a warm invitation, not competing with
             the plan anchor. Full block cut from its previous slot
             below Jobs so there is exactly one rendering on Home. */}
         <FadeInView delay={12}>
@@ -1573,7 +1573,7 @@ function SeekerHome() {
             how many strong + stretch matches landed today. Live
             count pulled from the same /v2/internships/feed window.
             Tap deep-links to /jobs. Renders only when the user has
-            at least one match to surface — otherwise Home would
+            at least one match to surface - otherwise Home would
             show a card saying "0 matches" which reads as broken. */}
         {jobCounts && jobCounts.total > 0 ? (
           <FadeInView delay={17}>
@@ -1625,18 +1625,18 @@ function SeekerHome() {
           </FadeInView>
         ) : null}
 
-        {/* Home v2 — radically simpler per tester feedback.
+        {/* Home v2 - radically simpler per tester feedback.
             Removed: Daily Pulse, Dilly Skills promo, Dilly Remembered
             card, Wins timeline. The callback intelligence from
             Remembered now lives as the Dilly AI opening message
-            instead — presence in the moment the user engages rather
+            instead - presence in the moment the user engages rather
             than another block competing for attention on Home.
             The Wins TIMELINE moved to My Dilly (public profile
             surface) so logged wins compound visibly in the profile;
             a "Log a win" shortcut now lives on Home instead of the
             full feed. */}
 
-        {/* Log a win — compact pill. Opens the same LogWinSheet the
+        {/* Log a win - compact pill. Opens the same LogWinSheet the
             My Dilly timeline uses, so logging stays frictionless
             from Home even though the timeline moved. */}
         <FadeInView delay={18}>
@@ -1724,55 +1724,6 @@ function SeekerHome() {
           </FadeInView>
         ) : null}
 
-        {/* ── Weekly Brief ──────────────────────────────────────
-            Personalized card for the Monday-morning moment. Server
-            generates this once per ISO week per user; pure derivation
-            from profile + jobs feed, no LLM cost. This is the card
-            that makes opening Dilly feel like checking your career
-            inbox.
-
-            Each bullet has a deep_link. tapping jumps to the
-            relevant tab with context (e.g. Jobs tab with ?weekly=1
-            shows the jobs that match). */}
-        {weeklyBrief && (weeklyBrief.new_jobs_count > 0 || (weeklyBrief.bullets?.length ?? 0) > 0) && (
-          <FadeInView delay={40}>
-            <View style={[s.briefCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <View style={s.briefTopRow}>
-                <View style={[s.briefBadge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-                  <Ionicons name="sparkles" size={11} color={theme.accent} />
-                  <Text style={[s.briefBadgeText, { color: theme.accent }]}>YOUR WEEK</Text>
-                </View>
-              </View>
-              <Text style={[s.briefHeadline, { color: theme.surface.t1 }]}>{weeklyBrief.headline}</Text>
-              {(weeklyBrief.bullets || []).map((b, i) => (
-                <AnimatedPressable
-                  key={i}
-                  style={[s.briefRow, { borderTopColor: theme.surface.border }]}
-                  scaleDown={0.98}
-                  onPress={() => {
-                    const link = b.deep_link || '';
-                    if (link.startsWith('dilly://jobs')) {
-                      router.push('/(app)/jobs');
-                    } else if (link.startsWith('dilly://ai-chat')) {
-                      openDillyOverlay({ name: firstName, isPaid: false });
-                    } else if (link.startsWith('dilly://my-dilly')) {
-                      router.push('/(app)/my-dilly-profile');
-                    } else {
-                      openDillyOverlay({ name: firstName, isPaid: false });
-                    }
-                  }}
-                >
-                  <View style={[s.briefRowIcon, { backgroundColor: theme.accentSoft }]}>
-                    <Ionicons name={b.icon as any} size={13} color={theme.accent} />
-                  </View>
-                  <Text style={[s.briefRowText, { color: theme.surface.t1 }]}>{b.text}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
-                </AnimatedPressable>
-              ))}
-            </View>
-          </FadeInView>
-        )}
-
         {/* DillyFace + pull-quote + talk CTA moved up to sit between
             Your Plan and Chapter. See the FadeInView delay={12} block
             above the ChapterCard render for the relocated block. */}
@@ -1793,7 +1744,7 @@ function SeekerHome() {
               onPress={() => openDillyOverlay({
                 name: firstName,
                 isPaid: false,
-                initialMessage: "Hey Dilly — I'm just getting started. Help me introduce myself. Ask me one or two things you need to know.",
+                initialMessage: "Hey Dilly - I'm just getting started. Help me introduce myself. Ask me one or two things you need to know.",
               })}
               scaleDown={0.99}
             >
@@ -1804,7 +1755,7 @@ function SeekerHome() {
                 <Text style={[s.dillySeesTitle, { color: theme.accent }]}>TELL DILLY ABOUT YOU</Text>
               </View>
               <Text style={[s.dillySeesRowText, { color: theme.surface.t1, marginTop: 10, lineHeight: 20 }]}>
-                Right now Dilly knows nothing about you. Tell her one thing — your field, a project, a goal, anything — and every screen in this app starts getting sharper.
+                Right now Dilly knows nothing about you. Tell her one thing - your field, a project, a goal, anything - and every screen in this app starts getting sharper.
               </Text>
               <View style={[s.dillySeesFooter, { borderTopColor: theme.surface.border, marginTop: 12 }]}>
                 <Text style={[s.dillySeesFooterText, { color: theme.surface.t3 }]}>
@@ -1997,7 +1948,11 @@ function SeekerHome() {
         {/* Quick Tools (moved above pipeline) */}
         <FadeInView delay={showJourney ? 360 : 140}>
           <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>QUICK TOOLS</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[s.toolRow, { justifyContent: 'center', flexGrow: 1 }]}
+          >
             {[
               // "What We Think" removed. It was an on-demand LLM button that
               // could be hammered. Replaced with the weekly Chapters ritual
@@ -2006,7 +1961,7 @@ function SeekerHome() {
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
               { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar' as any) },
-              { icon: 'shield-checkmark' as const, color: '#00C853', label: 'AI Arena', onPress: () => router.push('/(app)/ai-arena') },
+              { icon: 'color-palette' as const, color: '#00C853', label: 'Customize', onPress: () => router.push('/(app)/customize' as any) },
             ].map(tool => (
               <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
                 <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
@@ -2018,7 +1973,7 @@ function SeekerHome() {
           </ScrollView>
         </FadeInView>
 
-        {/* Pipeline tiles removed — felt like a status dashboard,
+        {/* Pipeline tiles removed - felt like a status dashboard,
             not a next-move surface. Users who want to see their
             tracker reach it via the Jobs tab. Kept PipelineTile for
             any future reuse. */}
@@ -2099,7 +2054,7 @@ export default function HomeScreen() {
   const userPath = String(profileCached?.user_path || '').toLowerCase();
 
   if (appMode === 'holder') return <HolderHome />;
-  // Full Rung-3 bespoke Homes — their own file, own sections.
+  // Full Rung-3 bespoke Homes - their own file, own sections.
   if (userPath === 'senior_reset')        return <SeniorResetHome />;
   if (userPath === 'exploring')           return <ExploringHome />;
   if (userPath === 'dropout')             return <DropoutHome />;
@@ -2109,7 +2064,7 @@ export default function HomeScreen() {
   if (userPath === 'parent_returning')    return <ParentReturningHome />;
   if (userPath === 'international_grad')  return <InternationalGradHome />;
   if (userPath === 'refugee')             return <RefugeeHome />;
-  // Tier-2 spec-driven Home — one component, per-path data. Covers
+  // Tier-2 spec-driven Home - one component, per-path data. Covers
   // student / career_switch / first_gen_college / trades_to_white_collar
   // / formerly_incarcerated / neurodivergent / disabled_professional
   // / lgbtq / rural_remote_only / ex_founder.

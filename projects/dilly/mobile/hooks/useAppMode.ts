@@ -1,5 +1,5 @@
 /**
- * useAppMode — React hook exposing the user's current AppMode.
+ * useAppMode - React hook exposing the user's current AppMode.
  *
  * Reads the profile once on mount + refetches on focus. Result feeds
  * the tab bar (_layout.tsx) and any home screen that switches layout
@@ -7,7 +7,7 @@
  *
  * Caching:
  *   - Module-level variable `_memMode` holds the last resolved mode
- *     for the life of the JS runtime — so navigating between tabs
+ *     for the life of the JS runtime - so navigating between tabs
  *     (which remounts consumers) never flashes back to the default.
  *   - AsyncStorage backs that up across cold starts. We hydrate from
  *     it on first mount so a relaunch for a holder never shows
@@ -29,7 +29,7 @@ let _memMode: AppMode | null = null;
 // Pub/sub for mode changes. Every useAppMode hook subscribes on mount
 // and re-renders whenever primeAppMode fires. Without this, Settings
 // could update _memMode but already-mounted screens (tab bar, Home,
-// Jobs) would keep rendering with the stale mode — which caused mid-
+// Jobs) would keep rendering with the stale mode - which caused mid-
 // session crashes when a screen tried to render a tab or view that
 // only exists in the new mode.
 const _modeListeners = new Set<(m: AppMode) => void>();
@@ -50,7 +50,7 @@ export function useAppMode(): AppMode {
   const [mode, setMode] = useState<AppMode>(_memMode ?? 'seeker');
 
   // Subscribe to primeAppMode pushes so ALL consumers re-render when
-  // the mode flips — not just the one that initiated the switch.
+  // the mode flips - not just the one that initiated the switch.
   useEffect(() => {
     const cb = (m: AppMode) => setMode(m);
     _modeListeners.add(cb);
@@ -61,7 +61,7 @@ export function useAppMode(): AppMode {
     let cancelled = false;
 
     // Hydrate from AsyncStorage if the in-memory cache is empty
-    // (first mount after cold start). This is best-effort — if it
+    // (first mount after cold start). This is best-effort - if it
     // fails we just wait for /profile.
     if (_memMode == null) {
       (async () => {
@@ -76,7 +76,7 @@ export function useAppMode(): AppMode {
       })();
     }
 
-    // Authoritative read from the server — always runs. Updates both
+    // Authoritative read from the server - always runs. Updates both
     // caches so later mounts start from the correct value.
     (async () => {
       try {
@@ -102,7 +102,7 @@ export function useAppMode(): AppMode {
  * Push a freshly-resolved mode into the in-memory + AsyncStorage
  * cache. Settings calls this the moment the user flips the Career
  * Mode toggle so every other screen using useAppMode sees the new
- * mode on its next render — without waiting for its own /profile
+ * mode on its next render - without waiting for its own /profile
  * fetch to come back. Without this, flipping in Settings only
  * changed the Settings screen's local state; the tab-bar and other
  * consumers kept the old mode until their next profile refetch.
@@ -110,7 +110,7 @@ export function useAppMode(): AppMode {
 export async function primeAppMode(mode: AppMode): Promise<void> {
   _memMode = mode;
   try { await AsyncStorage.setItem(STORAGE_KEY, mode); } catch {}
-  // Fan out to every mounted useAppMode — this is what makes the tab
+  // Fan out to every mounted useAppMode - this is what makes the tab
   // bar and other screens actually flip to the new mode in real time
   // instead of waiting for their own /profile refetch on next focus.
   _notifyModeChange(mode);

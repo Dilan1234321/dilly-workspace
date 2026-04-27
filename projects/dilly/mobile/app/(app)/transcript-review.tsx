@@ -81,7 +81,7 @@ export default function TranscriptReviewScreen() {
       });
       setManuallyEdited(prev => ({ ...prev, [field]: true }));
     } catch {
-      // Silent — will retry on next blur
+      // Silent - will retry on next blur
     } finally {
       setSaving(false);
     }
@@ -100,7 +100,7 @@ export default function TranscriptReviewScreen() {
     if (hasEdits) {
       Alert.alert(
         'Replace transcript?',
-        "You've made manual edits — replacing your transcript will reset them. Continue?",
+        "You've made manual edits - replacing your transcript will reset them. Continue?",
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Replace', style: 'destructive', onPress: doUpload },
@@ -126,14 +126,25 @@ export default function TranscriptReviewScreen() {
       if (res.ok) {
         const body = await res.json();
         if (body.low_confidence) {
-          Alert.alert('Heads up', body.low_confidence_message ?? "We parsed your transcript but couldn't find all the details — you can edit them below.");
+          Alert.alert('Heads up', body.low_confidence_message ?? "We parsed your transcript but couldn't find all the details - you can edit them below.");
         }
         await loadTranscript();
       } else {
-        Alert.alert('Upload failed', 'Could not read this file. Make sure it\'s a PDF with selectable text (not a photo).');
+        // Surface the API's actual reason instead of a generic line - the
+        // generic version was hiding bugs (wrong filename casing, missing
+        // PDF magic, file too big, etc.) and leaving users guessing.
+        let detail = '';
+        try {
+          const body = await res.json();
+          detail = (body?.detail || body?.message || '').toString().trim();
+        } catch { /* non-JSON response */ }
+        Alert.alert(
+          'Upload failed',
+          detail || `Server returned ${res.status}. Make sure it's a PDF with selectable text (not a photo).`
+        );
       }
-    } catch {
-      Alert.alert('Upload failed', 'Could not read the file.');
+    } catch (e: any) {
+      Alert.alert('Upload failed', e?.message ? `Could not read the file: ${e.message}` : 'Could not read the file.');
     } finally {
       setUploading(false);
     }
@@ -183,7 +194,7 @@ export default function TranscriptReviewScreen() {
         <View style={[s.disclaimer, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
           <Ionicons name="information-circle-outline" size={16} color={theme.accent} style={{ marginTop: 1 }} />
           <Text style={[s.disclaimerText, { color: theme.accent }]}>
-            Dilly parsed your transcript automatically. Double-check the details below — changes save when you leave a field.
+            Dilly parsed your transcript automatically. Double-check the details below - changes save when you leave a field.
           </Text>
         </View>
 

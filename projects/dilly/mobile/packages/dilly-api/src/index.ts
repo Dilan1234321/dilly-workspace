@@ -1,5 +1,5 @@
 /**
- * @dilly/api — Shared data layer for all Dilly frontends
+ * @dilly/api - Shared data layer for all Dilly frontends
  *
  * Import from here for everything:
  *   import { createDillyClient, type AuditV2, getScoreColor } from '@dilly/api';
@@ -15,7 +15,7 @@ export {
   type TokenProvider,
 } from "./client";
 
-// Types — complete re-export so consumers can import anything from "@dilly/api"
+// Types - complete re-export so consumers can import anything from "@dilly/api"
 export type {
   ActionItem,
   ApiError,

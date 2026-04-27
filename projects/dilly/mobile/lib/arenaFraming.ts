@@ -10,7 +10,7 @@
  * field I gave 20 years to is shifting under me." Same data, very
  * different stance.
  *
- * This module provides a short narrator block per path — 2 sentences
+ * This module provides a short narrator block per path - 2 sentences
  * that frame the Arena for who the user is. Injected at the top of
  * the Arena screen above the Field Pulse card. Zero LLM cost.
  *
@@ -100,7 +100,7 @@ const FRAMINGS: Record<string, ArenaFraming> = {
   },
   ex_founder: {
     eyebrow: 'THE MARKET SIDE OF THE TABLE',
-    line:    'You know what it looks like from inside a company you ran. Here is what it looks like from the hiring side — which most candidates cannot see.',
+    line:    'You know what it looks like from inside a company you ran. Here is what it looks like from the hiring side - which most candidates cannot see.',
   },
 };
 

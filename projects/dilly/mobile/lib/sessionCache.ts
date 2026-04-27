@@ -1,5 +1,5 @@
 /**
- * sessionCache — module-level in-memory cache + a hook that wraps the
+ * sessionCache - module-level in-memory cache + a hook that wraps the
  * mount+focus fetch pattern used across the app.
  *
  * Context: every tab in this app does some variation of
@@ -22,7 +22,7 @@
  *   - a manual refresh() for pull-to-refresh that bypasses the cache
  *
  * The cache lives on the JS module so it survives component unmounts
- * but dies at app-process exit, which matches what we want — no stale
+ * but dies at app-process exit, which matches what we want - no stale
  * data across app launches.
  */
 
@@ -64,7 +64,7 @@ type UseCachedFetchOpts<T> = {
    *  still returned instantly; a background revalidation runs. */
   ttlMs?: number;
   /** When true, treat cache absence (no entry at all) as "wait for
-   *  the first fetch" — the returned `data` stays undefined until
+   *  the first fetch" - the returned `data` stays undefined until
    *  the fetch resolves. Defaults to true. */
   waitForFirstFetch?: boolean;
   /** Parse a raw fetch result into the cached shape. Runs BEFORE the

@@ -1,5 +1,5 @@
 /**
- * Rejection Pattern Map — seeker tile. Reads the user's recent
+ * Rejection Pattern Map - seeker tile. Reads the user's recent
  * applications + interviews, derives a pattern, names the move.
  */
 
@@ -43,7 +43,7 @@ export default function RejectionPatternMap() {
     <ArenaPage
       eyebrow="REJECTION · PATTERN MAP"
       title="What your 'no's are telling you."
-      subtitle="Rejections are data. The pattern is what matters — not any one call."
+      subtitle="Rejections are data. The pattern is what matters - not any one call."
     >
       {!signals ? null : pattern ? (
         <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>

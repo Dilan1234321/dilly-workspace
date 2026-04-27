@@ -97,11 +97,23 @@ async def get_profile(request: Request):
         profile["gs_resume"]       = bool(profile.get("resume_uploaded_at"))
         profile["gs_win"]          = bool(len(profile.get("wins") or []) > 0)
         profile["gs_calendar"]     = bool(profile.get("calendar_feed_token"))
+        # gs_chapter: true once the user has completed ANY Chapter
+        # session, V1 (chapters table) or V2 (chapter_recaps). The home
+        # journey step was stuck "open" forever for V2 users because
+        # the predicate only checked the V1 store and V2 saves to a
+        # different table.
         try:
             from projects.dilly.api import chapters_store
-            profile["gs_chapter"] = chapters_store.count_chapters(email) > 0
+            v1_count = chapters_store.count_chapters(email)
         except Exception:
-            profile["gs_chapter"] = False
+            v1_count = 0
+        v2_done = False
+        try:
+            from projects.dilly.api import chapter_store as _v2
+            v2_done = _v2.get_last_recap_for_user(email) is not None
+        except Exception:
+            v2_done = False
+        profile["gs_chapter"] = bool(v1_count > 0 or v2_done)
         # gs_customize: true once the user has changed accent or surface from defaults.
         _theme = profile.get("theme") or {}
         profile["gs_customize"] = bool(
@@ -968,13 +980,36 @@ async def upload_profile_transcript(request: Request, file: UploadFile = File(..
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
         raise errors.validation_error( "Transcript must be under 10MB.")
-    if not content.startswith(_PDF_MAGIC):
+    # Some valid PDFs have a few junk bytes (BOM, whitespace) before
+    # the %PDF- header. Spec allows the header anywhere in the first
+    # 1024 bytes — match that instead of strict startswith.
+    if _PDF_MAGIC not in content[:1024]:
         raise errors.validation_error( "File is not a valid PDF. Upload an official transcript PDF.")
     fd, temp_path = tempfile.mkstemp(dir=folder, suffix=".pdf")
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(content)
         result: TranscriptParseResult = parse_transcript_pdf(temp_path)
+        # Some transcripts (especially Banner / older registrar exports)
+        # ship with embedded fonts that pypdf can't decode. Fall back to
+        # pymupdf when the primary parser returned no text — pymupdf is
+        # more permissive with font encodings and is already a dep.
+        warnings = list(getattr(result, "warnings", []) or [])
+        if "pdf_no_text_extracted" in warnings or "pdf_extract_failed" in warnings:
+            try:
+                import fitz  # pymupdf
+                from dilly_core.transcript_parser import parse_transcript_text, MAX_TRANSCRIPT_PAGES
+                doc = fitz.open(temp_path)
+                text = ""
+                for i, page in enumerate(doc):
+                    if i >= MAX_TRANSCRIPT_PAGES:
+                        break
+                    text += page.get_text() + "\n"
+                doc.close()
+                if text.strip():
+                    result = parse_transcript_text(text)
+            except Exception:
+                pass
         save_transcript_file(email, temp_path, ".pdf")
         payload = {
             "transcript_uploaded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

@@ -20,7 +20,7 @@ export const PENDING_UPLOAD_KEY = 'dilly_pending_upload';
 
 // Matches filenames that strongly suggest a transcript rather than a resume.
 const TRANSCRIPT_NAME_RE = /\b(transcript|registrar|unofficial|cumulative|grade.?point|institution)\b/i;
-// Matches filenames that clearly are a resume/CV — no warning needed.
+// Matches filenames that clearly are a resume/CV - no warning needed.
 const RESUME_NAME_RE = /\b(resume|cv|curriculum.?vitae)\b/i;
 
 type FileKind = 'transcript' | 'ambiguous' | 'resume';

@@ -1,5 +1,5 @@
 /**
- * useChapterNotifications — local scheduled notifications for Chapters.
+ * useChapterNotifications - local scheduled notifications for Chapters.
  *
  * Uses device-local notifications (not server push) because the
  * schedule is fully known on the client: the user's day-of-week +

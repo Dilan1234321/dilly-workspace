@@ -1,5 +1,5 @@
 /**
- * Haptics — shared haptic feedback utilities.
+ * Haptics - shared haptic feedback utilities.
  * Lazy-loads expo-haptics to prevent crash if not linked.
  *
  * Usage:
@@ -12,32 +12,32 @@
 let _haptics: any = null;
 try { _haptics = require('expo-haptics'); } catch {}
 
-/** Light tap — for button presses */
+/** Light tap - for button presses */
 export function lightHaptic() {
   try { _haptics?.impactAsync?.(_haptics.ImpactFeedbackStyle?.Light); } catch {}
 }
 
-/** Medium tap — for pull-to-refresh, toggles, tab switches */
+/** Medium tap - for pull-to-refresh, toggles, tab switches */
 export function mediumHaptic() {
   try { _haptics?.impactAsync?.(_haptics.ImpactFeedbackStyle?.Medium); } catch {}
 }
 
-/** Heavy tap — for destructive actions, errors */
+/** Heavy tap - for destructive actions, errors */
 export function heavyHaptic() {
   try { _haptics?.impactAsync?.(_haptics.ImpactFeedbackStyle?.Heavy); } catch {}
 }
 
-/** Success notification — for completed actions, score animations */
+/** Success notification - for completed actions, score animations */
 export function successHaptic() {
   try { _haptics?.notificationAsync?.(_haptics.NotificationFeedbackType?.Success); } catch {}
 }
 
-/** Warning notification — for alerts, validation errors */
+/** Warning notification - for alerts, validation errors */
 export function warningHaptic() {
   try { _haptics?.notificationAsync?.(_haptics.NotificationFeedbackType?.Warning); } catch {}
 }
 
-/** Selection tick — for picker changes, scroll snaps */
+/** Selection tick - for picker changes, scroll snaps */
 export function selectionHaptic() {
   try { _haptics?.selectionAsync?.(); } catch {}
 }

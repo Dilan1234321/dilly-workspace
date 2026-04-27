@@ -688,7 +688,7 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
               </AnimatedPressable>
             </View>
 
-            {/* Scrollable body — the keyboard used to cover the date
+            {/* Scrollable body - the keyboard used to cover the date
                 picker + notes + Add button because the modal card was
                 fixed. Wrapping everything below the header in a
                 ScrollView lets the user scroll past the keyboard to
@@ -808,7 +808,7 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
 
 export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
-  // Calendar had no theme integration — all 63 frozen colors refs
+  // Calendar had no theme integration - all 63 frozen colors refs
   // meant Midnight / Cream / Blush users saw a permanently light
   // surface. Pulling resolved theme here and threading it through
   // the main screen's key surfaces (container bg, navbar, month
@@ -826,7 +826,7 @@ export default function CalendarScreen() {
   const [loadingPrepDeckId, setLoadingPrepDeckId] = useState<string | null>(null);
   // Whether the user has already subscribed to the Dilly Calendar feed
   // in iOS. When true, we hide the Subscribe button in the top bar to
-  // avoid a redundant CTA — the user can always unsubscribe via
+  // avoid a redundant CTA - the user can always unsubscribe via
   // Settings → Calendar → Account, which is where iOS owns the state.
   const [calSubscribed, setCalSubscribed] = useState(false);
   useFocusEffect(useCallback(() => {

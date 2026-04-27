@@ -1,5 +1,5 @@
 /**
- * Chapter Prep — shown while the user waits for their next session.
+ * Chapter Prep - shown while the user waits for their next session.
  *
  * Covers two states:
  *   - Waiting for first-ever Chapter (scheduled, never had a session)
@@ -7,10 +7,10 @@
  *
  * Three jobs:
  *   1. Countdown chip showing when the next session arrives.
- *   2. Notes the user wants Dilly to bring up — feeds /chapters/notes,
+ *   2. Notes the user wants Dilly to bring up - feeds /chapters/notes,
  *      which /chapters/generate reads at generation time so topics
  *      surface naturally in the session without prompting.
- *   3. "Ideas from Dilly" — profile-signal topic starters, tap to
+ *   3. "Ideas from Dilly" - profile-signal topic starters, tap to
  *      pre-fill the notes input. Zero LLM calls; generated client-side
  *      from the locally-cached profile slim.
  *

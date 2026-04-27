@@ -3,7 +3,7 @@
  *
  * This is the between-sessions surface. After a Chapter session ends,
  * the user lands here. Instead of a list of "things we talked about,"
- * the topics become nodes on a winding path — a visual journey. Each
+ * the topics become nodes on a winding path - a visual journey. Each
  * node is a doorway back into Dilly, seeded with that topic, so the
  * user can work on one thing at a time between sessions.
  *
@@ -137,7 +137,7 @@ export default function ChapterJourneyScreen() {
   const nodes = useMemo(() => {
     if (!chapter) return [];
     // Show journey-worthy slots only. Cold open and close are framing,
-    // not homework — they clutter the map. User tap-opens real topics.
+    // not homework - they clutter the map. User tap-opens real topics.
     const WANT = new Set(['noticed', 'working', 'push_on', 'one_move', 'question']);
     return chapter.screens.filter(s => WANT.has(s.slot));
   }, [chapter]);
@@ -262,7 +262,7 @@ export default function ChapterJourneyScreen() {
           );
         })}
 
-        {/* Node labels — positioned beside each node on the opposite
+        {/* Node labels - positioned beside each node on the opposite
             side of where the node sits so they don't run off screen. */}
         {nodes.map((screen, i) => {
           const onLeft = i % 2 === 0;
@@ -325,7 +325,7 @@ function scheduleNext(days: number) {
   target.setDate(target.getDate() + days);
   // Backend endpoint optional; fail quietly. The toast is the real
   // confirmation. If the endpoint does not exist the UI still reads
-  // correctly — the user sees that Dilly heard them.
+  // correctly - the user sees that Dilly heard them.
   dilly.fetch('/chapters/schedule-next', {
     method: 'POST',
     body: JSON.stringify({ scheduled_for: target.toISOString() }),

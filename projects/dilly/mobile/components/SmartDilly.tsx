@@ -1,5 +1,5 @@
 /**
- * SmartDilly — the opinionated auto-context wrapper around DillyFace.
+ * SmartDilly - the opinionated auto-context wrapper around DillyFace.
  *
  * Instead of every onboarding + chat surface manually passing
  * `mood` and `accessory`, SmartDilly reads the current route (and
@@ -9,7 +9,7 @@
  * use <SmartDilly />. Everywhere else, use <DillyFace /> directly
  * with an explicit mood.
  *
- * Mood mapping is narrow on purpose — a face that flips expression
+ * Mood mapping is narrow on purpose - a face that flips expression
  * every route feels unhinged. Most routes resolve to `idle` (same
  * as today's DillyFace) so the behavior only changes where we want
  * it to.
@@ -51,7 +51,7 @@ function deriveFromRoute(path: string): { mood: DillyMood; accessory: DillyAcces
   if (path.includes('/onboarding/tutorial'))         return { mood: 'happy',       accessory: 'none' };
   if (path.includes('/onboarding/mode-switch'))      return { mood: 'curious',     accessory: 'none' };
 
-  // Customize studio — paintbrush. Mood stays idle so the face still drifts.
+  // Customize studio - paintbrush. Mood stays idle so the face still drifts.
   if (path.includes('/customize'))                   return { mood: 'happy',       accessory: 'paintbrush' };
 
   return { mood: 'idle', accessory: 'none' };

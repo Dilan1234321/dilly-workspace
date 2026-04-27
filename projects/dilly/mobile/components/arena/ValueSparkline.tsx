@@ -1,5 +1,5 @@
 /**
- * ValueSparkline — a dep-free sparkline built from a list of numbers.
+ * ValueSparkline - a dep-free sparkline built from a list of numbers.
  *
  * Uses react-native-svg (already in the bundle) to draw:
  *   - a stroked path connecting the normalized points

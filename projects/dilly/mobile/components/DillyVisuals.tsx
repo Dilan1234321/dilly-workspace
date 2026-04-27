@@ -150,7 +150,7 @@ export interface ProfileUpdatePayload {
 // Live payload types. ScoreBreakdown and CohortComparison were
 // removed because the underlying features (numeric scores, cohort
 // ranking) are deprecated app-wide. Old chat transcripts may still
-// have them stored — client-side renderer returns null for those
+// have them stored - client-side renderer returns null for those
 // types below so they render as nothing rather than crashing.
 export type VisualPayload =
   | InterviewChecklistPayload

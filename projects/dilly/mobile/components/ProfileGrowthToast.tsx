@@ -1,5 +1,5 @@
 /**
- * ProfileGrowthToast — global listener that surfaces Dilly's auto-add
+ * ProfileGrowthToast - global listener that surfaces Dilly's auto-add
  * to the My Dilly profile.
  *
  * The chat overlay already POSTs /ai/chat/flush on close, which
@@ -13,7 +13,7 @@
  * profile: X" so the user sees the product learning in real time.
  *
  * Tapping the pill opens a bottom-sheet modal listing the specific
- * facts that were just written — category, label, and value for each.
+ * facts that were just written - category, label, and value for each.
  * Swipe-to-dismiss still works; a tap is detected as very low movement
  * (< 10 px) in the PanResponder release handler.
  *
@@ -49,7 +49,7 @@ export default function ProfileGrowthToast() {
   const state = useExtractionState();
   const [visible, setVisible] = useState(false);
   const [label, setLabel] = useState('');
-  // Local copy of facts — captured before consumeAdded() clears global
+  // Local copy of facts - captured before consumeAdded() clears global
   // state, so the detail modal has real content even after the toast
   // reports the batch consumed.
   const [facts, setFacts] = useState<ExtractionAddedFact[]>([]);
@@ -197,7 +197,7 @@ export default function ProfileGrowthToast() {
                       {(f.category || 'fact').toUpperCase()}
                     </Text>
                     <Text style={[styles.factLabel, { color: theme.surface.t1 }]}>
-                      {f.label || f.value || '—'}
+                      {f.label || f.value || '-'}
                     </Text>
                     {f.value && f.label && f.value !== f.label ? (
                       <Text style={[styles.factValue, { color: theme.surface.t2 }]}>

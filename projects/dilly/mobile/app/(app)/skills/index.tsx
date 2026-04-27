@@ -1,5 +1,5 @@
 /**
- * Dilly Skills — in-app home (build 401).
+ * Dilly Skills - in-app home (build 401).
  *
  * Skills is a full in-app surface that mirrors everything
  * skills.hellodilly.com does: browse cohorts, ask a question, watch
@@ -8,21 +8,21 @@
  *
  * Header intent:
  *   Big Dilly logo (DillyFace, theme-accent) + "Skills" wordmark at
- *   the same size — reads as a co-branded product line. No back
+ *   the same size - reads as a co-branded product line. No back
  *   button; Skills is a destination, not a modal.
  *
  * Tabs:
- *   - Ask: /skills/ask — natural language search
- *   - Library: /skills/library — saved videos
- *   - Trending: /skills/trending — hot picks across all cohorts
+ *   - Ask: /skills/ask - natural language search
+ *   - Library: /skills/library - saved videos
+ *   - Trending: /skills/trending - hot picks across all cohorts
  *   Browse 22 cohort cards (real backend slugs). Tap → cohort page.
  *
  * Data: none on this screen. Cohort list is static. Heavy data lives
  * on the cohort detail page.
  *
  * Feature flag: SKILLS_RECOMMENDED_FIRST_ENABLED
- *   OFF (default) → LibraryLanding  — the original 22-cohort grid
- *   ON            → FeedLanding     — personalised hero + queue + cohort
+ *   OFF (default) → LibraryLanding  - the original 22-cohort grid
+ *   ON            → FeedLanding     - personalised hero + queue + cohort
  *                                     strip, with full library behind a
  *                                     "Browse full library" modal at bottom
  */
@@ -43,7 +43,7 @@ import { SKILLS_RECOMMENDED_FIRST_ENABLED, SKILLS_PERSONA_AWARE } from '../../..
 import { getAppMode, type AppMode } from '../../../lib/appMode';
 import { CertificationsSection } from '../../../components/skills/CertificationsSection';
 
-/** 22 backend cohort slugs — must stay in sync with
+/** 22 backend cohort slugs - must stay in sync with
  *  projects/dilly/api/routers/skill_lab.py `_SLUG_TO_COHORT`.
  *  Hints are the brand-voice taglines, not marketing. */
 interface Cohort { slug: string; label: string; hint: string; icon: any; }
@@ -60,11 +60,11 @@ const COHORTS: Cohort[] = [
   { slug: 'consulting-strategy',              label: 'Consulting & Strategy',         hint: 'Structure, synthesis, winning the whiteboard.',     icon: 'analytics' },
   { slug: 'marketing-advertising',            label: 'Marketing & Advertising',       hint: 'Brand, performance, content, demand.',              icon: 'megaphone' },
   { slug: 'management-operations',            label: 'Management & Operations',       hint: 'Teams, process, execution, the operating cadence.', icon: 'people' },
-  { slug: 'entrepreneurship-innovation',      label: 'Entrepreneurship & Innovation', hint: 'Building from zero — product, capital, velocity.',  icon: 'rocket' },
+  { slug: 'entrepreneurship-innovation',      label: 'Entrepreneurship & Innovation', hint: 'Building from zero - product, capital, velocity.',  icon: 'rocket' },
   { slug: 'economics-public-policy',          label: 'Economics & Public Policy',     hint: 'Markets, incentives, institutions, evidence.',      icon: 'trending-up' },
   { slug: 'healthcare-clinical',              label: 'Healthcare & Clinical',         hint: 'Anatomy, clinical reasoning, the MCAT bar.',        icon: 'medkit' },
   { slug: 'biotech-pharmaceutical',           label: 'Biotech & Pharmaceutical',      hint: 'Molecules, pathways, trials, regulation.',          icon: 'fitness' },
-  { slug: 'life-sciences-research',           label: 'Life Sciences & Research',      hint: 'From bench to insight — biology and the paper.',    icon: 'leaf' },
+  { slug: 'life-sciences-research',           label: 'Life Sciences & Research',      hint: 'From bench to insight - biology and the paper.',    icon: 'leaf' },
   { slug: 'physical-sciences-math',           label: 'Physical Sciences & Math',      hint: 'Physics, chemistry, the math that underwrites it.', icon: 'infinite' },
   { slug: 'law-government',                   label: 'Law & Government',              hint: 'Cases, briefs, process, institutional craft.',      icon: 'hammer' },
   { slug: 'media-communications',             label: 'Media & Communications',        hint: 'Narrative, reporting, the honest sentence.',        icon: 'newspaper' },
@@ -101,23 +101,23 @@ function fmtDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-// ─── Persona copy — subhead / section label / empty state per AppMode ────────
+// ─── Persona copy - subhead / section label / empty state per AppMode ────────
 
 const PERSONA_COPY: Record<AppMode, { subhead: string; sectionLabel: string; emptyState: string }> = {
   student: {
     subhead: 'Skills to ace your senior year',
     sectionLabel: 'YOUR STUDENT SKILL LAB',
-    emptyState: "No picks yet — add your major and graduation year to unlock your skill queue.",
+    emptyState: "No picks yet - add your major and graduation year to unlock your skill queue.",
   },
   seeker: {
     subhead: 'Skills to land your next role',
     sectionLabel: 'YOUR JOB SEARCH SKILL LAB',
-    emptyState: "No picks yet — complete your target role to unlock tailored recommendations.",
+    emptyState: "No picks yet - complete your target role to unlock tailored recommendations.",
   },
   holder: {
     subhead: 'Skills to grow into your next title',
     sectionLabel: 'YOUR CAREER SKILL LAB',
-    emptyState: "No picks yet — add your current role and growth goals to see what to learn.",
+    emptyState: "No picks yet - add your current role and growth goals to see what to learn.",
   },
 };
 
@@ -127,14 +127,14 @@ const GENERIC_COPY = {
   emptyState: 'No recommendations yet. Finish setting up your profile and check back.',
 };
 
-// ─── Root export — thin flag gate, no hooks ───────────────────────────────────
+// ─── Root export - thin flag gate, no hooks ───────────────────────────────────
 
 export default function SkillsHomeScreen() {
   if (SKILLS_RECOMMENDED_FIRST_ENABLED) return <FeedLanding />;
   return <LibraryLanding />;
 }
 
-// ─── LibraryLanding — original 22-cohort grid (unchanged logic) ───────────────
+// ─── LibraryLanding - original 22-cohort grid (unchanged logic) ───────────────
 
 function LibraryLanding() {
   const theme = useResolvedTheme();
@@ -150,7 +150,7 @@ function LibraryLanding() {
       contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 120 }}
     >
       {/* Big co-branded header: DillyFace + "Skills" at the same size.
-          No back button — Skills is a destination. */}
+          No back button - Skills is a destination. */}
       <View style={styles.header}>
         <DillyFace size={44} mood="happy" accessory="none" />
         <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
@@ -161,7 +161,7 @@ function LibraryLanding() {
         you need, or open your library.
       </Text>
 
-      {/* Ask / Library / Trending row — the three ways in. */}
+      {/* Ask / Library / Trending row - the three ways in. */}
       <View style={styles.pillsRow}>
         <TouchableOpacity
           activeOpacity={0.9}
@@ -191,7 +191,7 @@ function LibraryLanding() {
         </TouchableOpacity>
       </View>
       {/* Public learning profile entry point. Same tier as the
-          career public profile — the user can control visibility of
+          career public profile - the user can control visibility of
           their learning receipt directly from Skills. */}
       <View style={[styles.pillsRow, { marginTop: 10 }]}>
         <TouchableOpacity
@@ -236,7 +236,7 @@ function LibraryLanding() {
   );
 }
 
-// ─── FeedLanding — recommendation-first surface ───────────────────────────────
+// ─── FeedLanding - recommendation-first surface ───────────────────────────────
 
 const SCREEN_W = Dimensions.get('window').width;
 const COHORT_CARD_W = SCREEN_W * 0.44;
@@ -267,8 +267,9 @@ function FeedLanding() {
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.surface.bg }}
         contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 120 }}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* Header — same co-brand as LibraryLanding */}
+        {/* Header - same co-brand as LibraryLanding */}
         <View style={styles.header}>
           <DillyFace size={44} mood="happy" accessory="none" />
           <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
@@ -439,7 +440,7 @@ function FeedLanding() {
         )}
       </ScrollView>
 
-      {/* ── Full library modal — all 22 cohorts ── */}
+      {/* ── Full library modal - all 22 cohorts ── */}
       <Modal
         visible={browseOpen}
         animationType="slide"

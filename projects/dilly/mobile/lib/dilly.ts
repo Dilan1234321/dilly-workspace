@@ -84,7 +84,7 @@ const _origFetch = _baseClient.fetch.bind(_baseClient);
 // Paths that should NEVER auto-fire the global paywall on 402.
 // These are background/polling endpoints that run without the user
 // asking. If the user just downgraded or cancelled, these return 402
-// and would open the paywall at random moments — which testers saw
+// and would open the paywall at random moments - which testers saw
 // as "the paywall appears when not prompted randomly, at random times"
 // after cancelling. The screens that own these endpoints handle the
 // 402 locally (usually by rendering an inline upgrade teaser instead
@@ -122,7 +122,7 @@ async function fetchWithPaywall(path: string, init?: RequestInit): Promise<Respo
           promise: body?.message || body?.detail?.message || body?.error,
         };
       } catch {
-        // body wasn't JSON — show the default paywall copy
+        // body wasn't JSON - show the default paywall copy
       }
       openPaywall(ctx);
     }

@@ -1,5 +1,5 @@
 /**
- * ArenaGate — the "feed Dilly more" empty state shown when the user
+ * ArenaGate - the "feed Dilly more" empty state shown when the user
  * has too few facts for the arena tools to produce honest output.
  *
  * Design call: tools in the new AI Arena use real per-user data
@@ -10,7 +10,7 @@
  * with a specific question. Users get to the arena by feeding the
  * profile; the act of feeding IS the onboarding.
  *
- * This reads as respect, not a paywall — "Dilly needs to know you
+ * This reads as respect, not a paywall - "Dilly needs to know you
  * before she can be useful."
  */
 

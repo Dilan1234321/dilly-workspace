@@ -1,5 +1,5 @@
 /**
- * DillyFeatureBanner — quiet "this is a Dilly feature" reminder.
+ * DillyFeatureBanner - quiet "this is a Dilly feature" reminder.
  *
  * Shown on paid feature setup screens (Generate Resume, Interview
  * Practice) to free-tier users. Not a blocker: they can still tap
@@ -28,7 +28,7 @@ interface DillyFeatureBannerProps {
 export function DillyFeatureBanner({ feature, sub }: DillyFeatureBannerProps) {
   const { isPaid, loading } = useSubscription();
   const accent = useAccent();
-  // Don't show while subscription state is still resolving — avoids
+  // Don't show while subscription state is still resolving - avoids
   // a flash of the banner for paid users on cold start.
   if (loading || isPaid) return null;
   return (

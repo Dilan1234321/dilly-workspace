@@ -1,5 +1,5 @@
 /**
- * Next Role Lab — holder tile. Surfaces three plausible next roles
+ * Next Role Lab - holder tile. Surfaces three plausible next roles
  * for the user by mixing their cohort playbook's anchor tiers with
  * their current role keyword. Each card carries a fit read and a
  * "what you'd have to prove" line.

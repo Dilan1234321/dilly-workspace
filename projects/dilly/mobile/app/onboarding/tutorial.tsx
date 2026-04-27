@@ -480,7 +480,7 @@ export default function TutorialScreen() {
   const insets = useSafeAreaInsets();
   // Transition param comes from mode-switch.tsx. When present we play
   // a dedicated acknowledgement-first card arc instead of the generic
-  // mode tour — big difference in emotional register for got_job vs
+  // mode tour - big difference in emotional register for got_job vs
   // laid_off. Absent for fresh signups, which fall through to the
   // mode-based CARDS record below.
   const { transition: transitionParam } = useLocalSearchParams<{ transition?: string }>();
@@ -528,7 +528,7 @@ export default function TutorialScreen() {
 
   // Progress bar animated width. MUST live above the `if (!ready) return`
   // below, otherwise on the first render (ready=false) these two hooks
-  // aren't called, and on the second render (ready=true) they are —
+  // aren't called, and on the second render (ready=true) they are -
   // which is the 'Rendered more hooks than during the previous render'
   // crash users hit during onboarding. Hook order has to be identical
   // on every render.

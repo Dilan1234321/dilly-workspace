@@ -82,12 +82,12 @@ interface MemorySurface {
 
 // Category colors tuned to stay legible on BOTH dark and light
 // surfaces. Bright yellows (#FFD700) and light ambers (#FF9F0A)
-// vanish on white — swapped to darker amber / brown-gold tones
+// vanish on white - swapped to darker amber / brown-gold tones
 // that hold contrast on both themes while still feeling warm.
 // Same swap applied to coral and any other light-on-light case.
 // Base strength categories. These labels + icons apply to every
 // user_path by default. The render path overlays per-path renames
-// via applyPathOverrides() below — e.g. a veteran sees
+// via applyPathOverrides() below - e.g. a veteran sees
 // 'life_context' as "Service & Mission" with a medal icon instead of
 // the generic "Background". Facts still live under the canonical
 // category keys so the extraction pipeline is untouched.
@@ -156,7 +156,7 @@ function StrengthRing({ pct, size = 56 }: { pct: number; size?: number }) {
 
 // Fact categories that should show a "Sharpen" action in the row
 // popup. Must stay in sync with the skill category whitelist in
-// jobs.tsx (_SKILL_CATS) — both gate on the same signal: "is this a
+// jobs.tsx (_SKILL_CATS) - both gate on the same signal: "is this a
 // thing the user can practice / learn more about?"
 const _SKILL_CATS_PROFILE = new Set([
   'skill', 'skill_unlisted', 'technical_skill', 'soft_skill',
@@ -165,7 +165,7 @@ const _SKILL_CATS_PROFILE = new Set([
 // ── Fact Row (measures own position for inline popup) ────────────────────────
 
 /**
- * PulseTimelineSection — chronological feed of the user's daily
+ * PulseTimelineSection - chronological feed of the user's daily
  * pulse entries. Hits /pulse/history, renders up to 20 as a
  * simple list with date + mood + response. Expands on tap to show
  * the full text; collapsed rows show 2 lines. No LLM, no
@@ -325,7 +325,7 @@ function SkillTag({ skill, conf, onPress }: { skill: FactItem; conf: number; onP
       <View ref={tagRef} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
         <Text style={[d.skillTagText, { fontSize: 11 + conf * 3, color: theme.accent }]}>{skill.label || skill.value}</Text>
         {/* Tiny pencil glyph so users know the tag is editable.
-            Faint on purpose — it's an affordance cue, not a button. */}
+            Faint on purpose - it's an affordance cue, not a button. */}
         <Ionicons name="create-outline" size={10} color={theme.accent} style={{ opacity: 0.55 }} />
       </View>
     </AnimatedPressable>
@@ -417,7 +417,7 @@ function SeekerProfileScreen() {
   const [editName, setEditName] = useState('');
   const [editTagline, setEditTagline] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  // Mission statement — user-owned, surfaced as the hero block
+  // Mission statement - user-owned, surfaced as the hero block
   // on the public web profile. Edited from this screen only.
   const [editMission, setEditMission] = useState('');
   const [citySearch, setCitySearch] = useState('');
@@ -472,7 +472,7 @@ function SeekerProfileScreen() {
   // stays true through the exit fade so the card can animate OUT
   // instead of being yanked from the tree. `anim` drives opacity
   // + scale. This replaces the old pattern where the modal appeared
-  // instantly — tester feedback: "every single popup should have a
+  // instantly - tester feedback: "every single popup should have a
   // smooth animation coming in and coming out."
   const [addFactMounted, setAddFactMounted] = useState(false);
   const addFactAnim = useRef(new Animated.Value(0)).current;
@@ -496,7 +496,7 @@ function SeekerProfileScreen() {
         if (finished) setAddFactMounted(false);
       });
     }
-    // addFactMounted intentionally excluded from deps — we only want
+    // addFactMounted intentionally excluded from deps - we only want
     // to react to visible changes, not the unmount settle cycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addFactModal.visible, addFactAnim]);
@@ -574,7 +574,7 @@ function SeekerProfileScreen() {
         setProfile(prev => ({ ...prev, gs_resume: true, resume_uploaded_at: new Date().toISOString() }));
         fetchData();
       } else if (res.status === 409) {
-        // Already uploaded — sync local state
+        // Already uploaded - sync local state
         setProfile(prev => ({ ...prev, gs_resume: true }));
       } else {
         const body = await res.json().catch(() => ({}));
@@ -757,7 +757,7 @@ function SeekerProfileScreen() {
   // Derive the path-aware category map from the base. A veteran's
   // grid relabels some tiles; a dropout's, a parent_returning's, etc.
   // Facts still live under the canonical keys so extraction logic is
-  // unchanged — this is a presentation-layer remap only.
+  // unchanged - this is a presentation-layer remap only.
   const STRENGTH_CATEGORIES = applyPathOverrides(STRENGTH_CATEGORIES_BASE, (profile as any)?.user_path);
   const strengthCats = Object.keys(STRENGTH_CATEGORIES).filter(k => (data?.grouped?.[k]?.length ?? 0) > 0);
 
@@ -772,7 +772,7 @@ function SeekerProfileScreen() {
 
   return (
     <View style={[d.container, { backgroundColor: theme.surface.bg }]}>
-      {/* First-visit coach mark — seekers/students. */}
+      {/* First-visit coach mark - seekers/students. */}
       <FirstVisitCoach
         id="my-dilly-seeker-v1"
         iconName="person-circle"
@@ -798,7 +798,7 @@ function SeekerProfileScreen() {
               const patch: any = {
                 name: editName.trim() || undefined,
                 profile_tagline: editTagline.trim() || undefined,
-                // Mission statement — saved to both the canonical
+                // Mission statement - saved to both the canonical
                 // field and the legacy profile_bio fallback so the
                 // public profile reads it on either field.
                 mission_statement: editMission.trim(),
@@ -946,13 +946,13 @@ function SeekerProfileScreen() {
                   // Photo detection mirrors the main-screen resolution
                   // (see HolderCareer photoFull). Three possible sources
                   // in priority order:
-                  //   1. /profile/public/{slug}/photo — the public CDN
+                  //   1. /profile/public/{slug}/photo - the public CDN
                   //      URL. Present the moment the user has any slug,
                   //      even if p.photo_url hasn't hydrated.
-                  //   2. p.profile_photo_url — the canonical field some
+                  //   2. p.profile_photo_url - the canonical field some
                   //      backends return under this alias.
-                  //   3. p.photo_url — full profile response.
-                  // A user can have a photo via any of these — don't
+                  //   3. p.photo_url - full profile response.
+                  // A user can have a photo via any of these - don't
                   // prompt "Add a photo" if ANY is set.
                   const slug = p.profile_slug;
                   const bust = Math.floor(Date.now() / 86400000);
@@ -985,7 +985,7 @@ function SeekerProfileScreen() {
                 <TextInput style={d.editFieldInput} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={colors.t3} />
               </View>
 
-              {/* Mission Statement — rendered on the public web
+              {/* Mission Statement - rendered on the public web
                   profile as the hero block under the CTAs. One or
                   two sentences on why you do what you do. */}
               <View style={d.editField}>
@@ -1205,7 +1205,7 @@ function SeekerProfileScreen() {
                 </>
               )}
 
-              {/* Career Fields (non-students only) — collapsible.
+              {/* Career Fields (non-students only) - collapsible.
                   Long list of chips was bloating the edit box and
                   pushing everything else off screen. Collapsed by
                   default, tap header to expand. */}
@@ -1276,7 +1276,7 @@ function SeekerProfileScreen() {
                 </View>
               )}
 
-              {/* Cities — moved inside the edit box so it's
+              {/* Cities - moved inside the edit box so it's
                   discoverable. Previously lived far below the edit
                   panel and users didn't realize cities were editable. */}
               <View style={d.editField}>
@@ -1495,7 +1495,7 @@ function SeekerProfileScreen() {
                 {webTaglineSaving && <Text style={{ fontSize: 10, color: colors.t3, marginTop: 2 }}>Saving...</Text>}
               </View>
 
-              {/* Mission Statement — replaces the old "Bio" block.
+              {/* Mission Statement - replaces the old "Bio" block.
                   Saves to profile_bio for backward compat with the
                   web profile that reads either field (per the PATCH
                   allow-list in api/routers/profile.py the canonical
@@ -1753,7 +1753,7 @@ function SeekerProfileScreen() {
         </FadeInView>
 
         {/* ── 3. Strengths Map ─────────────────────────────────── */}
-        {/* Always render — even when no facts exist yet. Free-tier
+        {/* Always render - even when no facts exist yet. Free-tier
             users who skipped the resume upload previously saw a
             blank profile because the whole section was gated on
             strengthCats.length > 0. Rendering the 16 empty
@@ -1780,7 +1780,7 @@ function SeekerProfileScreen() {
                   borderWidth: 1, borderColor: theme.accentBorder,
                 }}
                 onPress={() => {
-                  // Default to "project_detail" — widest-relevant bucket
+                  // Default to "project_detail" - widest-relevant bucket
                   // for a first fact. User can add anywhere after.
                   openAddFactModal('project_detail', STRENGTH_CATEGORIES.project_detail.label);
                 }}
@@ -1791,7 +1791,7 @@ function SeekerProfileScreen() {
                 <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, letterSpacing: 0.2 }}>Add a fact</Text>
               </AnimatedPressable>
             </View>
-            {/* Empty-state hint — only shown when no facts exist.
+            {/* Empty-state hint - only shown when no facts exist.
                 Makes the grid of 16 empty tiles read as an
                 invitation, not a void. */}
             {strengthCats.length === 0 && (
@@ -1801,7 +1801,7 @@ function SeekerProfileScreen() {
                 color: theme.surface.t2,
                 marginBottom: 10,
               }}>
-                Tap any category to add a fact. No resume needed — you can build your profile one small thing at a time.
+                Tap any category to add a fact. No resume needed - you can build your profile one small thing at a time.
               </Text>
             )}
             <View style={d.strengthGrid}>
@@ -1967,7 +1967,7 @@ function SeekerProfileScreen() {
         {/* ── 6. Pulse timeline ─────────────────────────────────
             Surfaces the user's daily pulse reflections as a
             chronological body of work. Makes the daily habit
-            visible — users can see how they were feeling two weeks
+            visible - users can see how they were feeling two weeks
             ago, what they were working on a month back. Zero LLM.
             Hides entirely when no pulses exist yet. */}
         <FadeInView delay={380}>
@@ -2021,7 +2021,7 @@ function SeekerProfileScreen() {
           </FadeInView>
         )}
 
-        {/* ── 8. Resume Upload (one-time) — hidden once uploaded */}
+        {/* ── 8. Resume Upload (one-time) - hidden once uploaded */}
         {!profile.gs_resume && (
           <FadeInView delay={410}>
             <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR RESUME</Text>
@@ -2140,7 +2140,7 @@ function SeekerProfileScreen() {
         title={popup.fact?.label}
         message={popup.fact?.value}
         actions={[
-          // "Sharpen" only appears for skill-category facts — that's
+          // "Sharpen" only appears for skill-category facts - that's
           // where a Dilly Skills lookup actually makes sense. Routes
           // to /skills/ask with the skill label pre-populated so the
           // screen runs the search immediately. This is the second
@@ -2272,14 +2272,14 @@ function SeekerProfileScreen() {
 
       {/* Manual add-fact modal. Reuses the inline-editor look for
           consistency. This is the escape hatch for free-tier users
-          who didn't upload a resume — they can still grow their
+          who didn't upload a resume - they can still grow their
           profile without being gated into the paid chat surface.
           Inline theme overrides are required because the base
           StyleSheet freezes the colors proxy at module load and
           would otherwise render white-on-white in dark mode. */}
       {addFactMounted && (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          {/* Animated backdrop — fades opacity in sync with the card. */}
+          {/* Animated backdrop - fades opacity in sync with the card. */}
           <Animated.View
             style={[
               StyleSheet.absoluteFillObject,
@@ -2296,7 +2296,7 @@ function SeekerProfileScreen() {
               onPress={() => { Keyboard.dismiss(); setAddFactModal(prev => ({ ...prev, visible: false })); }}
             />
           </Animated.View>
-          {/* Animated card — fade + subtle scale-up from 0.96. */}
+          {/* Animated card - fade + subtle scale-up from 0.96. */}
           <Animated.View
             style={[
               d.inlineEditor,
@@ -2313,7 +2313,7 @@ function SeekerProfileScreen() {
               },
             ]}
           >
-            {/* Category picker — tap the pill to change bucket
+            {/* Category picker - tap the pill to change bucket
                 without closing the modal. Makes the top-level
                 "Add a fact" button genuinely useful. */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 10 }}>
@@ -2383,7 +2383,7 @@ function SeekerProfileScreen() {
       )}
 
       {/* QR Code Fullscreen. The QR itself stays dark-on-white for scan
-          reliability — theme only chromes the surrounding screen. */}
+          reliability - theme only chromes the surrounding screen. */}
       <Modal visible={showQrFullscreen} animationType="none" presentationStyle="fullScreen" transparent={false}>
         <View style={{ flex: 1, backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center' }}>
           <TouchableOpacity
@@ -2437,7 +2437,7 @@ function SeekerProfileScreen() {
                   );
                 })()}
                 {/* Name + URL sit INSIDE the captured QR card so they
-                    travel with the shared image — stay dark-on-white. */}
+                    travel with the shared image - stay dark-on-white. */}
                 <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginTop: 14 }}>
                   {p.name || 'Your Profile'}
                 </Text>
@@ -2590,7 +2590,7 @@ function HolderCareer() {
 
   return (
     <View style={[hc.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
-      {/* First-visit coach — holders see their career dashboard
+      {/* First-visit coach - holders see their career dashboard
           here. Different id/copy than the seeker variant. */}
       <FirstVisitCoach
         id="my-dilly-holder-v1"
@@ -3358,7 +3358,7 @@ const d = StyleSheet.create({
   },
   editPhotoBtn: { alignItems: 'center', gap: 8 },
   editPhotoImg: { width: 80, height: 80, borderRadius: 40 },
-  // Grayed camera mold — rendered when the user has no photo yet.
+  // Grayed camera mold - rendered when the user has no photo yet.
   // Dashed border reads as "empty slot, add something here" per
   // standard photo-upload UX patterns. Slightly bigger than the
   // filled photo so the target feels tappable.

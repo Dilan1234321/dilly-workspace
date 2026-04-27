@@ -1,5 +1,5 @@
 /**
- * DillyFace — the face of Dilly. One SVG character that carries
+ * DillyFace - the face of Dilly. One SVG character that carries
  * the product's personality across every surface.
  *
  * Layers:
@@ -8,11 +8,11 @@
  *   2. Optional accessory (pencil, magnifier, paintbrush). Rendered
  *      as a second SVG layer, positioned near the hand/mouth zone.
  *   3. Idle drift (the original random-gaze behavior). Only active
- *      when mood === 'idle' — other moods lock the gaze so the
+ *      when mood === 'idle' - other moods lock the gaze so the
  *      expression reads cleanly.
  *
  * Prefer the <OnboardingDilly> / <ChatDilly> wrappers in most cases
- * — they derive mood + accessory automatically. Use <DillyFace mood="x" />
+ * - they derive mood + accessory automatically. Use <DillyFace mood="x" />
  * directly only when you need manual control.
  */
 
@@ -31,7 +31,7 @@ export type DillyMood =
   | 'sleeping'
   | 'proud'
   | 'writing'
-  // Chapter V2 arc moods — returned by the backend per screen/message
+  // Chapter V2 arc moods - returned by the backend per screen/message
   | 'warm'       // Screen 1: warm re-connection
   | 'attentive'  // Screen 1: focused listening
   | 'thoughtful' // Screen 2: observing, weighing
@@ -118,7 +118,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const s = faceRadius / 19
 
   // Ink color follows the user's accent so the face adapts to
-  // Customize Dilly — rose gets a rose face, teal gets a teal face,
+  // Customize Dilly - rose gets a rose face, teal gets a teal face,
   // etc. Previously hardcoded to indigo regardless of theme, which
   // is what users were seeing as "the face doesn't match the theme".
   const theme = useResolvedTheme()
@@ -138,7 +138,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const posX = useRef(new Animated.Value(0)).current
   const posY = useRef(new Animated.Value(0)).current
   const smileAnim = useRef(new Animated.Value(shape.smile)).current
-  // Transitionable shape props — we animate these via Animated.timing
+  // Transitionable shape props - we animate these via Animated.timing
   // when mood changes so swaps feel smooth (no jump-cut).
   const eyeScaleAnim = useRef(new Animated.Value(shape.eyeScale)).current
   const eyeLiftAnim  = useRef(new Animated.Value(shape.eyeLift)).current
@@ -153,7 +153,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
 
   function pickTarget() {
     // Writing: gaze settles down-right toward the pencil but with
-    // slight jitter so Dilly looks alive — previously the target
+    // slight jitter so Dilly looks alive - previously the target
     // was a constant, so after converging the face sat perfectly
     // still (loading screens felt frozen). Small ±TRAVEL*0.15
     // wobble reads like natural micro-movements while writing.
@@ -174,7 +174,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     targetRef.current = { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist }
   }
 
-  // React to mood changes — animate the transition. Runs whenever mood
+  // React to mood changes - animate the transition. Runs whenever mood
   // changes, with a 280ms cubic ease that feels alive but not rubbery.
   useEffect(() => {
     const next = shapeFor(mood)
@@ -189,11 +189,11 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mood])
 
-  // Writing scribble — a dash-offset loop on the pencil tip stroke.
+  // Writing scribble - a dash-offset loop on the pencil tip stroke.
   // Linear easing so motion reads as continuous ink (no slow-fast-slow
   // wobble, no visible reverse). Animated.loop of a single 0→1 timing
   // restarts at 0 each cycle, so the scribble always moves in one
-  // direction — it never reverses.
+  // direction - it never reverses.
   useEffect(() => {
     scribbleAnim.setValue(0)
     if (mood !== 'writing') return
@@ -214,7 +214,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     const moveInterval = setInterval(pickTarget, 2600)
     const smileInterval = setInterval(() => {
       // Idle roams freely. Writing gets a gentle breath so the
-      // chapter loading screen doesn't read as frozen — smile
+      // chapter loading screen doesn't read as frozen - smile
       // wobbles between 0.25 and 0.45 on a slow cycle.
       if (mood === 'idle') {
         smileTargetRef.current = 0.15 + Math.random() * 0.45
@@ -285,7 +285,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
 
   // Face renders at its natural size inside the ring. The earlier
   // attempt to inset the SVG (86% of ring) made the smile look off
-  // and didn't even address the real issue — the RING itself was
+  // and didn't even address the real issue - the RING itself was
   // clipping at the edge of the parent screen, not Dilly's face
   // inside the ring. That gets fixed at the wrapper level below
   // with a margin. Here we keep the face coords unchanged so it
@@ -347,13 +347,13 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
         </Animated.View>
       </View>
 
-      {/* Pencil layer — OUTSIDE the ring. Rendered in its own Svg
+      {/* Pencil layer - OUTSIDE the ring. Rendered in its own Svg
           positioned so the pencil tip just touches the ring's
           bottom-right edge and the body extends into the padding
           area. Static: Dilly moves, pencil doesn't.
           Scaled up 1.8x from the default Accessory size because the
           old "face-hand-zone" pencil was tiny. The Accessory SVG
-          coords don't change — we just pass a larger `s` value. */}
+          coords don't change - we just pass a larger `s` value. */}
       {pinnedPencil && (
         <View
           pointerEvents="none"
@@ -421,7 +421,7 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
   const browRx = cx + 9 * s
   const browSpan = 6 * s
 
-  // Arched "smiling eyes" paths — small upward crescents. Drawn as
+  // Arched "smiling eyes" paths - small upward crescents. Drawn as
   // static paths; only visible when archEyes is true. We animate the
   // crescents' opacity so transitions into/out of celebrating look smooth.
   const archLPath = `M ${cx - 10 * s} ${cy - 3 * s} Q ${cx - 8 * s} ${cy - 7 * s} ${cx - 6 * s} ${cy - 3 * s}`
@@ -429,7 +429,7 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
 
   return (
     <>
-      {/* Eye dots — hidden when arched. We keep them rendered so the
+      {/* Eye dots - hidden when arched. We keep them rendered so the
           transition is a fade, not a pop. */}
       <AnimatedCircle
         cx={cx - 8 * s}
@@ -444,7 +444,7 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
         fill={archEyes ? 'transparent' : ink}
       />
 
-      {/* Arched "smiling eyes" — only visible on celebrating / proud. */}
+      {/* Arched "smiling eyes" - only visible on celebrating / proud. */}
       {archEyes && (
         <>
           <Path d={archLPath} stroke={ink} strokeWidth={2.2 * s} strokeLinecap="round" fill="none" />
@@ -452,7 +452,7 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
         </>
       )}
 
-      {/* Subtle brows — only render when browLift > 0 (curious/thinking). */}
+      {/* Subtle brows - only render when browLift > 0 (curious/thinking). */}
       <AnimatedPath
         d={`M ${browLx} 0 l ${browSpan} 0`}
         stroke={ink}
@@ -477,7 +477,7 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
   )
 }
 
-// Animated Circle helper — react-native-svg's Circle isn't animatable
+// Animated Circle helper - react-native-svg's Circle isn't animatable
 // for cy/r by default without createAnimatedComponent.
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
@@ -510,7 +510,7 @@ function Accessory({ kind, cx, cy, s, color, scribbleAnim, isDark }: AccessoryPr
 /** Pencil in the hand zone (bottom-right of face). Writing mood makes
  *  the tip scribble with a short animated under-line.
  *
- *  Colors are fixed (not themed) — readable against any accent:
+ *  Colors are fixed (not themed) - readable against any accent:
  *    - Body: yellow (classic no.2)
  *    - Top / eraser: pink
  *    - Tip (bottom): black graphite
@@ -546,7 +546,7 @@ function PencilAccessory({ cx, cy, s, scribbleAnim, isDark }: Omit<AccessoryProp
       <Circle cx={tipX} cy={tipY} r={0.9 * s} fill={PENCIL_TIP} />
       {/* Pink eraser */}
       <Circle cx={butX} cy={butY} r={1.2 * s} fill={PENCIL_ERASER} />
-      {/* Scribble line — only when writing */}
+      {/* Scribble line - only when writing */}
       {dashOffset && (
         <AnimatedPath
           d={`M ${tipX - 5 * s} ${tipY + 3 * s} l ${10 * s} 0`}
@@ -562,7 +562,7 @@ function PencilAccessory({ cx, cy, s, scribbleAnim, isDark }: Omit<AccessoryProp
   )
 }
 
-/** Magnifying glass — circle lens + diagonal handle, hovering bottom-right. */
+/** Magnifying glass - circle lens + diagonal handle, hovering bottom-right. */
 function MagnifierAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
   const lensX = cx + 13 * s
   const lensY = cy + 12 * s
@@ -597,7 +597,7 @@ function hexWithAlpha(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-/** Paintbrush — wooden handle + colored tip. Tip color follows the
+/** Paintbrush - wooden handle + colored tip. Tip color follows the
  *  user's theme accent when passed through accessoryColor. */
 function PaintbrushAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
   const tipX = cx + 13 * s
@@ -618,12 +618,12 @@ function PaintbrushAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' |
         rx={0.4 * s}
         transform={`rotate(-45 ${tipX + 1.2 * s} ${tipY - 2 * s})`}
       />
-      {/* Bristle tip — colored per theme */}
+      {/* Bristle tip - colored per theme */}
       <Path
         d={`M ${tipX - 1 * s} ${tipY} q ${2 * s} ${3 * s} ${-1 * s} ${4 * s} z`}
         fill={color}
       />
-      {/* Paint dab — tiny splotch on the "canvas" showing the tip drew something */}
+      {/* Paint dab - tiny splotch on the "canvas" showing the tip drew something */}
       <Circle cx={tipX - 3 * s} cy={tipY + 4 * s} r={1 * s} fill={color} opacity={0.7} />
     </>
   )

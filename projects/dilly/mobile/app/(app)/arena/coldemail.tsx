@@ -1,5 +1,5 @@
 /**
- * Cold Email Studio — student tile. A template with four real
+ * Cold Email Studio - student tile. A template with four real
  * inputs (name, hook, fact, ask) that produces a real cold email
  * copy-ready to send. Seeds Dilly chat if the student needs
  * help filling a slot.

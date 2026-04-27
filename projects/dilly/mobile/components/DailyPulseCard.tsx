@@ -1,14 +1,14 @@
 /**
- * DailyPulseCard — Home surface for the daily reflective check-in.
+ * DailyPulseCard - Home surface for the daily reflective check-in.
  *
  * Purpose: give users a reason to open the app every day (between
  * weekly Chapters). A single prompt, short response, streak counter.
  * Breaking the streak is the psychological cost that drives return.
  *
  * Three states:
- *   1. loading   — skeleton while /pulse/today resolves
- *   2. unanswered — prompt + input + submit
- *   3. answered  — a calm "done for today" card showing streak + the
+ *   1. loading   - skeleton while /pulse/today resolves
+ *   2. unanswered - prompt + input + submit
+ *   3. answered  - a calm "done for today" card showing streak + the
  *                  response they wrote (so they can feel the continuity)
  *
  * No LLM call on the frontend. Answers post to /pulse, which advances
@@ -165,7 +165,7 @@ export default function DailyPulseCard() {
   }
 
   if (error || !today) {
-    // Fail quietly — this is a nice-to-have, not a critical surface.
+    // Fail quietly - this is a nice-to-have, not a critical surface.
     return null;
   }
 

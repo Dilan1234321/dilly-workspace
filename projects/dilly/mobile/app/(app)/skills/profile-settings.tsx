@@ -10,8 +10,8 @@ import { safeBack } from '../../../lib/navigation';
  *   - learning_profile_visible  : overall on/off (also exposed in
  *                                  Settings so both entries stay in sync)
  *   - learning_show_stats       : Invested / Videos / Fields / Receipts
- *   - learning_show_why         : "Why they're learning" — aim + industry
- *   - learning_show_mastery     : "Skills in motion" — per-cohort breakdown
+ *   - learning_show_why         : "Why they're learning" - aim + industry
+ *   - learning_show_mastery     : "Skills in motion" - per-cohort breakdown
  *   - learning_show_library     : the list of saved videos
  *   - hidden_video_ids          : per-video hide list (tap a saved video
  *                                  to add/remove it)
@@ -106,7 +106,7 @@ export default function LearningProfileSettingsScreen() {
   // switch. Merges back into the ORIGINAL web_profile_settings blob
   // so we never clobber hidden_fact_ids, section toggles, etc.
   // Rapid-fire taps on the same switch are safe because each request
-  // posts the latest merged state — last-write-wins on the server.
+  // posts the latest merged state - last-write-wins on the server.
   const persist = useCallback(async (next: WebSettings) => {
     setSaveState('saving');
     const merged = { ...rawSettingsRef.current, ...next };
@@ -196,7 +196,7 @@ export default function LearningProfileSettingsScreen() {
         />
       </View>
 
-      {/* Section toggles — only matter when the master is on */}
+      {/* Section toggles - only matter when the master is on */}
       {settings.learning_profile_visible !== false ? (
         <>
           <SectionTitle theme={theme} text="SECTIONS" />

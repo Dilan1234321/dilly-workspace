@@ -1,5 +1,5 @@
 /**
- * AI Arena — tab entry point.
+ * AI Arena - tab entry point.
  *
  * V2 is the only path. Immediately replaces to the field-intel screen
  * inside the arena stack. All V1 code has been removed.

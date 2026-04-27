@@ -346,7 +346,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
                 )}
                 {/* Camera badge only shows when there's no photo (it's
                     the add-photo affordance). Once the user has a photo
-                    the badge disappears — 'Remove photo' below handles
+                    the badge disappears - 'Remove photo' below handles
                     changing. Also shown while uploading so the user
                     has feedback. */}
                 {(!displayPhoto || uploading) && (

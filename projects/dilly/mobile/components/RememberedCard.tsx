@@ -1,5 +1,5 @@
 /**
- * RememberedCard — proof Dilly is tracking.
+ * RememberedCard - proof Dilly is tracking.
  *
  * Surfaces one specific callback to a past pulse / Chapter / deadline
  * on Home. Tapping it opens the AI overlay seeded with a follow-up
@@ -39,7 +39,7 @@ export default function RememberedCard() {
         const r = (await dilly.get('/remember/today')) as RememberResponse;
         setData(r);
       } catch (_e) {
-        // Fail quietly — this is a nice-to-have.
+        // Fail quietly - this is a nice-to-have.
       }
     })();
   }, []);
@@ -72,7 +72,7 @@ export default function RememberedCard() {
         <Ionicons name={iconName as any} size={14} color={theme.accent} />
         <Text style={[s.eyebrow, { color: theme.accent }]}>DILLY REMEMBERED</Text>
       </View>
-      {/* Removed numberOfLines clamps — truncation cut the user off
+      {/* Removed numberOfLines clamps - truncation cut the user off
           mid-thought and made the card feel chrome. Let it grow. */}
       <Text style={[s.headline, { color: theme.surface.t2 }]}>
         {data.headline}

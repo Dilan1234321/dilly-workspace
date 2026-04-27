@@ -1,5 +1,5 @@
 /**
- * useCohortScores — fetch + manage per-cohort Claude scores.
+ * useCohortScores - fetch + manage per-cohort Claude scores.
  *
  * Reads `cohort_scores` from the profile, parses into a sorted array,
  * and exposes the active cohort's scores. The switcher index persists

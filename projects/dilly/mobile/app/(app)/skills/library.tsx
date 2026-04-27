@@ -1,6 +1,6 @@
 import { safeBack } from '../../../lib/navigation';
 /**
- * Skills library — the user's saved videos.
+ * Skills library - the user's saved videos.
  *
  * Mirrors the web /library: chronological list of saved videos, empty
  * state when there are none. Fetches from /skill-lab/library (auth
@@ -119,7 +119,7 @@ export default function LibraryScreen() {
         id="skills_library_v1"
         iconName="bookmark"
         headline="Everything you save lives here"
-        subline="Tap the bookmark on any video to keep it. Sorted by most recent save — your receipt of what you're learning."
+        subline="Tap the bookmark on any video to keep it. Sorted by most recent save - your receipt of what you're learning."
       />
     </ScrollView>
   );

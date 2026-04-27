@@ -1,5 +1,5 @@
 /**
- * 90-Day Clock — seeker tile. A concrete plan with numbers the
+ * 90-Day Clock - seeker tile. A concrete plan with numbers the
  * user can actually hit: apps/week target, interview conversion
  * goal, two skills to close, weekly Dilly session. Derived from
  * the user's feed + signals.
@@ -79,7 +79,7 @@ export default function NinetyDayClock() {
           {/* CTA */}
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => openDillyOverlay({ initialMessage: `I'm starting the 90-day clock. My targets: ${targets.appTarget} apps/week, ${targets.interviewGoal} interviews in the first 30 days. Help me plan week 1 specifically — what does my Monday look like?` })}
+            onPress={() => openDillyOverlay({ initialMessage: `I'm starting the 90-day clock. My targets: ${targets.appTarget} apps/week, ${targets.interviewGoal} interviews in the first 30 days. Help me plan week 1 specifically - what does my Monday look like?` })}
             style={[s.cta, { backgroundColor: theme.accent }]}
           >
             <Ionicons name="rocket" size={14} color="#FFF" />

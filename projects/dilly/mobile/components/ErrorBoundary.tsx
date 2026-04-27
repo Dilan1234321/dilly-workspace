@@ -20,7 +20,7 @@ interface ErrorBoundaryProps {
    * Pass the current route name to clear when the user navigates away
    * from a crashed screen. */
   resetKey?: string | number;
-  /** When true, a caught error renders nothing at all — no sad face,
+  /** When true, a caught error renders nothing at all - no sad face,
    * no error text. Use for optional surface pieces (intel strips,
    * band dividers) where failure should degrade silently without
    * blocking the rest of the page. */

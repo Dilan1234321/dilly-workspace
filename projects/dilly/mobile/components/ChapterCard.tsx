@@ -1,5 +1,5 @@
 /**
- * ChapterCard — Home surface for the weekly Chapter.
+ * ChapterCard - Home surface for the weekly Chapter.
  *
  * Renders one of several states depending on what the server knows:
  *   locked      Starter tier, no access. Paywall CTA.
@@ -140,7 +140,7 @@ export default function ChapterCard({ state, theme }: Props) {
           <Text style={[s.ghostBtnText, { color: theme.accent }]}>Build your profile with Dilly</Text>
         </AnimatedPressable>
 
-        {/* Note input — works even before the first Chapter unlocks.
+        {/* Note input - works even before the first Chapter unlocks.
             Users who are still building their profile can still queue
             thoughts to be read when their first Chapter arrives, which
             makes this screen feel less like a hard gate. */}
@@ -152,7 +152,7 @@ export default function ChapterCard({ state, theme }: Props) {
             PREP FOR YOUR FIRST CHAPTER
           </Text>
           <Text style={{ fontSize: 12, color: theme.surface.t2, lineHeight: 17 }}>
-            Anything you want Dilly to think through in your first session? Jot it down — she'll read it before she writes.
+            Anything you want Dilly to think through in your first session? Jot it down - she'll read it before she writes.
           </Text>
         </View>
         <InlineNoteAdd theme={theme} />
@@ -235,7 +235,7 @@ export default function ChapterCard({ state, theme }: Props) {
       </Text>
       {/* Inline quick-add for chapter notes. A small labeled heading
           above the input so users clearly understand this is where
-          they queue things they want Dilly to bring up — not a search
+          they queue things they want Dilly to bring up - not a search
           bar, not a chat. Prior version had just the input with a
           placeholder, which was easy to miss. */}
       <View style={{ marginTop: 14, marginBottom: 2 }}>
@@ -276,7 +276,7 @@ export default function ChapterCard({ state, theme }: Props) {
 }
 
 /**
- * InlineNoteAdd — one-line input that queues a Chapter note.
+ * InlineNoteAdd - one-line input that queues a Chapter note.
  *
  * Shown inside ChapterCard in the waiting / pre-first state so users
  * can drop notes without leaving Home. Submits to POST /chapters/notes

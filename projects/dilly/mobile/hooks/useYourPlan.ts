@@ -1,5 +1,5 @@
 /**
- * useYourPlan — the anchor concept for Dilly across all three modes.
+ * useYourPlan - the anchor concept for Dilly across all three modes.
  *
  * Product verb (per founder): "Dilly turns your career confusion
  * into a plan." Every tab, card, and button in the app exists to
@@ -41,7 +41,8 @@
  *   component at the top of the card stack.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Mode = 'student' | 'seeker' | 'holder';
@@ -81,7 +82,7 @@ function today(): string {
 }
 
 /**
- * The generator. Deterministic — same inputs on same day = same plan.
+ * The generator. Deterministic - same inputs on same day = same plan.
  * That's the right behavior for a "today's plan" card; the user
  * should see the same plan all day no matter how many times they
  * open the app.
@@ -90,24 +91,35 @@ function today(): string {
 // We've had single-character / whitespace-only values land here from
 // partial extractions, which produced lines like "take the first step
 // toward 'S'". A meaningful value is >= 4 chars AND (contains a space
-// OR is >= 8 chars) — that passes "your role" but rejects "S", "a",
+// OR is >= 8 chars) - that passes "your role" but rejects "S", "a",
 // "job", etc.
 function _meaningful(s: string | null | undefined): boolean {
   const t = (s || '').trim();
   return t.length >= 4 && (t.includes(' ') || t.length >= 8);
 }
 
-function generatePlan(i: PlanInputs): YourPlan {
+function generatePlanVariants(i: PlanInputs): YourPlan[] {
   const { mode, userPath, firstName, appCount = 0, factCount = 0,
     interviewingCount = 0, currentRole, recentDeadline } = i;
 
-  // Priority 1: a near-term deadline ALWAYS wins the headline slot,
-  // but only if the label is substantive enough to not look broken.
-  // "Final round at Ramp" → in. "R" or "job" → fall through.
+  const base = (overrides: Partial<YourPlan>): YourPlan => ({
+    mode,
+    pathKey: userPath,
+    headline: '',
+    followup: '',
+    cta: '',
+    initialMessage: '',
+    destination: 'chat',
+    generatedAt: today(),
+    ...overrides,
+  });
+
+  // Pinned variants - when truly urgent, these always go first so a
+  // user with a deadline / live interview never rotates past them.
+  const pinned: YourPlan[] = [];
+
   if (recentDeadline && recentDeadline.daysUntil <= 3 && _meaningful(recentDeadline.label)) {
-    return {
-      mode,
-      pathKey: userPath,
+    pinned.push(base({
       headline: recentDeadline.daysUntil === 0
         ? `${recentDeadline.label} is today.`
         : recentDeadline.daysUntil === 1
@@ -116,224 +128,298 @@ function generatePlan(i: PlanInputs): YourPlan {
       followup: 'Block 30 minutes with Dilly to prep.',
       cta: 'Prep with Dilly',
       initialMessage: `Help me prep for "${recentDeadline.label}" which is ${recentDeadline.daysUntil <= 1 ? 'tomorrow' : `in ${recentDeadline.daysUntil} days`}.`,
-      generatedAt: today(),
-      destination: 'chat',
-    };
+    }));
   }
 
-  // Priority 2: interviewing in progress — this is where outcomes
-  // get decided, so it trumps everything else.
   if (interviewingCount > 0) {
-    return {
-      mode,
-      pathKey: userPath,
+    pinned.push(base({
       headline: `You're interviewing at ${interviewingCount} ${interviewingCount === 1 ? 'place' : 'places'}.`,
       followup: 'Pick the one that matters most and run a mock with Dilly.',
       cta: 'Start practice',
       initialMessage: "I'm interviewing this week. Help me pick the one I'm most worried about and run a mock.",
-      generatedAt: today(),
-      destination: 'chat',
-    };
+    }));
   }
 
-  // Priority 3: mode-specific anchors. These are the default plans
-  // for each path when there's no urgent deadline / interview.
+  // Mode/path-specific rotation pool. The user cycles through these
+  // each time they tap the card and return to home. Order is
+  // intentional: highest-leverage variant first so even a one-tap user
+  // gets the strongest move.
+  const pool: YourPlan[] = [];
+
   if (mode === 'holder') {
-    // Holder — career acceleration while employed. Plan frames
-    // growth, not job search. _meaningful() guards against garbage
-    // role values (e.g. "a", "SE", "-") that would produce broken
-    // copy like "Sharpen one edge as a S this week."
     const roleIsReal = _meaningful(currentRole);
-    return {
-      mode,
-      pathKey: userPath,
+    const role = roleIsReal ? currentRole! : 'your field';
+    pool.push(base({
       headline: roleIsReal
-        ? `Sharpen one edge as a ${currentRole} this week.`
+        ? `Sharpen one edge as a ${role} this week.`
         : 'Sharpen one edge in your field this week.',
       followup: 'Read the weekly signal, then run one growth conversation with Dilly.',
       cta: 'See this week',
-      initialMessage: roleIsReal
-        ? `I'm a ${currentRole}. Based on this week's field signal, what's ONE concrete move I should make to stay ahead?`
-        : "Based on this week's field signal, what's ONE concrete move I should make to stay ahead?",
-      generatedAt: today(),
-      destination: 'chat',
-    };
-  }
-
-  if (mode === 'student') {
-    // Student paths: vary by user_path.
+      initialMessage: `I'm a ${role}. Based on this week's field signal, what's ONE concrete move I should make to stay ahead?`,
+    }));
+    pool.push(base({
+      headline: 'Reach out to one mentor this week.',
+      followup: 'Growth compounds through people who already did what you want to do.',
+      cta: 'Draft with Dilly',
+      initialMessage: 'Help me draft a check-in to one mentor or senior peer this week.',
+    }));
+    pool.push(base({
+      headline: 'Pick one skill to level up this month.',
+      followup: 'Dilly will turn it into a 4-week plan you can actually finish.',
+      cta: 'Plan it',
+      initialMessage: 'Help me pick ONE skill to level up over the next 4 weeks based on where my field is headed.',
+    }));
+    pool.push(base({
+      headline: 'Audit your visibility at work this week.',
+      followup: "Promotion comes from being seen on the right things. Let's spot one gap.",
+      cta: 'Walk through it',
+      initialMessage: 'Help me audit how visible my best work is at my current job and pick one thing to fix this week.',
+    }));
+    pool.push(base({
+      headline: 'Refresh your story for the next role.',
+      followup: 'Even if you are not looking, the narrative needs upkeep.',
+      cta: 'Sharpen with Dilly',
+      initialMessage: 'Help me refresh my career story for the next role I would want, even if I am not actively looking.',
+    }));
+  } else if (mode === 'student') {
     if (userPath === 'dropout') {
-      return {
-        mode,
-        pathKey: userPath,
+      pool.push(base({
         headline: 'Ship one visible thing this week.',
         followup: 'Commit, post, demo. Receipts beat resumes.',
         cta: 'Plan the ship',
         initialMessage: "I'm a dropout working on proof-over-paper. Help me pick the one thing to ship this week.",
-        generatedAt: today(),
-        destination: 'chat',
-      };
-    }
-    if (userPath === 'international_grad') {
-      return {
-        mode,
-        pathKey: userPath,
+      }));
+      pool.push(base({
+        headline: 'Document one project on a public page.',
+        followup: 'A live link is a credential a degree cannot match.',
+        cta: 'Draft it',
+        initialMessage: 'Help me write a short public project page for one thing I built - what to include and how to frame it.',
+      }));
+    } else if (userPath === 'international_grad') {
+      pool.push(base({
         headline: 'Research one sponsor-friendly company this week.',
         followup: 'Save it to your target list, then tailor a fit read.',
         cta: 'Start research',
         initialMessage: "I'm on an international-grad path. Help me pick one sponsor-friendly company to research deeply this week.",
-        generatedAt: today(),
         destination: 'jobs',
-      };
+      }));
+      pool.push(base({
+        headline: 'Map your visa timeline against your search.',
+        followup: 'Dates first, applications second. Dilly can structure it.',
+        cta: 'Map it',
+        initialMessage: 'Help me build a visa-aware job search timeline for the next 6 months.',
+      }));
     }
-    // Default student anchor.
-    if (appCount < 3) {
-      return {
-        mode,
-        pathKey: userPath,
-        headline: 'Apply to 3 roles this week.',
-        followup: 'Dilly will tailor a fit read on each.',
-        cta: 'Open jobs',
-        initialMessage: 'Help me pick 3 roles to apply to this week. Start with the strongest matches.',
-        generatedAt: today(),
-        destination: 'jobs',
-      };
-    }
-    if (factCount < 12) {
-      return {
-        mode,
-        pathKey: userPath,
-        headline: 'Teach Dilly 3 more things about you this week.',
-        followup: 'Every fact sharpens the guidance and the fit reads.',
-        cta: 'Talk to Dilly',
-        initialMessage: 'Help me add 3 more things about my experience that a recruiter would want to know.',
-        generatedAt: today(),
-        destination: 'chat',
-      };
-    }
-    return {
-      mode,
-      pathKey: userPath,
+    pool.push(base({
+      headline: 'Apply to 3 roles this week.',
+      followup: 'Dilly will tailor a fit read on each.',
+      cta: 'Open jobs',
+      initialMessage: 'Help me pick 3 roles to apply to this week. Start with the strongest matches.',
+      destination: 'jobs',
+    }));
+    pool.push(base({
+      headline: 'Teach Dilly 3 more things about you this week.',
+      followup: 'Every fact sharpens the guidance and the fit reads.',
+      cta: 'Talk to Dilly',
+      initialMessage: 'Help me add 3 more things about my experience that a recruiter would want to know.',
+    }));
+    pool.push(base({
       headline: `Push one conversation forward this week, ${firstName}.`,
       followup: 'A referral beats a cold app. Pick the person, draft the message.',
       cta: 'Start with Dilly',
       initialMessage: 'Help me draft one warm outreach message to someone in my target field this week.',
-      generatedAt: today(),
-      destination: 'chat',
-    };
+    }));
+    pool.push(base({
+      headline: 'Polish one resume bullet today.',
+      followup: 'Numbers, verbs, outcomes. Dilly tightens it in five minutes.',
+      cta: 'Tighten it',
+      initialMessage: 'Help me rewrite ONE bullet on my resume to be sharper, more specific, and more measurable.',
+    }));
+    pool.push(base({
+      headline: 'Pick one skill to learn this week.',
+      followup: 'A 30-minute focused session beats two hours of scrolling jobs.',
+      cta: 'Plan the session',
+      initialMessage: 'Help me pick ONE skill to learn this week that maps to the roles I want.',
+    }));
+  } else {
+    // mode === 'seeker'
+    if (userPath === 'senior_reset') {
+      pool.push(base({
+        headline: 'Warm up one past colleague this week.',
+        followup: 'People in your network hire first. Dilly will help you draft.',
+        cta: 'Draft with Dilly',
+        initialMessage: "I'm reopening my job search. Help me draft a check-in to one former colleague this week.",
+      }));
+      pool.push(base({
+        headline: 'List 5 companies that respect your seniority.',
+        followup: 'Skip the entry-level firehose. Aim where your level lands.',
+        cta: 'Build the list',
+        initialMessage: 'Help me build a target list of 5 companies that hire at my level and respect my experience.',
+      }));
+    }
+    if (userPath === 'career_switch') {
+      pool.push(base({
+        headline: 'Publish one skill-transfer proof this week.',
+        followup: 'A short project or case study signals the pivot is real.',
+        cta: 'Plan it',
+        initialMessage: "I'm switching careers. Help me pick ONE small project or case study I can publish this week.",
+      }));
+      pool.push(base({
+        headline: 'Translate one past role into the new field.',
+        followup: 'The same work, told in the new language. That is the pivot resume.',
+        cta: 'Translate it',
+        initialMessage: 'Help me rewrite one bullet from my previous career so it reads to recruiters in the field I am switching into.',
+      }));
+    }
+    if (userPath === 'parent_returning') {
+      pool.push(base({
+        headline: 'Set one coffee chat this week.',
+        followup: 'Returning to work starts with people, not postings.',
+        cta: 'Find the person',
+        initialMessage: "I'm returning to work after a career gap. Help me pick the one person to reach out to this week.",
+      }));
+      pool.push(base({
+        headline: 'Frame your gap in one tight line.',
+        followup: 'A clean answer makes the gap a non-issue. Dilly drafts it.',
+        cta: 'Draft the line',
+        initialMessage: 'Help me write one short, confident sentence to explain my career gap to recruiters.',
+      }));
+    }
+    pool.push(base({
+      headline: appCount < 5
+        ? 'Apply to 5 strong matches this week.'
+        : 'Book one conversation this week.',
+      followup: appCount < 5
+        ? 'Dilly will tailor a fit read on each one.'
+        : 'A call beats three cold applications.',
+      cta: appCount < 5 ? 'Open jobs' : 'Start with Dilly',
+      initialMessage: appCount < 5
+        ? 'Help me pick 5 strong roles to apply to this week.'
+        : "I've been applying consistently. Help me shift toward conversations this week.",
+      destination: appCount < 5 ? 'jobs' : 'chat',
+    }));
+    pool.push(base({
+      headline: 'Tighten your story for one role.',
+      followup: 'A targeted narrative reads sharper than a one-size resume.',
+      cta: 'Sharpen it',
+      initialMessage: 'Help me tailor my story for ONE specific role I am chasing this week.',
+    }));
+    pool.push(base({
+      headline: 'Re-engage one warm contact today.',
+      followup: 'A 90-second message often beats a 90-minute application.',
+      cta: 'Draft it',
+      initialMessage: 'Help me write a short re-engagement message to one person in my network I have lost touch with.',
+    }));
   }
 
-  // mode === 'seeker' — paths: senior_reset, career_switch, parent_returning, etc.
-  if (userPath === 'senior_reset') {
-    return {
-      mode,
-      pathKey: userPath,
-      headline: 'Warm up one past colleague this week.',
-      followup: 'People in your network hire first. Dilly will help you draft.',
-      cta: 'Draft with Dilly',
-      initialMessage: "I'm reopening my job search. Help me draft a check-in to one former colleague this week.",
-      generatedAt: today(),
-      destination: 'chat',
-    };
+  // Pinned items always go first so urgency wins; rotation cycles
+  // only the non-urgent pool. If everything is empty (shouldn't
+  // happen), return a single fallback so the card never crashes.
+  const all = [...pinned, ...pool];
+  if (all.length === 0) {
+    all.push(base({
+      headline: 'Pick one career move this week.',
+      followup: 'Dilly will help you make it specific.',
+      cta: 'Talk to Dilly',
+      initialMessage: 'Help me pick ONE concrete career move to make this week.',
+    }));
   }
-  if (userPath === 'career_switch') {
-    return {
-      mode,
-      pathKey: userPath,
-      headline: 'Publish one skill-transfer proof this week.',
-      followup: 'A short project or case study signals the pivot is real.',
-      cta: 'Plan it',
-      initialMessage: "I'm switching careers. Help me pick ONE small project or case study I can publish this week.",
-      generatedAt: today(),
-      destination: 'chat',
-    };
-  }
-  if (userPath === 'parent_returning') {
-    return {
-      mode,
-      pathKey: userPath,
-      headline: 'Set one coffee chat this week.',
-      followup: 'Returning to work starts with people, not postings.',
-      cta: 'Find the person',
-      initialMessage: "I'm returning to work after a career gap. Help me pick the one person to reach out to this week.",
-      generatedAt: today(),
-      destination: 'chat',
-    };
-  }
-  // Default seeker.
-  return {
-    mode,
-    pathKey: userPath,
-    headline: appCount < 5
-      ? 'Apply to 5 strong matches this week.'
-      : 'Book one conversation this week.',
-    followup: appCount < 5
-      ? 'Dilly will tailor a fit read on each one.'
-      : 'A call beats three cold applications.',
-    cta: appCount < 5 ? 'Open jobs' : 'Start with Dilly',
-    initialMessage: appCount < 5
-      ? 'Help me pick 5 strong roles to apply to this week.'
-      : "I've been applying consistently. Help me shift toward conversations this week.",
-    generatedAt: today(),
-    destination: appCount < 5 ? 'jobs' : 'chat',
-  };
+  return all;
 }
 
-/** Marks today's plan action as taken. Call when the user taps the CTA. */
+function generatePlan(i: PlanInputs, variantIdx: number = 0): YourPlan {
+  const variants = generatePlanVariants(i);
+  const safe = variants.length > 0 ? variants : [{
+    mode: i.mode,
+    pathKey: i.userPath,
+    headline: 'Pick one career move this week.',
+    followup: 'Dilly will help you make it specific.',
+    cta: 'Talk to Dilly',
+    initialMessage: 'Help me pick ONE concrete career move to make this week.',
+    destination: 'chat' as const,
+    generatedAt: today(),
+  }];
+  return safe[variantIdx % safe.length];
+}
+
+/**
+ * Bump the variant index. Called when the user taps the plan CTA -
+ * by the time they navigate back to home, the next variant will be
+ * showing. We keep the date so a tap at 11:59 PM rolls over cleanly.
+ */
 export async function markPlanActionTaken(): Promise<void> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const stored = JSON.parse(raw);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ...stored, actionTaken: true }));
+    const stored = raw ? JSON.parse(raw) : {};
+    const idx = typeof stored.variantIdx === 'number' ? stored.variantIdx : 0;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...stored,
+      date: stored.date || today(),
+      variantIdx: idx + 1,
+    }));
+  } catch {}
+}
+
+interface StoredPlanState {
+  date: string;
+  variantIdx: number;
+  mode?: string;
+  userPath?: string;
+}
+
+async function readStoredState(): Promise<StoredPlanState> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) return { date: today(), variantIdx: 0 };
+    const parsed = JSON.parse(raw);
+    return {
+      date: typeof parsed.date === 'string' ? parsed.date : today(),
+      variantIdx: typeof parsed.variantIdx === 'number' ? parsed.variantIdx : 0,
+      mode: parsed.mode,
+      userPath: parsed.userPath,
+    };
+  } catch {
+    return { date: today(), variantIdx: 0 };
+  }
+}
+
+async function writeStoredState(s: StoredPlanState): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(s));
   } catch {}
 }
 
 /**
- * Hook: returns the plan for today. Regenerates if the stored date
- * is stale, otherwise returns cached. Inputs must be passed fresh
- * each render — the hook reacts to input changes so a new deadline
- * appearing mid-day bumps the plan immediately.
+ * Hook: returns today's plan, cycling to a new variant each time the
+ * user taps the CTA and returns to the screen. Re-reads storage on
+ * focus so the increment from markPlanActionTaken (fired in the card)
+ * shows up the moment home becomes visible again.
  */
 export function useYourPlan(inputs: PlanInputs | null): YourPlan | null {
   const [plan, setPlan] = useState<YourPlan | null>(null);
 
-  useEffect(() => {
+  // Recompute the plan from the current inputs + variantIdx in storage.
+  // Resets idx to 0 when mode/path changes (different user state) or
+  // when the date rolls over (fresh day starts at variant 0).
+  const recompute = useCallback(async () => {
     if (!inputs) {
       setPlan(null);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        const cached = raw ? JSON.parse(raw) : null;
-        if (
-          cached &&
-          cached.plan &&
-          cached.date === today() &&
-          cached.plan.pathKey === inputs.userPath &&
-          cached.plan.mode === inputs.mode
-        ) {
-          if (!cancelled) setPlan({ ...cached.plan, actionTaken: cached.actionTaken ?? false });
-          return;
-        }
-      } catch {
-        // fall through to regenerate
-      }
-      const fresh = generatePlan(inputs);
-      try {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
-          date: today(),
-          plan: fresh,
-        }));
-      } catch {}
-      if (!cancelled) setPlan(fresh);
-    })();
-    return () => { cancelled = true; };
-    // Regenerate if any relevant input shifts (new deadline, new
-    // interview, new count). Storage still guards same-day identity
-    // so opening the app 20 times a day doesn't churn.
+    const stored = await readStoredState();
+    const dayChanged = stored.date !== today();
+    const contextChanged = stored.mode !== inputs.mode || stored.userPath !== inputs.userPath;
+    const variantIdx = (dayChanged || contextChanged) ? 0 : stored.variantIdx;
+
+    if (dayChanged || contextChanged) {
+      await writeStoredState({
+        date: today(),
+        variantIdx: 0,
+        mode: inputs.mode,
+        userPath: inputs.userPath,
+      });
+    }
+    setPlan(generatePlan(inputs, variantIdx));
   }, [
     inputs?.mode,
     inputs?.userPath,
@@ -344,6 +430,14 @@ export function useYourPlan(inputs: PlanInputs | null): YourPlan | null {
     inputs?.recentDeadline?.label,
     inputs?.recentDeadline?.daysUntil,
   ]);
+
+  // Initial + input-driven recompute.
+  useEffect(() => { recompute(); }, [recompute]);
+
+  // Re-read storage every time the host screen regains focus - picks
+  // up the variantIdx bump from markPlanActionTaken without needing
+  // any cross-component state plumbing.
+  useFocusEffect(useCallback(() => { recompute(); }, [recompute]));
 
   return plan;
 }

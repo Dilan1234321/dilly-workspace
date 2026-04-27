@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Dimensions, Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
@@ -8,8 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { CERTIFICATIONS, type Certification } from '../../data/certifications';
 import type { AppMode } from '../../lib/appMode';
+import { dilly } from '../../lib/dilly';
 
 const SAVED_KEY = 'cert_saved_ids_v1';
+const COMPLETED_KEY = 'cert_completed_ids_v1';
 const CARD_W = Dimensions.get('window').width * 0.78;
 
 type FilterMode = 'free' | 'all' | 'paid';
@@ -39,30 +41,51 @@ const COHORT_LABELS: Record<string, string> = {
   'chemical-biomedical-engineering': 'Chemical Engineering',
 };
 
-function whyFits(cert: Certification, cohortSlug: string | null, appMode: AppMode): string {
+// Honest, derivation-only description. No LLM call. Three signals
+// shape the verdict: cohort match, persona match, and effort vs payoff.
+// When the cert genuinely doesn't fit, we say so instead of forcing
+// generic praise - recommendations the user can trust > recommendations
+// that always sound positive.
+function describeCert(cert: Certification, cohortSlug: string | null, appMode: AppMode): string {
   const cohortLabel = cohortSlug
     ? (COHORT_LABELS[cohortSlug] ?? cohortSlug.replace(/-/g, ' '))
     : 'your field';
 
-  const map: Record<AppMode, Record<Certification['level'], string>> = {
-    student: {
-      entry:        `Great first credential in ${cohortLabel} — strong on a new-grad resume.`,
-      intermediate: `Challenging cert for ${cohortLabel} — stands out before graduation.`,
-      advanced:     `Ambitious choice in ${cohortLabel} — plan for post-graduation.`,
-    },
-    seeker: {
-      entry:        `Fast skill signal for ${cohortLabel} roles — shows employers you're ready.`,
-      intermediate: `Strong differentiator in ${cohortLabel} — ahead of most candidates.`,
-      advanced:     `Top-tier ${cohortLabel} cert — commands premium roles.`,
-    },
-    holder: {
-      entry:        `Quick credential refresh in ${cohortLabel} — often required for promotion.`,
-      intermediate: `Closes a common skill gap for ${cohortLabel} professionals.`,
-      advanced:     `Gold-standard in ${cohortLabel} — opens senior doors.`,
-    },
-  };
+  const cohortMatch = !cohortSlug
+    || cert.cohorts.includes(cohortSlug)
+    || cert.cohorts.includes('general');
+  const personaMatch = cert.persona_fit.includes(appMode);
+  const heavy = cert.est_hours >= 150;
+  const expensive = !cert.is_free;
 
-  return map[appMode][cert.level];
+  if (!cohortMatch && !personaMatch) {
+    return `Built for a different field and stage than yours. Skip unless you are pivoting hard.`;
+  }
+  if (!cohortMatch) {
+    return `Recognized credential, but not the one ${cohortLabel} hiring managers look for. Worth it only if you are broadening into another field.`;
+  }
+  if (!personaMatch) {
+    if (appMode === 'student') return `Designed for working professionals. Not wrong for a student, but the payoff lands later.`;
+    if (appMode === 'holder') return `Aimed at people earlier in their career. Useful only if it covers a real gap for you.`;
+    return `Aimed at a different career stage. Worth it only if the skill set genuinely matches what you need next.`;
+  }
+
+  if (heavy && expensive) {
+    return `Real time and money commitment (${cert.time_label}, ${cert.cost_label}). Only worth it if you are committed to ${cohortLabel} long-term.`;
+  }
+  if (heavy) {
+    return `Big time investment (${cert.time_label}) but free. Pays off when you are sure ${cohortLabel} is the path.`;
+  }
+  if (expensive) {
+    return `Costs money, but ${cohortLabel} recruiters know the name. A real signal you went past the basics.`;
+  }
+  if (cert.level === 'entry') {
+    return `Low-cost signal that you are serious about ${cohortLabel}. Quick to finish, easy to put on a resume.`;
+  }
+  if (cert.level === 'intermediate') {
+    return `Solid skill stamp for ${cohortLabel} that does not cost money. Most candidates skip it, so doing it stands out.`;
+  }
+  return `Top-tier ${cohortLabel} cert. Heavy lift but unlocks senior doors when paired with experience.`;
 }
 
 interface Props {
@@ -74,10 +97,14 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
   const theme = useResolvedTheme();
   const [filter, setFilter] = useState<FilterMode>('free');
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     AsyncStorage.getItem(SAVED_KEY)
       .then(raw => { if (raw) setSavedIds(new Set(JSON.parse(raw))); })
+      .catch(() => {});
+    AsyncStorage.getItem(COMPLETED_KEY)
+      .then(raw => { if (raw) setCompletedIds(new Set(JSON.parse(raw))); })
       .catch(() => {});
   }, []);
 
@@ -90,6 +117,32 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
       return next;
     });
   }, []);
+
+  // Mark a cert as completed: persist locally so the badge sticks
+  // across sessions, and POST a profile_facts achievement so it
+  // shows up under My Dilly's Achievements category and feeds into
+  // resume generation. Best-effort - if the network call fails, the
+  // local badge still shows so the user is not blocked.
+  const markCompleted = useCallback((cert: Certification) => {
+    if (completedIds.has(cert.id)) return;
+    setCompletedIds(prev => {
+      const next = new Set(prev);
+      next.add(cert.id);
+      AsyncStorage.setItem(COMPLETED_KEY, JSON.stringify([...next])).catch(() => {});
+      return next;
+    });
+    const isoDate = new Date().toISOString().slice(0, 10);
+    dilly.fetch('/memory/items', {
+      method: 'POST',
+      body: JSON.stringify({
+        category: 'achievement',
+        label: cert.name.slice(0, 80),
+        value: `${cert.provider} certification, completed ${isoDate}.`.slice(0, 400),
+      }),
+    })
+      .then(() => Alert.alert('Added to your profile', `${cert.name} is now on your Dilly profile under Achievements.`))
+      .catch(() => Alert.alert('Saved locally', 'We marked this complete on your device. It will sync to your profile next time you are online.'));
+  }, [completedIds]);
 
   const openCert = useCallback(async (url: string) => {
     await WebBrowser.openBrowserAsync(url, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
@@ -127,48 +180,58 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
         RECOMMENDED CERTIFICATIONS
       </Text>
       <Text style={[styles.subtitle, { color: theme.surface.t2 }]}>
-        Earn a credential — free options first.
+        Earn a credential - free options first.
       </Text>
 
-      {/* Filter chips */}
+      {/* Filter chips. Pressable (not TouchableOpacity) + zero press
+          delay so taps land instantly even while the parent ScrollView
+          is mid-scroll/momentum. Generous hitSlop because the chip
+          padding is tight. */}
       <View style={styles.chips}>
         {(['free', 'all', 'paid'] as FilterMode[]).map(f => {
           const active = filter === f;
           return (
-            <TouchableOpacity
+            <Pressable
               key={f}
-              activeOpacity={0.8}
               onPress={() => setFilter(f)}
-              style={[
+              unstable_pressDelay={0}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+              style={({ pressed }) => [
                 styles.chip,
                 active
                   ? { backgroundColor: theme.accent }
                   : { borderColor: theme.accentBorder, borderWidth: 1 },
+                pressed && { opacity: 0.7 },
               ]}
             >
               <Text style={[styles.chipText, { color: active ? '#FFF' : theme.surface.t2 }]}>
                 {f === 'free' ? 'Free' : f === 'paid' ? 'Paid' : 'All'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
 
-      {/* Cert cards */}
+      {/* Cert cards. keyboardShouldPersistTaps so a tap landing on a
+          chip while the horizontal row is still decelerating fires
+          immediately instead of being eaten as a scroll-stop tap. */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cardRow}
+        keyboardShouldPersistTaps="handled"
       >
         {filtered.map(cert => (
           <CertCard
             key={cert.id}
             cert={cert}
             saved={savedIds.has(cert.id)}
-            whyText={whyFits(cert, cohortSlug, appMode)}
+            completed={completedIds.has(cert.id)}
+            whyText={describeCert(cert, cohortSlug, appMode)}
             theme={theme}
             onStart={() => openCert(cert.url)}
             onSave={() => toggleSave(cert.id)}
+            onComplete={() => markCompleted(cert)}
           />
         ))}
       </ScrollView>
@@ -181,16 +244,17 @@ export function CertificationsSection({ cohortSlug, appMode }: Props) {
 interface CardProps {
   cert: Certification;
   saved: boolean;
+  completed: boolean;
   whyText: string;
   theme: any;
   onStart: () => void;
   onSave: () => void;
+  onComplete: () => void;
 }
 
-function CertCard({ cert, saved, whyText, theme, onStart, onSave }: CardProps) {
+function CertCard({ cert, saved, completed, whyText, theme, onStart, onSave, onComplete }: CardProps) {
   return (
     <View style={[cardStyles.root, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-      {/* Header row: provider + cost badge */}
       <View style={cardStyles.headerRow}>
         <Text style={[cardStyles.provider, { color: theme.surface.t3 }]} numberOfLines={1}>
           {cert.provider}
@@ -207,12 +271,10 @@ function CertCard({ cert, saved, whyText, theme, onStart, onSave }: CardProps) {
         </View>
       </View>
 
-      {/* Cert name */}
       <Text style={[cardStyles.name, { color: theme.surface.t1 }]} numberOfLines={3}>
         {cert.name}
       </Text>
 
-      {/* Time + level row */}
       <View style={cardStyles.metaRow}>
         <Ionicons name="time-outline" size={12} color={theme.surface.t3} />
         <Text style={[cardStyles.meta, { color: theme.surface.t3 }]}>{cert.time_label}</Text>
@@ -222,12 +284,12 @@ function CertCard({ cert, saved, whyText, theme, onStart, onSave }: CardProps) {
         </Text>
       </View>
 
-      {/* Why-this-fits */}
-      <Text style={[cardStyles.why, { color: theme.surface.t2 }]} numberOfLines={2}>
+      {/* Honest description - lengthened to 4 lines so the verdict
+          actually fits without truncation. */}
+      <Text style={[cardStyles.why, { color: theme.surface.t2 }]} numberOfLines={4}>
         {whyText}
       </Text>
 
-      {/* Actions */}
       <View style={cardStyles.actions}>
         <TouchableOpacity
           activeOpacity={0.88}
@@ -254,6 +316,29 @@ function CertCard({ cert, saved, whyText, theme, onStart, onSave }: CardProps) {
           />
         </TouchableOpacity>
       </View>
+
+      {/* Mark as completed - separate row so it does not crowd the
+          primary Start CTA. Once tapped it locks in (re-tapping does
+          nothing) and writes an Achievement to the Dilly profile. */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={onComplete}
+        disabled={completed}
+        style={[
+          cardStyles.completeBtn,
+          { borderColor: completed ? theme.accent : theme.accentBorder },
+          completed && { backgroundColor: theme.accentSoft },
+        ]}
+      >
+        <Ionicons
+          name={completed ? 'checkmark-circle' : 'checkmark-circle-outline'}
+          size={14}
+          color={theme.accent}
+        />
+        <Text style={[cardStyles.completeText, { color: theme.accent }]}>
+          {completed ? 'On your profile' : 'I completed this'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -378,5 +463,19 @@ const cardStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
+  },
+  completeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  completeText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

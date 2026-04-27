@@ -1,7 +1,7 @@
 /**
  * Client-side DillyFace splash greeting variants.
  *
- * All logic is pure client-side — reads the locally cached profile
+ * All logic is pure client-side - reads the locally cached profile
  * slim and picks a variant not shown in the last 5 opens. Zero LLM
  * calls, zero new network round-trips.
  *

@@ -1,5 +1,5 @@
 /**
- * useTierFeel — ambient premium treatment that varies by subscription tier.
+ * useTierFeel - ambient premium treatment that varies by subscription tier.
  *
  * The app can't add new features to the paid tiers (product rule).
  * What it CAN do is make the SAME features feel different to hold.
@@ -8,7 +8,7 @@
  *
  *   starter:  clean, friendly, intentionally lightweight
  *   dilly:    slightly heavier, more considered
- *   pro:      full gravitas — thicker borders, heavier type, more
+ *   pro:      full gravitas - thicker borders, heavier type, more
  *             deliberate press feedback
  *
  * Users cannot name why Pro "feels more expensive" than Dilly. The
@@ -42,7 +42,7 @@ export interface TierFeel {
   headingWeight: '700' | '800' | '900';
   /** Additional letter-spacing added to the hero heading. pro gets +0.2px. */
   headingTracking: number;
-  /** AnimatedPressable scaleDown — smaller scaleDown = more subtle, more premium. */
+  /** AnimatedPressable scaleDown - smaller scaleDown = more subtle, more premium. */
   pressScaleDown: number;
   /** Whether to play haptic feedback on button press. */
   pressHaptic: boolean;
@@ -78,7 +78,7 @@ export function useTierFeel(): TierFeel {
         cardBorder: 2.5,
         headingWeight: '900',
         headingTracking: 0.2,
-        pressScaleDown: 0.98,     // barely shrinks — feels deliberate
+        pressScaleDown: 0.98,     // barely shrinks - feels deliberate
         pressHaptic: true,        // Pro presses have tactile feedback
         proAccentBar: true,       // 3px accent bar across the top of hero cards
         isStarter: false,

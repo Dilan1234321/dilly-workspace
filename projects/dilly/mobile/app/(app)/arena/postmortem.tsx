@@ -1,5 +1,5 @@
 /**
- * Rejection Post-Mortem — student tile. A structured walkthrough
+ * Rejection Post-Mortem - student tile. A structured walkthrough
  * after a no. Guides the student through five questions and seeds
  * each with a Dilly chat so the post-mortem actually happens.
  */
@@ -18,27 +18,27 @@ interface Q {
 
 const QUESTIONS: Q[] = [
   {
-    label: '1 — THE MOMENT',
+    label: '1 - THE MOMENT',
     question: 'Walk me through the moment you got the no. Where were you? What did they say?',
     why: 'Naming the moment stops you from rewriting it in your head.',
   },
   {
-    label: '2 — THE STORY YOU ARE TELLING',
+    label: '2 - THE STORY YOU ARE TELLING',
     question: 'What is the story you are already telling yourself about why?',
     why: 'That story is usually wrong, and it is usually cruel. Surface it on purpose.',
   },
   {
-    label: '3 — THE FACTS',
+    label: '3 - THE FACTS',
     question: 'What do you actually know about the decision? What is speculation?',
     why: 'Rejection gets worse when you fill gaps in the truth with fear.',
   },
   {
-    label: '4 — THE LESSON',
+    label: '4 - THE LESSON',
     question: 'What is one specific thing you would do differently next time, not in general, but next time?',
     why: 'The rep, not the brag-sheet.',
   },
   {
-    label: '5 — THE NEXT MOVE',
+    label: '5 - THE NEXT MOVE',
     question: 'What is the one thing you will send, apply to, or build in the next 48 hours?',
     why: 'Time between noes is not recovery. Time between noes is the stage.',
   },

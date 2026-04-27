@@ -1,5 +1,5 @@
 /**
- * RoleRadarChart — scatter plot of role clusters by volume and AI demand.
+ * RoleRadarChart - scatter plot of role clusters by volume and AI demand.
  *
  * X axis: job volume (number of active listings for this role in your cohort)
  * Y axis: AI fluency % (share of those listings requiring AI/ML skills)
@@ -35,10 +35,10 @@ const MAX_BUBBLE = 18
 const MIN_BUBBLE = 5
 
 function bubbleColor(aiPct: number): string {
-  if (aiPct >= 70) return '#FF453A'   // coral — high AI demand
-  if (aiPct >= 45) return '#FF9F0A'   // amber — moderate
-  if (aiPct >= 25) return '#34C759'   // green — low-moderate
-  return '#8E8E93'                    // gray — minimal
+  if (aiPct >= 70) return '#FF453A'   // coral - high AI demand
+  if (aiPct >= 45) return '#FF9F0A'   // amber - moderate
+  if (aiPct >= 25) return '#34C759'   // green - low-moderate
+  return '#8E8E93'                    // gray - minimal
 }
 
 export default function RoleRadarChart({ dots, width }: Props) {

@@ -1,5 +1,5 @@
 /**
- * Recruiter Radar — student tile. Simulates the 15-second read a
+ * Recruiter Radar - student tile. Simulates the 15-second read a
  * recruiter does of a student's public profile. We surface a
  * ranked list of the first three things they would see, plus a
  * "killer detail" test (name the single item that would make them
@@ -51,7 +51,7 @@ export default function RecruiterRadar() {
     const project = facts.find(f => String(f.category).toLowerCase() === 'project')
     return [
       {
-        label: 'Line 1 — Identity',
+        label: 'Line 1 - Identity',
         value: tagline
           ? `${profile?.name || ''} · ${tagline}`
           : `${profile?.name || 'Your name'} · ${playbook.shortName} student`,
@@ -59,16 +59,16 @@ export default function RecruiterRadar() {
         why: tagline ? 'A tagline you wrote. Reads as intent.' : 'No custom tagline. Reads as generic.',
       },
       {
-        label: 'Line 2 — Proof',
+        label: 'Line 2 - Proof',
         value: achievement?.label || achievement?.value || 'No achievement surfaced yet',
         strong: !!achievement,
-        why: achievement ? 'A concrete achievement, the first thing a recruiter pattern-matches on.' : 'No achievement on your surface — recruiters will move on.',
+        why: achievement ? 'A concrete achievement, the first thing a recruiter pattern-matches on.' : 'No achievement on your surface - recruiters will move on.',
       },
       {
-        label: 'Line 3 — What you built',
+        label: 'Line 3 - What you built',
         value: project?.label || project?.value || 'No project surfaced yet',
         strong: !!project,
-        why: project ? 'A project is the strongest proof for students — shows you ship, not just learn.' : 'No project on your surface. This is the line that buys you a reply.',
+        why: project ? 'A project is the strongest proof for students - shows you ship, not just learn.' : 'No project on your surface. This is the line that buys you a reply.',
       },
     ]
   }, [profile, facts, playbook])

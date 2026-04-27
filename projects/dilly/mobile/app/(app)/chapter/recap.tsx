@@ -1,5 +1,5 @@
 /**
- * Chapter Recap — shown after a session ends, or when the user taps
+ * Chapter Recap - shown after a session ends, or when the user taps
  * "See last Chapter recap" from the prep screen.
  *
  * Comprehensive visual summary of what was discussed. Every slot is
@@ -33,6 +33,20 @@ interface Chapter {
   screens: Screen[];
   count?: number;
   generated_at?: string;
+}
+
+// Strip markdown emphasis from LLM-authored body text - bare <Text>
+// renders **bold** as literal asterisks, which reads as a glitch.
+function stripFormatting(s: string): string {
+  if (!s) return '';
+  return s
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/(^|[\s(])\*(?!\s)([^*\n]+?)\*(?=[\s).,!?;:]|$)/g, '$1$2')
+    .replace(/(^|[\s(])_(?!\s)([^_\n]+?)_(?=[\s).,!?;:]|$)/g, '$1$2')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .trim();
 }
 
 const SLOT_LABEL: Record<string, string> = {
@@ -110,7 +124,9 @@ export default function ChapterRecapScreen() {
   const recapCards = useMemo(() => {
     if (!chapter) return [];
     const WANT = new Set(['noticed', 'working', 'push_on', 'one_move', 'question', 'close']);
-    return chapter.screens.filter(s => WANT.has(s.slot));
+    return chapter.screens
+      .filter(s => WANT.has(s.slot))
+      .map(s => ({ ...s, body: stripFormatting(s.body) }));
   }, [chapter]);
 
   if (loading) {
@@ -147,7 +163,7 @@ export default function ChapterRecapScreen() {
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
       contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 40 }}
     >
-      {/* Back / close button — present when pushed from prep screen */}
+      {/* Back / close button - present when pushed from prep screen */}
       <View style={s.topBar}>
         <AnimatedPressable onPress={() => safeBack('/(app)')} hitSlop={12} scaleDown={0.9}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />

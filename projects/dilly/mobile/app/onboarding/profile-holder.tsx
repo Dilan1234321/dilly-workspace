@@ -149,7 +149,7 @@ export default function ProfileHolderScreen() {
     if (!canAdvance() || saving) return;
     // Step 2 is role + company. Run the client-side gibberish guard
     // before letting the user past this step. Zero server cost, no
-    // LLM call — just heuristics. Stops the obvious 'asdfghjkl' and
+    // LLM call - just heuristics. Stops the obvious 'asdfghjkl' and
     // ')*#&%' inputs from ever reaching the backend.
     if (step === 2) {
       const roleCheck = validateRole(role);

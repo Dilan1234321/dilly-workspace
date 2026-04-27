@@ -1,5 +1,5 @@
 /**
- * DillyPaywallFullScreen — shown when a free-tier user taps a
+ * DillyPaywallFullScreen - shown when a free-tier user taps a
  * Dilly-AI surface they can't use yet. Full-screen, elegant,
  * quietly persuasive.
  *
@@ -91,7 +91,7 @@ export default function DillyPaywallFullScreen({
     try {
       await Linking.openURL(PRICING_URL);
     } catch {
-      // If the link fails we don't dismiss — user can try again.
+      // If the link fails we don't dismiss - user can try again.
       return;
     }
     onDismiss();
@@ -118,7 +118,7 @@ export default function DillyPaywallFullScreen({
           },
         ]}
       >
-        {/* No dismiss button up top anymore — the 'Not right now' CTA at
+        {/* No dismiss button up top anymore - the 'Not right now' CTA at
             the bottom is the single way out. Cleaner visually and avoids
             the paywall feeling like an alert to swat away. */}
         <View style={s.topRow} />
@@ -129,7 +129,7 @@ export default function DillyPaywallFullScreen({
             <DillyFace size={96} />
           </View>
 
-          {/* Eyebrow is always "A GENTLE REMINDER" — consistent voice.
+          {/* Eyebrow is always "A GENTLE REMINDER" - consistent voice.
               Previously we'd swap in the surface name (FIT READS etc.)
               but that split the brand tone; this reads gentler. */}
           <Text style={[s.eyebrow, { color: theme.accent }]}>A GENTLE REMINDER</Text>

@@ -37,7 +37,7 @@ function DillyGateWrapper() {
  *
  *  On dismiss: return the user to the page they were on when the
  *  paywall opened. Previously we force-routed to /(app) which felt
- *  like the app ate their session. Now we just close the overlay —
+ *  like the app ate their session. Now we just close the overlay -
  *  the screen they were on is still underneath, and if it was in a
  *  402'd state (e.g. Forge mid-generation) the screen's own paywall
  *  bail logic has already reset it to a safe state. */
@@ -54,7 +54,7 @@ function CelebrationWrapper() {
   return <CelebrationPortal />;
 }
 
-/** Animated tab icon — hoisted to module scope so it doesn't get
+/** Animated tab icon - hoisted to module scope so it doesn't get
  *  re-created on every render of AppLayoutInner. Previously this was
  *  an inner function (`TabIcon` below), which meant each tab switch
  *  (pathname change → AppLayoutInner re-render) produced a NEW
@@ -104,7 +104,7 @@ const TabIcon = ({
 
 function DillyTabIcon({ focused }: { focused: boolean }) {
   // Reads the user's current theme accent so if they pick teal/rose/
-  // etc., the Dilly tab chip matches — previously this was hard-coded
+  // etc., the Dilly tab chip matches - previously this was hard-coded
   // indigo regardless of the user's customization.
   const theme = useResolvedTheme();
   return (
@@ -187,7 +187,7 @@ function AppLayoutInner() {
         isHolder ? 'trending-up' : 'briefcase',
         isHolder ? 'trending-up-outline' : 'briefcase-outline',
       ),
-      // Dilly Skills tab — curated learning library. Play-circle reads
+      // Dilly Skills tab - curated learning library. Play-circle reads
       // as "video content" without being literal about YouTube. Same
       // icon for both modes; Skills is cross-audience.
       skills: make('play-circle', 'play-circle-outline'),
@@ -199,7 +199,7 @@ function AppLayoutInner() {
   // reading through the session.
   const onChapter = !!pathname && pathname.includes('/chapter');
   // Skills sub-pages (a specific cohort, video, ask, library, trending)
-  // also hide the tab bar so the detail surfaces feel full-screen — the
+  // also hide the tab bar so the detail surfaces feel full-screen - the
   // Skills root keeps the tab bar so the navigation is obvious.
   const onSkillsDetail = !!pathname && /\/skills\/(cohort|video|ask|library|trending)/.test(pathname);
   const hideTabBar = onChapter || onSkillsDetail;
@@ -245,7 +245,7 @@ function AppLayoutInner() {
       />
 
       {/* Tab 2: AI Arena / Field. Shield carries "defend your
-          career / know the threats" meaning — both modes. */}
+          career / know the threats" meaning - both modes. */}
       <Tabs.Screen
         name="ai-arena"
         options={{
@@ -254,7 +254,7 @@ function AppLayoutInner() {
         }}
       />
 
-      {/* Tab 3: Dilly Skills — the curated learning library,
+      {/* Tab 3: Dilly Skills - the curated learning library,
           promoted from hidden to a top-level tab. Dilly and Skills
           are two sides of the same coin; Skills deserves a permanent
           seat in the navbar so Chapter / Jobs prescriptions read
@@ -267,7 +267,7 @@ function AppLayoutInner() {
         }}
       />
 
-      {/* Jobs — application mode. Briefcase for seekers/students,
+      {/* Jobs - application mode. Briefcase for seekers/students,
           trending-up for holders (The Market). */}
       <Tabs.Screen
         name="jobs"
@@ -277,7 +277,7 @@ function AppLayoutInner() {
           animation: 'fade',
         }}
       />
-      {/* My Dilly — identity / profile. Person-circle for seekers,
+      {/* My Dilly - identity / profile. Person-circle for seekers,
           analytics for holders (My Career). */}
       <Tabs.Screen
         name="my-dilly-profile"
@@ -298,9 +298,9 @@ function AppLayoutInner() {
         name="settings"
         options={{ href: null, animation: 'fade' }}
       />
-      {/* Public profile manager — mirrors /skills/profile-settings.
+      {/* Public profile manager - mirrors /skills/profile-settings.
           Reached from Settings > Web Profile > Public profile row.
-          Tabs.Screen animation is Tabs-level (fade/none/shift) — the
+          Tabs.Screen animation is Tabs-level (fade/none/shift) - the
           slide-in feel comes from expo-router's default push behavior
           when we router.push(). */}
       <Tabs.Screen
@@ -386,7 +386,7 @@ function AppLayoutInner() {
 }
 
 export default function AppLayout() {
-  // useResolvedTheme subscribes to AsyncStorage-hydrated state —
+  // useResolvedTheme subscribes to AsyncStorage-hydrated state -
   // keep it inside a child (AppLayoutInner) so the SubscriptionProvider
   // and ErrorBoundary wrap it cleanly. The other wrappers (overlay,
   // gate, paywall) live here so they stay mounted across tab switches.

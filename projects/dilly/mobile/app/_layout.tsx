@@ -25,7 +25,7 @@ import { useResolvedTheme } from '../hooks/useTheme';
 const GOLD = '#2B3A8E';
 
 /** Very brief splash rendered before fonts resolve (~200ms). Tints
- *  the logo with the user's Customize Dilly accent — starts at the
+ *  the logo with the user's Customize Dilly accent - starts at the
  *  default accent then flips to the stored accent once AsyncStorage
  *  hydrates. Same surface bg so the pre-font flash matches whatever
  *  theme the user chose. */
@@ -53,7 +53,7 @@ function PreFontSplash() {
 function LoadingScreen({ onComplete, themed }: { onComplete: () => void; themed: boolean }) {
   const theme = useResolvedTheme();
   const bg = themed ? theme.surface.bg : '#FFFFFF';
-  // fill tracks accent in both cases — theme.accent falls back to the
+  // fill tracks accent in both cases - theme.accent falls back to the
   // default accent (indigo-violet) when no user has hydrated yet.
   const fill = theme.accent || GOLD;
   const taglineColor = themed ? theme.surface.t2 : colors.t2;
@@ -216,7 +216,7 @@ export default function RootLayout() {
   if (!fontsLoaded) {
     // Pre-font flash. useResolvedTheme is hook-based (no provider
     // required) so we can tint the logo with the user's Customize
-    // Dilly accent here too — starts at the default accent on very
+    // Dilly accent here too - starts at the default accent on very
     // first paint, flips to the stored accent within a tick once
     // AsyncStorage hydrates. Consistent with the rest of the app.
     return <PreFontSplash />;
@@ -274,7 +274,7 @@ export default function RootLayout() {
 
 /** Crossfade overlay that fires when the OS dark/light mode toggles.
  * Snaps to the new theme's bg at full opacity, then animates out over
- * ~300ms — masking the instant palette snap with a smooth fade-in.
+ * ~300ms - masking the instant palette snap with a smooth fade-in.
  * Uses useNativeDriver so the animation runs on the UI thread. */
 function SystemThemeTransitionOverlay() {
   const theme = useResolvedTheme();

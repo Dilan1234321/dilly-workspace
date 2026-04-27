@@ -376,7 +376,7 @@ export default function ChooseSituationScreen() {
                 other identities become FILTERS later prevents the
                 'what if I'm X and Y' confusion that testers flagged. */}
             <Text style={styles.clarifier}>
-              You can only pick one. Anything else about you — LGBTQ+ focus, remote-only, fair-chance, visa timing — you'll set as a filter once you're in.
+              You can only pick one. Anything else about you - LGBTQ+ focus, remote-only, fair-chance, visa timing - you'll set as a filter once you're in.
             </Text>
           </View>
         </FadeInView>

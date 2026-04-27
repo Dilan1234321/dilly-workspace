@@ -1,6 +1,6 @@
 import { safeBack } from '../../lib/navigation';
 /**
- * Generate Resume — "The Forge"
+ * Generate Resume - "The Forge"
  *
  * This is not a resume generator. It is a one-role, one-company
  * artifact builder. Every surface here reinforces: your profile
@@ -8,7 +8,7 @@ import { safeBack } from '../../lib/navigation';
  * company's ATS bar.
  *
  * Differentiators (why the user pays for this):
- *   - JD strength meter during setup — instant signal that the
+ *   - JD strength meter during setup - instant signal that the
  *     quality of what they paste directly shapes what they get.
  *   - Narrated forge stages during generation, plus a live
  *     keyword ticker showing what Dilly just pulled out of the JD.
@@ -133,7 +133,7 @@ function resumeText(sections: GeneratedSection[]): string {
   return parts.join(' ');
 }
 
-/** Find the "weakest" bullet — heuristic: short + no metrics/numbers. */
+/** Find the "weakest" bullet - heuristic: short + no metrics/numbers. */
 function findWeakestBullet(sections: GeneratedSection[]): { text: string; where: string } | null {
   const candidates: { text: string; where: string; score: number }[] = [];
   const hasMetric = (t: string) => /\d/.test(t);
@@ -248,8 +248,8 @@ export default function ResumeGenerateScreen() {
   }, [variantId]);
 
   /** Apply an inline edit. `path` is a dotted accessor into the
-   *  section — e.g. `education.major`, `experiences.0.role`,
-   *  `experiences.0.bullets.2.text`. Safe against typos — an invalid
+   *  section - e.g. `education.major`, `experiences.0.role`,
+   *  `experiences.0.bullets.2.text`. Safe against typos - an invalid
    *  path no-ops. */
   const handleFieldEdit = useCallback((sectionIdx: number, path: string, newValue: string) => {
     setSections(prev => {
@@ -303,9 +303,9 @@ export default function ResumeGenerateScreen() {
       }
 
       const token = await dilly.tokenProvider.getToken();
-      if (!token) throw new Error('Not signed in — please sign out and back in.');
+      if (!token) throw new Error('Not signed in - please sign out and back in.');
 
-      // Sanitize filename — no spaces or special chars so the file URI is valid
+      // Sanitize filename - no spaces or special chars so the file URI is valid
       const safeName = (profile.name || 'Resume')
         .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'Resume';
       const safeCompany = (company || 'Company')
@@ -315,7 +315,7 @@ export default function ResumeGenerateScreen() {
       const { API_BASE } = require('../../lib/tokens') as any;
       const url = `${API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
 
-      // Fetch binary from the API directly — more reliable than downloadAsync
+      // Fetch binary from the API directly - more reliable than downloadAsync
       // for authenticated requests across Expo SDK versions.
       const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -325,14 +325,14 @@ export default function ResumeGenerateScreen() {
         let detail = '';
         try { detail = (await resp.json())?.detail || ''; } catch {}
         throw new Error(
-          `Server error ${resp.status}${detail ? ': ' + detail : ''} — try again.`,
+          `Server error ${resp.status}${detail ? ': ' + detail : ''} - try again.`,
         );
       }
 
       // Validate content-type so we never write a JSON error page to disk as a PDF
       const ct = (resp.headers.get('content-type') || '').toLowerCase();
       if (format === 'pdf' && !ct.includes('pdf')) {
-        throw new Error('Unexpected response from server — try again.');
+        throw new Error('Unexpected response from server - try again.');
       }
 
       // Acquire file system
@@ -412,7 +412,7 @@ export default function ResumeGenerateScreen() {
   // Refetch whenever viewId changes. resume-generate is registered as
   // a hidden tab route which means it does NOT unmount between
   // navigations. Before this fix the useEffect had [] deps so the
-  // first viewId the user ever opened stayed cached forever — every
+  // first viewId the user ever opened stayed cached forever - every
   // subsequent tap on a different resume in My Dilly rendered the
   // same content. Tying the effect to viewId (plus a small in-flight
   // guard to avoid double-fetches during the initial mount race)
@@ -592,7 +592,7 @@ export default function ResumeGenerateScreen() {
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* First-visit coach — Resume Forge. Version bumped to v2 to
+      {/* First-visit coach - Resume Forge. Version bumped to v2 to
           re-show the coach once per user with the ATS explainer.
           Most applicants have no idea what ATS means, and that's
           the entire point of the Forge, so we spell it out. */}
@@ -718,7 +718,7 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
   const theme = useResolvedTheme();
   return (
     <FadeInView>
-      {/* Free-tier nudge — banner only renders for starter users. */}
+      {/* Free-tier nudge - banner only renders for starter users. */}
       <DillyFeatureBanner
         feature="The Forge"
         sub="You can set up the role for free. Forging the tailored resume unlocks with Dilly."
@@ -742,7 +742,7 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
         </View>
       </View>
 
-      {/* Power demo — free-tier only. Concrete specifics, not generic
+      {/* Power demo - free-tier only. Concrete specifics, not generic
           marketing. The goal is to make the user read "oh, this does
           things a template can't" before they tap and hit the paywall.
           Paid users skip this entirely. */}
@@ -872,7 +872,7 @@ function FieldLabel({ text, required, top, inline }: { text: string; required?: 
   );
 }
 
-/** One row in the Forge power demo — icon bubble, title, one-liner. */
+/** One row in the Forge power demo - icon bubble, title, one-liner. */
 function PowerRow({ icon, title, body }: { icon: any; title: string; body: string }) {
   return (
     <View style={styles.powerRow}>
@@ -948,7 +948,7 @@ function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, p
           <Animated.View style={[styles.progressFill, { backgroundColor: theme.accent }, progressStyle]} />
         </View>
 
-        {/* Keyword ticker — watch Dilly extract the JD */}
+        {/* Keyword ticker - watch Dilly extract the JD */}
         <View style={[styles.kwTickerWrap, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
           <View style={[styles.kwTickerDot, { backgroundColor: theme.accent }]} />
           <Text style={[styles.kwTickerLabel, { color: theme.accent }]}>EXTRACTED</Text>
@@ -993,7 +993,7 @@ function DonePhase({
 
   return (
     <FadeInView>
-      {/* Forged headline — this is the moment */}
+      {/* Forged headline - this is the moment */}
       <View style={styles.forgedHero}>
         <View style={[styles.forgedGlyph, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
           <Ionicons name="ribbon" size={22} color={theme.accent} />
@@ -1012,7 +1012,7 @@ function DonePhase({
         ) : null}
       </View>
 
-      {/* Scorecard — reads like a hiring rubric */}
+      {/* Scorecard - reads like a hiring rubric */}
       <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>ATS READINESS</Text>
       <View style={[styles.scorecardCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         {Object.entries(scorecard).map(([label, value]) => (
@@ -1020,7 +1020,7 @@ function DonePhase({
         ))}
       </View>
 
-      {/* Gaps / missing keyword warnings — only when present */}
+      {/* Gaps / missing keyword warnings - only when present */}
       {atsInfo?.keyword_warning && Array.isArray(atsInfo?.missing_keywords) && atsInfo.missing_keywords.length > 0 && (
         <View style={[styles.warnCard, { backgroundColor: theme.surface.s1, borderColor: AMBER + '40' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1062,7 +1062,7 @@ function DonePhase({
         </View>
       )}
 
-      {/* Weakest bullet spotlight — one bullet that could be stronger */}
+      {/* Weakest bullet spotlight - one bullet that could be stronger */}
       {weakestBullet && (
         <View style={[styles.weakestCard, { backgroundColor: theme.surface.s1, borderColor: AMBER + '40' }]}>
           <View style={styles.weakestKicker}>

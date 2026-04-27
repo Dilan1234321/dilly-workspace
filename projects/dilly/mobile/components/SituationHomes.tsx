@@ -1,24 +1,24 @@
 /**
- * SituationHomes — per-situation Home variants.
+ * SituationHomes - per-situation Home variants.
  *
  * Four seeker user_paths get bespoke Home screens that reshape the
  * hero, eyebrow copy, hero card, and CTA ordering to match how that
  * person is actually thinking about their job search:
  *
- *   exploring   → "Your next move" — generic next-step seeker
- *   dropout     → "Proof over paper" — portfolio-first framing
- *   laid_off    → "Runway + momentum" — calm but urgent
- *   visa       → "Timing + sponsors" — H1B/OPT-aware
+ *   exploring   → "Your next move" - generic next-step seeker
+ *   dropout     → "Proof over paper" - portfolio-first framing
+ *   laid_off    → "Runway + momentum" - calm but urgent
+ *   visa       → "Timing + sponsors" - H1B/OPT-aware
  *
  * Design principles shared across all four:
  *   - No numeric scores (product rule).
- *   - Reads from /profile and /memory via sessionCache — zero new
+ *   - Reads from /profile and /memory via sessionCache - zero new
  *     backend endpoints needed for v1.
  *   - One hero card. Three CTAs max. Never a dashboard.
  *   - Each has a unique accent color family that's distinct enough
  *     for a user to tell "I'm in the right app" at a glance.
  *
- * Dispatcher: see app/(app)/index.tsx HomeScreen — it routes based
+ * Dispatcher: see app/(app)/index.tsx HomeScreen - it routes based
  * on the cached /profile's user_path value.
  */
 
@@ -97,7 +97,7 @@ function HomeShell({
 }) {
   // Pull the user's theme: surface bg + density scale. This is
   // the biggest visible change when someone picks Cream or Midnight
-  // in Customize — their entire home repaints.
+  // in Customize - their entire home repaints.
   const t = useResolvedTheme();
   const sp = useSpacing();
   return (
@@ -226,7 +226,7 @@ function TalkCta({ label, seed, accent }: { label: string; seed: string; accent:
   );
 }
 
-/** Hero card wrapper — honors theme surface, shape.lg, and density. */
+/** Hero card wrapper - honors theme surface, shape.lg, and density. */
 function HeroCard({ tintColor, borderColor, bg, children }: {
   tintColor?: string; borderColor?: string; bg?: string; children: React.ReactNode;
 }) {
@@ -274,7 +274,7 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 1. Exploring Home — "Your next move."                           */
+/* 1. Exploring Home - "Your next move."                           */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function ExploringHome() {
@@ -307,12 +307,12 @@ export function ExploringHome() {
         eyebrowColor={accent}
       />
 
-      {/* Your Plan for this week — always top. */}
+      {/* Your Plan for this week - always top. */}
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
       </FadeInView>
 
-      {/* Hero — 3 concrete next moves, picked for explorers. */}
+      {/* Hero - 3 concrete next moves, picked for explorers. */}
       <FadeInView delay={40}>
         <HeroCard tintColor={accent}>
           <HeroText
@@ -329,7 +329,7 @@ export function ExploringHome() {
         </HeroCard>
       </FadeInView>
 
-      {/* Two prompt rows — "where do I start today". */}
+      {/* Two prompt rows - "where do I start today". */}
       <FadeInView delay={100}>
         <SectionLabel>START HERE TODAY</SectionLabel>
         <View style={{ gap: 8 }}>
@@ -359,7 +359,7 @@ export function ExploringHome() {
         />
       </FadeInView>
 
-      {/* Profile depth nudge — only when thin. */}
+      {/* Profile depth nudge - only when thin. */}
       {factCount < 20 ? (
         <FadeInView delay={220}>
           <View style={s.growthNudge}>
@@ -383,7 +383,7 @@ export function ExploringHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 2. Dropout Home — "Proof over paper."                           */
+/* 2. Dropout Home - "Proof over paper."                           */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function DropoutHome() {
@@ -394,7 +394,7 @@ export function DropoutHome() {
   const factCount = data?.factCount ?? 0;
   const marketCount = data?.marketCount ?? null;
 
-  // Green-forward palette — dropouts need to feel backed, not pitied.
+  // Green-forward palette - dropouts need to feel backed, not pitied.
   const PROOF = '#0E9F6E';
 
   // Plan anchor. Mode=student because the dropout path is a
@@ -439,7 +439,7 @@ export function DropoutHome() {
         </HeroCard>
       </FadeInView>
 
-      {/* Proof stack visual — facts the user has captured. */}
+      {/* Proof stack visual - facts the user has captured. */}
       <FadeInView delay={100}>
         <SectionLabel>YOUR PROOF STACK</SectionLabel>
         <View style={s.proofStack}>
@@ -486,7 +486,7 @@ export function DropoutHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 3. Laid-Off Home — "Runway + momentum."                         */
+/* 3. Laid-Off Home - "Runway + momentum."                         */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function LaidOffHome() {
@@ -506,7 +506,7 @@ export function LaidOffHome() {
     ? Math.max(0, Math.floor((Date.now() - layoffDate.getTime()) / (1000 * 60 * 60 * 24 * 7)))
     : null;
 
-  // Coral/amber palette — urgency without panic.
+  // Coral/amber palette - urgency without panic.
   const RESET = '#C2410C';
 
   // Plan anchor. Mode=seeker (laid_off path). useYourPlan falls
@@ -535,7 +535,7 @@ export function LaidOffHome() {
         <YourPlanCard plan={plan} firstName={firstName} />
       </FadeInView>
 
-      {/* Regroup card — calm but moving. */}
+      {/* Regroup card - calm but moving. */}
       <FadeInView delay={40}>
         <HeroCard bg="#FFF7ED" borderColor="#FED7AA">
           <HeroText
@@ -552,7 +552,7 @@ export function LaidOffHome() {
         </HeroCard>
       </FadeInView>
 
-      {/* Pipeline — 3 stages the user should be working. */}
+      {/* Pipeline - 3 stages the user should be working. */}
       <FadeInView delay={100}>
         <SectionLabel>YOUR PIPELINE</SectionLabel>
         <View style={s.pipelineRow}>
@@ -574,7 +574,7 @@ export function LaidOffHome() {
         </View>
       </FadeInView>
 
-      {/* Prompts — layoff-specific. */}
+      {/* Prompts - layoff-specific. */}
       <FadeInView delay={160}>
         <SectionLabel>TODAY'S OPENING</SectionLabel>
         <View style={{ gap: 8 }}>
@@ -608,7 +608,7 @@ export function LaidOffHome() {
 
       <FadeInView delay={260}>
         <Text style={s.footerNote}>
-          {factCount} things in your profile. Add one today — it sharpens every match.
+          {factCount} things in your profile. Add one today - it sharpens every match.
         </Text>
       </FadeInView>
     </HomeShell>
@@ -616,7 +616,7 @@ export function LaidOffHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 4. Visa Home — "Timing + sponsors."                             */
+/* 4. Visa Home - "Timing + sponsors."                             */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function VisaHome() {
@@ -627,7 +627,7 @@ export function VisaHome() {
   const factCount = data?.factCount ?? 0;
   const marketCount = data?.marketCount ?? null;
 
-  // Blue/violet palette — trustworthy, serious, considered.
+  // Blue/violet palette - trustworthy, serious, considered.
   const VISA = '#4338CA';
 
   // Plan anchor. useYourPlan has a dedicated international_grad
@@ -728,7 +728,7 @@ export function VisaHome() {
       {factCount < 15 ? (
         <FadeInView delay={260}>
           <Text style={s.footerNote}>
-            {factCount} facts in your profile. Add a few specifics about your field — visa-friendly recruiters screen hard.
+            {factCount} facts in your profile. Add a few specifics about your field - visa-friendly recruiters screen hard.
           </Text>
         </FadeInView>
       ) : null}
@@ -737,7 +737,7 @@ export function VisaHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 5. Veteran Home — "Translating the mission."                    */
+/* 5. Veteran Home - "Translating the mission."                    */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function VeteranHome() {
@@ -797,7 +797,7 @@ export function VeteranHome() {
           <PromptRow
             text="What was my actual scope and team size?"
             tint={VET_TONE}
-            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'Help me name the real scope of my service — headcount I led, budget or equipment I was responsible for, geographic footprint. Turn it into one clean resume line.' })}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'Help me name the real scope of my service - headcount I led, budget or equipment I was responsible for, geographic footprint. Turn it into one clean resume line.' })}
           />
           <PromptRow
             text="How do I answer 'tell me about yourself' without military jargon?"
@@ -837,7 +837,7 @@ export function VeteranHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 6. Parent Returning Home — "Back in the room."                  */
+/* 6. Parent Returning Home - "Back in the room."                  */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function ParentReturningHome() {
@@ -848,7 +848,7 @@ export function ParentReturningHome() {
   const factCount = data?.factCount ?? 0;
   const marketCount = data?.marketCount ?? null;
 
-  // Warm sage — calm, adult, not saccharine. No pink, no "mompreneur".
+  // Warm sage - calm, adult, not saccharine. No pink, no "mompreneur".
   const RETURN_TONE = '#5B8A72';
 
   const plan = useYourPlan({
@@ -896,7 +896,7 @@ export function ParentReturningHome() {
           <PromptRow
             text="What skills stayed sharp through the gap?"
             tint={RETURN_TONE}
-            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me name the skills that actually stayed sharp during my caregiving years — project management, triage, negotiation, decision under pressure. Ask me about specific moments." })}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me name the skills that actually stayed sharp during my caregiving years - project management, triage, negotiation, decision under pressure. Ask me about specific moments." })}
           />
           <PromptRow
             text="How do I answer 'what have you been doing for X years'?"
@@ -936,7 +936,7 @@ export function ParentReturningHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 7. International Grad Home — "On two clocks."                   */
+/* 7. International Grad Home - "On two clocks."                   */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function InternationalGradHome() {
@@ -995,7 +995,7 @@ export function InternationalGradHome() {
           <PromptRow
             text="Which companies actually sponsor in my field?"
             tint={INTL_TONE}
-            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Suggest 8 companies that reliably sponsor H-1B / green card in my field. Don't pad the list with 'most big tech sponsors' generalities — I want names and why. Ask my field." })}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Suggest 8 companies that reliably sponsor H-1B / green card in my field. Don't pad the list with 'most big tech sponsors' generalities - I want names and why. Ask my field." })}
           />
           <PromptRow
             text="How do I answer 'do you need sponsorship' cleanly?"
@@ -1005,7 +1005,7 @@ export function InternationalGradHome() {
           <PromptRow
             text="What does my resume need to pass a US reader?"
             tint={INTL_TONE}
-            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me audit my resume for a US audience — format, numbers, what to add, what to drop from my home country's resume conventions. Ask me about my degree and my last role." })}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me audit my resume for a US audience - format, numbers, what to add, what to drop from my home country's resume conventions. Ask me about my degree and my last role." })}
           />
         </View>
       </FadeInView>
@@ -1035,7 +1035,7 @@ export function InternationalGradHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 8. Refugee Home — "Translating your career."                    */
+/* 8. Refugee Home - "Translating your career."                    */
 /* ─────────────────────────────────────────────────────────────── */
 
 export function RefugeeHome() {
@@ -1046,7 +1046,7 @@ export function RefugeeHome() {
   const factCount = data?.factCount ?? 0;
   const marketCount = data?.marketCount ?? null;
 
-  // Warm terracotta — respectful, grounded, not corporate.
+  // Warm terracotta - respectful, grounded, not corporate.
   const BRIDGE_TONE = '#B7541F';
 
   const plan = useYourPlan({
@@ -1077,12 +1077,12 @@ export function RefugeeHome() {
           <HeroText
             kicker="TRANSLATE, DON'T REBUILD"
             head={"Your career didn't start\nhere. It started somewhere."}
-            body="The US market often reads foreign experience as zero. It isn't. Dilly helps translate credentials, companies, and roles into language this market can act on — and finds the employers and programs that already recognize it."
+            body="The US market often reads foreign experience as zero. It isn't. Dilly helps translate credentials, companies, and roles into language this market can act on - and finds the employers and programs that already recognize it."
             kickerColor={BRIDGE_TONE}
           />
           <TalkCta
             label="Translate my experience"
-            seed="I worked in my home country before coming to the US. Help me translate my experience — companies, titles, credentials — into US resume language that hiring managers here will understand. Ask me about my most recent role and how long I worked there."
+            seed="I worked in my home country before coming to the US. Help me translate my experience - companies, titles, credentials - into US resume language that hiring managers here will understand. Ask me about my most recent role and how long I worked there."
             accent={BRIDGE_TONE}
           />
         </HeroCard>
@@ -1134,7 +1134,7 @@ export function RefugeeHome() {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/* 9. TieredSeekerHome — spec-driven Home for paths that don't    */
+/* 9. TieredSeekerHome - spec-driven Home for paths that don't    */
 /*    need a full bespoke file. Reads from lib/homeSpecs and      */
 /*    renders through the same primitives as the Rung-3 Homes.   */
 /*    Covers 10 additional paths in one component.                */
