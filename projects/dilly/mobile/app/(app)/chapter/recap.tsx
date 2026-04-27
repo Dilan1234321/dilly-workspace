@@ -206,6 +206,105 @@ export default function ChapterRecapScreen() {
       .map(s => ({ ...s, body: stripFormatting(s.body) }));
   }, [chapter]);
 
+  /** Pull a slot's body once - the recap maps the LLM's six labelled
+   *  beats into specific UI roles, so we look up by slot name instead
+   *  of iterating. Returns undefined if the slot is missing or empty. */
+  const slot = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const s of recapCards) m[s.slot] = s.body || '';
+    return m;
+  }, [recapCards]);
+
+  // Fetch the previous chapter so we can render a "what changed since
+  // last time" delta - one of the things that turns a list of slot
+  // bodies into a feeling of "Dilly remembers and is tracking me."
+  const [previousChapter, setPreviousChapter] = useState<Chapter | null>(null);
+  useEffect(() => {
+    if (!chapter || sessionCount < 2) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list: any = await dilly.get('/chapters/list?limit=2').catch(() => null);
+        const items: any[] = Array.isArray(list?.items)
+          ? list.items
+          : Array.isArray(list?.chapters)
+          ? list.chapters
+          : Array.isArray(list)
+          ? list
+          : [];
+        if (cancelled) return;
+        // Find the entry whose id is NOT the current chapter (the
+        // previous one). API may return newest-first or oldest-first;
+        // either way we filter by !== current id.
+        const prev = items.find((c) => c?.id && chapter?.id && c.id !== chapter.id);
+        if (prev) setPreviousChapter(prev as Chapter);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [chapter, sessionCount]);
+
+  /** Compare the One Move from this Chapter to last Chapter's commitment
+   *  to render a one-line "what changed" beat. Safe-fallback to a generic
+   *  cadence line when we don't have a previous Chapter (first session
+   *  or fetch failed). Pure prose; the LLM didn't write this - we did,
+   *  so it's stable in tone. */
+  const whatChanged = useMemo(() => {
+    if (!previousChapter || !chapter) return null;
+    const prevSlots: Record<string, string> = {};
+    for (const s of (previousChapter.screens || [])) {
+      if (s?.slot) prevSlots[s.slot] = stripFormatting(s.body || '');
+    }
+    const prevMove = prevSlots.one_move || '';
+    const thisMove = slot.one_move || '';
+    if (!prevMove || !thisMove) return null;
+    // Truncate both to a clean snippet so the beat reads as one line.
+    const trim = (s: string) => {
+      const cleaned = s.split(/(?<=[.!?])\s+/)[0] || s;
+      return cleaned.length > 90 ? cleaned.slice(0, 87) + '...' : cleaned;
+    };
+    return { prev: trim(prevMove), now: trim(thisMove) };
+  }, [previousChapter, chapter, slot]);
+
+  /** A short, declarative line that opens the recap - pulled from the
+   *  'noticed' slot and trimmed to one sentence. Sets the tone before
+   *  the user reads anything else. */
+  const headlineInsight = useMemo(() => {
+    const raw = slot.noticed || '';
+    if (!raw) return null;
+    const first = raw.split(/(?<=[.!?])\s+/)[0] || raw;
+    return first.length > 200 ? first.slice(0, 197) + '...' : first;
+  }, [slot]);
+
+  /** The closing line - whatever Dilly wrote in the close slot - styled
+   *  as a pulled quote attributed back to the user (or to Dilly if it
+   *  reads more like Dilly's voice). Last beat the user reads, designed
+   *  to stick. */
+  const closingLine = useMemo(() => {
+    const raw = slot.close || '';
+    if (!raw) return null;
+    return raw.length > 220 ? raw.slice(0, 217) + '...' : raw;
+  }, [slot]);
+
+  /** Break the One Move body into a 2-3 step micro-plan when the LLM
+   *  authored a multi-sentence move. Each step renders as a numbered
+   *  row so the user has something concrete to act on, not a paragraph
+   *  to re-read. Falls back to rendering the move as a single block
+   *  when there isn't natural sentence structure to split on. */
+  const oneMoveSteps = useMemo(() => {
+    const raw = slot.one_move || '';
+    if (!raw) return null;
+    const sentences = raw
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length >= 12);
+    if (sentences.length < 2) return { headline: raw, steps: [] };
+    // First sentence is the headline; the next 2-3 are steps.
+    return {
+      headline: sentences[0],
+      steps: sentences.slice(1, 4),
+    };
+  }, [slot]);
+
   if (loading) {
     return (
       <DillyLoadingState
@@ -259,37 +358,141 @@ export default function ChapterRecapScreen() {
         <Text style={[s.title, { color: theme.surface.t1 }]} numberOfLines={2}>
           {chapter.title}
         </Text>
-        <Text style={[s.sub, { color: theme.surface.t3 }]}>
-          Tap any card to keep the conversation going with Dilly.
-        </Text>
       </View>
 
-      {/* Recap cards */}
-      <Text style={[s.sectionTitle, { color: theme.accent }]}>WHAT WE TALKED ABOUT</Text>
-      {recapCards.map(scr => (
-        <TouchableOpacity
-          key={scr.slot}
-          activeOpacity={0.85}
-          onPress={() => onCardTap(scr.slot, scr.body)}
-          style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
-        >
-          <View style={s.cardHeader}>
-            <View style={[s.cardIconBg, { backgroundColor: theme.accentSoft }]}>
-              <Ionicons name={SLOT_ICON[scr.slot] || 'ellipse-outline'} size={14} color={theme.accent} />
-            </View>
-            <Text style={[s.cardLabel, { color: theme.surface.t2 }]}>
-              {SLOT_LABEL[scr.slot] || scr.slot}
-            </Text>
+      {/* Headline insight - the one sentence Dilly wants you to walk
+          away with this week. Pulled from the 'noticed' slot and
+          rendered as a pulled quote with a bold accent bar so it
+          reads as the thesis of the session, not a list item. */}
+      {headlineInsight ? (
+        <View style={[s.insightCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent }]}>
+          <View style={[s.insightAccent, { backgroundColor: theme.accent }]} />
+          <View style={{ flex: 1 }}>
+            <Text style={[s.insightEyebrow, { color: theme.accent }]}>WHAT DILLY NOTICED</Text>
+            <Text style={[s.insightBody, { color: theme.surface.t1 }]}>{headlineInsight}</Text>
           </View>
-          <Text style={[s.cardBody, { color: theme.surface.t1 }]} numberOfLines={6}>
-            {scr.body}
-          </Text>
-          <View style={s.cardCta}>
-            <Text style={[s.cardCtaText, { color: theme.accent }]}>Keep talking</Text>
-            <Ionicons name="arrow-forward" size={12} color={theme.accent} />
+        </View>
+      ) : null}
+
+      {/* What changed since last time - render only when we found a
+          previous Chapter and both have a One Move. The delta is what
+          turns "list of slots" into "Dilly is tracking my growth" -
+          the user sees their old commitment alongside the new one and
+          feels the throughline. */}
+      {whatChanged ? (
+        <View style={[s.changedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+          <View style={s.changedHeader}>
+            <Ionicons name="git-compare" size={14} color={theme.accent} />
+            <Text style={[s.changedEyebrow, { color: theme.accent }]}>WHAT CHANGED SINCE LAST TIME</Text>
+          </View>
+          <View style={s.changedRow}>
+            <Text style={[s.changedFromLabel, { color: theme.surface.t3 }]}>LAST WEEK</Text>
+            <Text style={[s.changedFromBody, { color: theme.surface.t2 }]}>{whatChanged.prev}</Text>
+          </View>
+          <View style={[s.changedDivider, { backgroundColor: theme.surface.border }]} />
+          <View style={s.changedRow}>
+            <Text style={[s.changedToLabel, { color: theme.accent }]}>THIS WEEK</Text>
+            <Text style={[s.changedToBody, { color: theme.surface.t1 }]}>{whatChanged.now}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* The Move - bold framed card with concrete steps if the LLM
+          gave us multi-sentence content to break down. This is THE
+          beat the user is supposed to leave with, so it gets the
+          biggest visual weight and a tap-to-act primary CTA. */}
+      {oneMoveSteps ? (
+        <View style={[s.moveCard, { backgroundColor: theme.accent, borderColor: theme.accent }]}>
+          <Text style={[s.moveEyebrow, { color: '#FFFFFF', opacity: 0.85 }]}>YOUR ONE MOVE</Text>
+          <Text style={[s.moveHeadline, { color: '#FFFFFF' }]}>{oneMoveSteps.headline}</Text>
+          {oneMoveSteps.steps.length > 0 ? (
+            <View style={s.moveSteps}>
+              {oneMoveSteps.steps.map((step, i) => (
+                <View key={i} style={s.moveStepRow}>
+                  <View style={s.moveStepNum}>
+                    <Text style={s.moveStepNumText}>{i + 1}</Text>
+                  </View>
+                  <Text style={s.moveStepText}>{step}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          <AnimatedPressable
+            style={s.moveCta}
+            onPress={() => onCardTap('one_move', slot.one_move || '')}
+            scaleDown={0.97}
+          >
+            <Ionicons name="chatbubbles" size={13} color="#FFFFFF" />
+            <Text style={s.moveCtaText}>Plan it with Dilly</Text>
+          </AnimatedPressable>
+        </View>
+      ) : null}
+
+      {/* Strongest signal + biggest exposure - compact two-card block.
+          Working = green-tinted "you're doing this right." Push_on =
+          coral-tinted "this is where the gap is." Tap to chat. */}
+      {(slot.working || slot.push_on) ? (
+        <View style={s.signalsRow}>
+          {slot.working ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => onCardTap('working', slot.working)}
+              style={[s.signalCard, { backgroundColor: theme.surface.s1, borderColor: '#10B98155' }]}
+            >
+              <View style={s.signalHeader}>
+                <Ionicons name="trending-up" size={12} color="#10B981" />
+                <Text style={[s.signalLabel, { color: '#10B981' }]}>STRONGEST SIGNAL</Text>
+              </View>
+              <Text style={[s.signalBody, { color: theme.surface.t1 }]} numberOfLines={5}>
+                {slot.working}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {slot.push_on ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => onCardTap('push_on', slot.push_on)}
+              style={[s.signalCard, { backgroundColor: theme.surface.s1, borderColor: '#F59E0B55' }]}
+            >
+              <View style={s.signalHeader}>
+                <Ionicons name="alert-circle" size={12} color="#F59E0B" />
+                <Text style={[s.signalLabel, { color: '#F59E0B' }]}>WHERE TO PUSH</Text>
+              </View>
+              <Text style={[s.signalBody, { color: theme.surface.t1 }]} numberOfLines={5}>
+                {slot.push_on}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* The line to sit with - rendered as a large quoted question.
+          Italic, generous line height, accent quotation marks. This
+          is the beat designed to stay with the user during the week. */}
+      {slot.question ? (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onCardTap('question', slot.question)}
+          style={[s.questionCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+        >
+          <Text style={[s.questionEyebrow, { color: theme.surface.t3 }]}>SIT WITH THIS</Text>
+          <View style={s.questionQuoteRow}>
+            <Text style={[s.questionMark, { color: theme.accent }]}>{'“'}</Text>
+            <Text style={[s.questionBody, { color: theme.surface.t1 }]}>{slot.question}</Text>
+            <Text style={[s.questionMarkClose, { color: theme.accent }]}>{'”'}</Text>
           </View>
         </TouchableOpacity>
-      ))}
+      ) : null}
+
+      {/* Closing line - intimate, smaller, italic. The session's last
+          beat. No cta on this one - it's meant to be read once and
+          carried, not tapped. */}
+      {closingLine ? (
+        <View style={[s.closingCard, { backgroundColor: theme.surface.bg, borderColor: theme.surface.border }]}>
+          <Text style={[s.closingLabel, { color: theme.surface.t3 }]}>BEFORE YOU GO</Text>
+          <Text style={[s.closingBody, { color: theme.surface.t1 }]}>{closingLine}</Text>
+        </View>
+      ) : null}
 
       {/* Reschedule prompt - the most important moment after a Chapter
           ends. Three outcomes: book one week from today (the default
@@ -417,6 +620,247 @@ const s = StyleSheet.create({
   cardBody:   { fontSize: 14, lineHeight: 21 },
   cardCta:    { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
   cardCtaText: { fontSize: 11, fontWeight: '800' },
+
+  // ── Headline insight ─────────────────────────────────────────────
+  insightCard: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 18,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  insightAccent: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+  },
+  insightEyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.6,
+    marginBottom: 6,
+  },
+  insightBody: {
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 26,
+    letterSpacing: -0.3,
+  },
+
+  // ── What changed ─────────────────────────────────────────────────
+  changedCard: {
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  changedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  changedEyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+  },
+  changedRow: {
+    gap: 4,
+  },
+  changedFromLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  changedFromBody: {
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+    fontStyle: 'italic',
+    opacity: 0.8,
+  },
+  changedToLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  changedToBody: {
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 20,
+    letterSpacing: -0.1,
+  },
+  changedDivider: {
+    height: 1,
+    marginVertical: 10,
+  },
+
+  // ── One Move (the big move) ──────────────────────────────────────
+  moveCard: {
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 20,
+    gap: 10,
+  },
+  moveEyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.8,
+  },
+  moveHeadline: {
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 26,
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  moveSteps: {
+    marginTop: 6,
+    gap: 10,
+  },
+  moveStepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  moveStepNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moveStepNumText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  moveStepText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    opacity: 0.95,
+  },
+  moveCta: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  moveCtaText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+
+  // ── Strongest signal + Where to push (two-card row) ──────────────
+  signalsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+  },
+  signalCard: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 12,
+    gap: 8,
+  },
+  signalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  signalLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  signalBody: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+
+  // ── Question to sit with ─────────────────────────────────────────
+  questionCard: {
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+    gap: 12,
+  },
+  questionEyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.6,
+  },
+  questionQuoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  questionMark: {
+    fontSize: 36,
+    fontWeight: '900',
+    lineHeight: 36,
+    marginTop: -6,
+  },
+  questionMarkClose: {
+    fontSize: 36,
+    fontWeight: '900',
+    lineHeight: 36,
+    marginTop: -6,
+    alignSelf: 'flex-end',
+  },
+  questionBody: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 24,
+    fontStyle: 'italic',
+    letterSpacing: -0.2,
+  },
+
+  // ── Closing line ─────────────────────────────────────────────────
+  closingCard: {
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
+    gap: 8,
+  },
+  closingLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.6,
+  },
+  closingBody: {
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 21,
+    fontStyle: 'italic',
+  },
 
   rescheduleCard: {
     marginHorizontal: 16,

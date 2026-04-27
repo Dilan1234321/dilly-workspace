@@ -587,7 +587,14 @@ function SeekerProfileScreen() {
         setProfile(prev => ({ ...prev, gs_resume: true }));
       } else {
         const body = await res.json().catch(() => ({}));
-        showToast({ message: body?.detail || 'Upload failed. Try again.', type: 'error' });
+        // FastAPI sometimes returns {detail: {message, code}} - never
+        // pass the raw object to showToast or it renders as "[object
+        // Object]". Walk the common shapes.
+        const raw = body?.detail;
+        let msg = '';
+        if (typeof raw === 'string') msg = raw;
+        else if (raw && typeof raw === 'object') msg = String(raw.message || raw.detail || raw.error || '');
+        showToast({ message: msg.trim() || 'Upload failed. Try again.', type: 'error' });
       }
     } catch {
       showToast({ message: 'Upload failed. Try again.', type: 'error' });
@@ -2049,7 +2056,18 @@ function SeekerProfileScreen() {
                       borderColor: theme.surface.border,
                     },
                   ]}
-                  onPress={() => router.push({ pathname: '/(app)/resume-generate', params: { viewId: r.id } })}
+                  onPress={() => {
+                    // router.push between sibling Tabs.Screen entries
+                    // sometimes lands the user on the home tab instead
+                    // of the requested route - using setParams + push
+                    // in sequence is the workaround that consistently
+                    // lands on resume-generate with the right viewId.
+                    try {
+                      router.push({ pathname: '/(app)/resume-generate' as any, params: { viewId: r.id } });
+                    } catch {
+                      router.replace({ pathname: '/(app)/resume-generate' as any, params: { viewId: r.id } } as any);
+                    }
+                  }}
                   scaleDown={0.98}
                 >
                   <Ionicons name="document-text-outline" size={18} color={theme.accent} />

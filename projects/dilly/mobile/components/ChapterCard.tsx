@@ -260,35 +260,71 @@ export default function ChapterCard({ state, theme }: Props) {
     );
   }
 
-  // ── 4b. First-ever Chapter not yet scheduled. Sell what a Chapter
-  //        actually is so the user understands why they want one,
-  //        not just "your first chapter is on Sunday". ─────────────
+  // ── 4b. First-ever Chapter not yet scheduled. Sell hard, not
+  //        polite. Founder direction: this card has to make people
+  //        WANT it - not a polite scheduler tile. The headline reads
+  //        as something honest the user is avoiding; the body lands
+  //        the promise in plain prose; the imperative CTA closes the
+  //        loop. Dark frame on the headline pulls the eye. ─────────
   if (!hasHadChapter) {
     return (
       <AnimatedPressable
-        style={[s.card, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}
+        style={[s.card, { backgroundColor: theme.accent, borderColor: theme.accent, padding: 22 }]}
         onPress={() => router.push('/(app)/chapter/schedule')}
         scaleDown={0.98}
       >
         <View style={s.topRow}>
-          <Text style={[s.eyebrow, { color: theme.accent }]}>YOUR FIRST CHAPTER</Text>
-          <View style={[s.lockChip, { backgroundColor: theme.accent }]}>
+          <Text style={[s.eyebrow, { color: '#FFFFFF', opacity: 0.85 }]}>WHAT NOBODY IS TELLING YOU</Text>
+          <View style={[s.lockChip, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
             <Ionicons name="bookmark" size={9} color="#FFF" />
             <Text style={[s.lockChipText, { color: '#FFF' }]}>WEEKLY · 1:1</Text>
           </View>
         </View>
         <Text style={[s.headline, {
-          color: theme.surface.t1,
+          color: '#FFFFFF',
           fontFamily: theme.type.display,
           fontWeight: heroWeight,
           letterSpacing: theme.type.heroTracking,
+          fontSize: 24,
+          lineHeight: 30,
+          marginTop: 6,
         }]}>
-          A weekly sit-down with Dilly.
+          The version of your career you've been avoiding looking at.
         </Text>
-        <Text style={[s.body, { color: theme.surface.t2 }]}>
-          One real read on your career every week - what's working, what isn't, the one move to make next. Pick the day and the time and Dilly does the rest.
+        <Text style={[s.body, {
+          color: '#FFFFFF',
+          opacity: 0.92,
+          fontSize: 14,
+          lineHeight: 21,
+          marginTop: 10,
+        }]}>
+          Once a week, Dilly sits down and reads it back to you. What's actually working. What you keep deferring. The one move to make next. No fluff, no pep talk. The conversation you've been avoiding having with yourself.
         </Text>
-        <View style={[s.ghostBtn, { borderColor: theme.accent, backgroundColor: theme.accent, marginTop: 14, alignSelf: 'flex-start' }]}>
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 8,
+          marginTop: 18, paddingHorizontal: 16, paddingVertical: 12,
+          borderRadius: 12, alignSelf: 'flex-start',
+          backgroundColor: '#FFFFFF',
+        }}>
+          <Ionicons name="calendar" size={14} color={theme.accent} />
+          <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '900', letterSpacing: -0.1 }}>
+            Pick your time. Then keep it.
+          </Text>
+          <Ionicons name="arrow-forward" size={13} color={theme.accent} />
+        </View>
+        <View style={[s.ghostBtn, {
+          borderColor: 'transparent', backgroundColor: 'transparent',
+          marginTop: 6, alignSelf: 'flex-start', paddingHorizontal: 0,
+        }]}>
+          <Ionicons name="time" size={11} color="#FFFFFF" style={{ opacity: 0.7 }} />
+          <Text style={{ color: '#FFFFFF', opacity: 0.7, fontSize: 11, fontWeight: '700', letterSpacing: 0.2 }}>
+            One Chapter a week. ~10 minutes. Stays with you longer.
+          </Text>
+        </View>
+        {/* Hide the legacy ghost button below the new CTA. The
+            original component has more JSX after this so we leave the
+            structure intact and just suppress the trailing button. */}
+        <View style={{ height: 0, overflow: 'hidden' }}>
           <Ionicons name="calendar" size={13} color="#FFF" />
           <Text style={[s.ghostBtnText, { color: '#FFF' }]}>Schedule my first Chapter</Text>
         </View>

@@ -138,10 +138,19 @@ export default function TranscriptReviewScreen() {
         await loadTranscript();
       } else {
         // Surface the API's actual reason instead of a generic line.
+        // FastAPI sometimes returns {detail: {message, code}} (object,
+        // not string), so unwrapping with .toString() produced
+        // "[object Object]". This walks the common shapes and falls
+        // back to a friendly message.
         let detail = '';
         try {
           const body = await res.json();
-          detail = (body?.detail || body?.error || body?.message || '').toString().trim();
+          const raw = body?.detail ?? body?.error ?? body?.message;
+          if (typeof raw === 'string') {
+            detail = raw.trim();
+          } else if (raw && typeof raw === 'object') {
+            detail = String(raw.message || raw.detail || raw.error || '').trim();
+          }
         } catch { /* non-JSON response */ }
         showToast({
           message: detail || `Upload failed (${res.status}). Make sure it's a PDF with selectable text.`,

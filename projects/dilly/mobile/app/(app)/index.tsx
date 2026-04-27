@@ -671,13 +671,13 @@ const h = StyleSheet.create({
   trajCtaText: { fontSize: 12, fontWeight: '700', color: INDIGO },
 
   // Tools
-  toolsRow: { flexDirection: 'row', gap: 18, justifyContent: 'center', alignItems: 'flex-start' },
-  toolItem: { alignItems: 'center', gap: 7, width: 72 },
+  toolsRow: { flexDirection: 'row', gap: 12, justifyContent: 'center', alignItems: 'flex-start' },
+  toolItem: { alignItems: 'center', gap: 5, width: 60 },
   toolIcon: {
-    width: 58, height: 58, borderRadius: 17,
+    width: 46, height: 46, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',
   },
-  toolLabel: { fontSize: 12, fontWeight: '700', color: colors.t2 },
+  toolLabel: { fontSize: 10, fontWeight: '700', color: colors.t2 },
 });
 
 
@@ -2344,9 +2344,12 @@ const s = StyleSheet.create({
   jobTitle: { fontSize: 13, fontWeight: '600', color: colors.t1 },
   jobCompany: { fontSize: 11, color: colors.t2, marginTop: 2 },
 
-  // Tools
-  toolRow: { gap: 18, paddingVertical: 4, marginBottom: 16 },
-  toolItem: { alignItems: 'center', width: 72 },
-  toolIcon: { width: 58, height: 58, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
-  toolLabel: { fontSize: 12, fontWeight: '700', color: colors.t2, textAlign: 'center' },
+  // Tools - sized so 5 fit edge-to-edge on a 390pt iPhone screen
+  // without horizontal scrolling. Math: (390 - 32 sidePad) = 358 / 5
+  // = 71 per tile. We give each 64pt + 12pt gap so it lands tight
+  // but with a touch of breathing room.
+  toolRow: { gap: 12, paddingVertical: 4, marginBottom: 16 },
+  toolItem: { alignItems: 'center', width: 60 },
+  toolIcon: { width: 46, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  toolLabel: { fontSize: 10, fontWeight: '700', color: colors.t2, textAlign: 'center' },
 });

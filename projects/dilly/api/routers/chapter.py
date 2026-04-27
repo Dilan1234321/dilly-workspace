@@ -31,7 +31,7 @@ router = APIRouter(tags=["chapter"])
 _HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
 # Cost guard: 30 total messages per session (spec §12)
-_MAX_SESSION_TURNS = 30
+_MAX_SESSION_TURNS = 50
 _COST_GUARD_MSG = (
     "We've covered a lot of ground this session. "
     "Let's wrap up — tap 'advance' to move to your recap."
@@ -57,8 +57,13 @@ SCREEN_MOODS = {
     5: "settled",
     6: "settled",
 }
-# Max user turns allowed per screen
-SCREEN_TURN_LIMITS = {0: 6, 1: 3, 2: 5, 3: 5, 4: 5, 5: 3, 6: 0}
+# Max user turns allowed per screen. Bumped up across the board (build
+# 436+) so each Chapter feels substantial, not skimmed. The product
+# moment we're chasing is "Dilly really sat with me on this" - that
+# requires Dilly to probe past the user's first answer on every beat.
+# Largest bump is on push_on (4) and one_move (5) where the depth
+# happens; intake/welcome stay smallest because they're transitional.
+SCREEN_TURN_LIMITS = {0: 8, 1: 5, 2: 8, 3: 8, 4: 9, 5: 6, 6: 0}
 
 
 # ── Feature flag check ────────────────────────────────────────────────────────
@@ -285,21 +290,55 @@ def _generate_opening_message(
     screen: int,
     prior_captures: Optional[dict] = None,
 ) -> str:
-    """Generate the opening message for a screen via Haiku."""
+    """Generate the opening message for a screen via Haiku.
+
+    The instruction goes to the *model only*, never the user. We
+    intentionally avoid:
+      - leaking "Screen N" labels (the model parroted them back as
+        "Your prompt says I'm in Screen 5...")
+      - including the current screen's own capture in the context
+        (that read as "Screen 5 capture exists" + "generate Screen 5"
+        which the model interpreted as contradictory and asked for
+        clarification instead of generating)
+    """
     cached_block, dynamic_suffix = _build_system_prompt_parts(persona, prompt_ctx)
 
     screen_name = SCREEN_NAMES.get(screen, "unknown")
-    instruction_suffix = f"\n\nGenerate the opening message for the {screen_name} phase."
-    if prior_captures and screen > 0:
-        captures_text = "\n".join(
-            f"Screen {k} capture: {v}" for k, v in prior_captures.items()
+    # Filter to PRIOR screens only - never include the current screen's
+    # capture in its own opening message context.
+    prior_only = {}
+    if prior_captures:
+        for k, v in prior_captures.items():
+            try:
+                if int(k) < int(screen) and v:
+                    prior_only[k] = v
+            except (TypeError, ValueError):
+                continue
+
+    # Use plain prose instead of "Screen N capture: X" so the labels
+    # don't echo back into the assistant's response.
+    captures_block = ""
+    if prior_only:
+        ordered_keys = sorted(prior_only.keys(), key=lambda k: int(k))
+        captures_block = (
+            "\n\nWhat the user has already shared earlier in this session:\n"
+            + "\n".join(f"- {prior_only[k]}" for k in ordered_keys)
         )
-        instruction_suffix += f"\n\nPrior screen captures:\n{captures_text}"
+
+    instruction_suffix = (
+        f"\n\nWrite the next opening message for the {screen_name} part of the session. "
+        "Speak directly to the user. Do not reference 'screens', 'phases', 'sections', "
+        "or any structural labels - the user only sees your message, not the scaffolding. "
+        "Do not ask the assistant for clarification; just write the message."
+    ) + captures_block
 
     messages = [{"role": "user", "content": instruction_suffix}]
 
     try:
-        text = _haiku_call(cached_block, dynamic_suffix, messages, max_tokens=300)
+        # Bumped from 300 to 500 (build 436+) so opening messages can
+        # land 2-3 substantive sentences instead of the truncated
+        # one-liners that made each Chapter screen feel skimmed.
+        text = _haiku_call(cached_block, dynamic_suffix, messages, max_tokens=500)
         return text.strip() or "Let's get started."
     except Exception as exc:
         print(f"[CHAPTER] _generate_opening_message error: {exc}", flush=True)
@@ -322,15 +361,26 @@ def _generate_recap(
     cached_block, dynamic_suffix = _build_system_prompt_parts(persona, prompt_ctx)
 
     recap_instruction = (
-        f"The session is complete. The user committed to: '{commitment}'"
+        f"The session just ended. The user committed to: '{commitment}'"
         + (f" by {commitment_deadline}." if commitment_deadline else ".")
-        + "\n\nGenerate a Chapter Recap with exactly this JSON structure:\n"
+        + "\n\nWrite a recap in this exact JSON structure:\n"
         + '{"headline": "...", "observations": ["...", "...", "..."], '
         + '"between_sessions_prompt": "..."}\n\n'
-        + "The headline is 1–2 sentences for WHERE YOU ARE. "
-        + "Observations are 2–3 specific bullet strings. "
-        + "between_sessions_prompt is one reflection question for the week. "
-        + "Return ONLY valid JSON, no markdown."
+        + "headline: ONE specific sentence describing the user's career "
+        + "moment right now. Not a summary - a verdict. Avoid generic "
+        + "phrases ('your journey', 'on track'). Use concrete language "
+        + "the user can argue with. Examples of the right shape: 'You "
+        + "have proof you can ship; you don't have proof you can choose.' "
+        + "or 'You're playing for the wrong audience and you know it.' "
+        + "12-25 words.\n"
+        + "observations: 3 strings. Each one starts with what the user "
+        + "actually said or did this session, then what it tells you. "
+        + "Reference specific words from the conversation, not paraphrases. "
+        + "20-40 words each.\n"
+        + "between_sessions_prompt: a single question that should haunt "
+        + "the user this week. Specific to what they said, not generic. "
+        + "Cuts to the version of the answer they're avoiding. 8-20 words.\n"
+        + "Return ONLY valid JSON, no markdown, no commentary."
     )
 
     # Build messages array: full session + recap instruction
@@ -582,7 +632,10 @@ async def chapter_message(session_id: str, screen_n: int, request: Request):
     cached_block, dynamic_suffix = _build_system_prompt_parts(persona, prompt_ctx)
 
     try:
-        reply = _haiku_call(cached_block, dynamic_suffix, messages_for_api, max_tokens=300)
+        # Bumped to 500 alongside opening messages - the chat replies
+        # within a screen need the same depth budget so Dilly can
+        # actually probe rather than nodding back single sentences.
+        reply = _haiku_call(cached_block, dynamic_suffix, messages_for_api, max_tokens=500)
     except Exception as exc:
         print(f"[CHAPTER] haiku call error: {exc}", flush=True)
         reply = "I'm having a moment — could you say that again?"
@@ -654,10 +707,13 @@ async def chapter_advance(session_id: str, screen_n: int, request: Request):
 
     persona = str(session.get("persona_at_time") or "student")
 
-    # Auto-generate capture if not provided
+    # Auto-generate capture if not provided. Plain prose, never
+    # "Screen N" - the model treats "Screen N completed" + "generate
+    # for Screen N" as contradictory and asks for clarification
+    # instead of generating, which leaks the scaffolding to the user.
     if not screen_capture:
-        screen_name = SCREEN_NAMES.get(screen_n, "unknown")
-        screen_capture = f"Screen {screen_n} ({screen_name}) completed."
+        screen_name = SCREEN_NAMES.get(screen_n, "session")
+        screen_capture = f"User finished the {screen_name} part of the session."
 
     # Advance session row
     updated = advance_chapter_screen(session_id, screen_capture, from_screen=screen_n)

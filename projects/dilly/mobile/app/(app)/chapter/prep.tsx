@@ -37,6 +37,7 @@ import { readProfileSlim } from '../../../lib/profileCache';
 import { DillyFace } from '../../../components/DillyFace';
 import { showToast } from '../../../lib/globalToast';
 import { showConfirm } from '../../../lib/globalConfirm';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ChapterNote { id: string; text: string; added_at: string; }
 interface NotesResponse {
@@ -117,6 +118,20 @@ function relative(iso: string): string {
   } catch { return ''; }
 }
 
+/** Curated state-of-mind chips. Tapping logs the user's pre-session
+ *  mood as a profile fact so Dilly can condition the session tone on
+ *  whether the user is fired up, drained, or stuck walking in. The
+ *  fact reads as 'Walking in: <mood>' in their memory. */
+const PREP_MOODS = [
+  { id: 'fired_up', label: 'Fired up',  emoji: '🔥' },
+  { id: 'clear',    label: 'Clear',     emoji: '🪞' },
+  { id: 'scattered',label: 'Scattered', emoji: '🌪' },
+  { id: 'drained',  label: 'Drained',   emoji: '🥱' },
+  { id: 'stuck',    label: 'Stuck',     emoji: '🪨' },
+];
+
+const PREP_MOOD_KEY = 'dilly_prep_mood_v1';
+
 export default function ChapterPrepScreen() {
   const insets = useSafeAreaInsets();
   const theme = useResolvedTheme();
@@ -129,6 +144,20 @@ export default function ChapterPrepScreen() {
   const [ideas, setIdeas] = useState<string[]>([]);
   const [ack, setAck] = useState<string | null>(null);
   const ackAnim = useState(new Animated.Value(0))[0];
+  /** Briefing fields - what Dilly remembers about you walking into
+   *  this Chapter. Pulled from /chapters/current's latest recap +
+   *  /memory + /profile slim so the user sees concrete proof Dilly
+   *  retained the state, not just "we'll see you Sunday". */
+  const [briefing, setBriefing] = useState<{
+    lastMove?: string;
+    lastQuestion?: string;
+    factsCount?: number;
+    appsCount?: number;
+    daysSinceLast?: number | null;
+  } | null>(null);
+  /** State-of-mind chip selection. Locally persisted so re-opening
+   *  prep shows the user their last selection until session start. */
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
 
   const fetchNotes = useCallback(async () => {
     try {
@@ -140,20 +169,99 @@ export default function ChapterPrepScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [cur, notes, profile] = await Promise.all([
+        const [cur, notes, profile, mem, savedMood] = await Promise.all([
           dilly.get('/chapters/current').catch(() => null),
           dilly.get('/chapters/notes').catch(() => null),
           readProfileSlim().catch(() => null),
+          dilly.get('/memory').catch(() => null),
+          AsyncStorage.getItem(PREP_MOOD_KEY).catch(() => null),
         ]);
         if (cur?.schedule) setSchedule(cur.schedule);
         setSessionCount(cur?.count || 0);
         if (notes) setNotesData(notes);
         setIdeas(buildIdeas(profile));
+        if (savedMood) setSelectedMood(savedMood);
+
+        // Build the briefing - what Dilly is bringing into this
+        // Chapter. Pulls last session's One Move + Question to sit
+        // with, plus rough activity counters so the card has weight.
+        const screens: any[] = (cur as any)?.latest?.screens || [];
+        const lastMoveScreen = screens.find((sc: any) => sc?.slot === 'one_move');
+        const lastQuestionScreen = screens.find((sc: any) => sc?.slot === 'question');
+        const factArr: any[] = Array.isArray((mem as any)?.items)
+          ? (mem as any).items
+          : Array.isArray(mem) ? (mem as any) : [];
+        let daysSinceLast: number | null = null;
+        try {
+          const fetchedAt = (cur as any)?.latest?.fetched_at || (cur as any)?.latest?.generated_at;
+          if (fetchedAt) {
+            const d = new Date(fetchedAt);
+            if (!isNaN(d.getTime())) {
+              daysSinceLast = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+            }
+          }
+        } catch {}
+        setBriefing({
+          lastMove: lastMoveScreen?.body
+            ? String(lastMoveScreen.body).split(/(?<=[.!?])\s+/)[0].slice(0, 160)
+            : undefined,
+          lastQuestion: lastQuestionScreen?.body
+            ? String(lastQuestionScreen.body).split(/(?<=[.!?])\s+/)[0].slice(0, 160)
+            : undefined,
+          factsCount: factArr.length,
+          appsCount: Array.isArray((profile as any)?.applications)
+            ? (profile as any).applications.length
+            : undefined,
+          daysSinceLast,
+        });
       } finally {
         setLoading(false);
       }
     })();
   }, []);
+
+  /** Tap-to-log mood. Optimistic: highlight the chip immediately, then
+   *  persist locally + write a 'walking in: <mood>' fact to memory so
+   *  the chapter generator can condition on it. */
+  const onPickMood = useCallback(async (moodId: string, label: string) => {
+    setSelectedMood(moodId);
+    try { await AsyncStorage.setItem(PREP_MOOD_KEY, moodId); } catch {}
+    try {
+      await dilly.fetch('/memory/items', {
+        method: 'POST',
+        body: JSON.stringify({
+          category: 'state',
+          label: 'Walking into Chapter',
+          value: `Mood: ${label} (logged ${new Date().toISOString().slice(0,10)})`,
+        }),
+      });
+    } catch {}
+  }, []);
+
+  /** Three short questions Dilly is likely to ask, derived client-side
+   *  from profile signals so the user can pre-think before the session.
+   *  Pure heuristics; no LLM call. The point is to make the user feel
+   *  like Dilly already knows what's coming, not to be 100% accurate. */
+  const askPreview = useMemo<string[]>(() => {
+    const facts = briefing?.factsCount ?? 0;
+    const days = briefing?.daysSinceLast;
+    const out: string[] = [];
+    if (briefing?.lastMove) {
+      out.push(`Did you actually do "${briefing.lastMove.slice(0, 60).replace(/[.!?]+$/, '')}"?`);
+    }
+    if (typeof days === 'number' && days >= 7) {
+      out.push(`A week passed. What changed in your career this week?`);
+    }
+    if (facts < 12) {
+      out.push(`What's something I don't know about you yet that matters?`);
+    } else {
+      out.push(`What's the version of your career you're avoiding looking at?`);
+    }
+    if (briefing?.appsCount && briefing.appsCount > 0) {
+      out.push(`What's the one application you've been deferring?`);
+    }
+    return out.slice(0, 3);
+  }, [briefing]);
 
   // Re-check session readiness whenever the user returns to this tab.
   // If generation_eligible flips true, route to chapter/index which
@@ -273,12 +381,108 @@ export default function ChapterPrepScreen() {
             </View>
           )}
           <Text style={[s.headerSub, { color: theme.surface.t2 }]}>
-            Write what you want to bring up. Dilly reads these before writing your session.
+            Walk in prepared. Dilly does her best work when you give her something to chew on.
           </Text>
         </View>
 
+        {/* Briefing - what Dilly is bringing into this Chapter. Visible
+            proof that she remembers; the carryover from last session. */}
+        {briefing && (briefing.lastMove || briefing.lastQuestion || (briefing.factsCount ?? 0) > 0) ? (
+          <View style={[s.briefingCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+            <View style={s.briefingHeader}>
+              <Ionicons name="bookmark" size={13} color={theme.accent} />
+              <Text style={[s.briefingEyebrow, { color: theme.accent }]}>WHAT I'M BRINGING IN</Text>
+            </View>
+            {briefing.lastMove ? (
+              <View style={s.briefingRow}>
+                <Text style={[s.briefingLabel, { color: theme.surface.t3 }]}>YOUR LAST MOVE</Text>
+                <Text style={[s.briefingValue, { color: theme.surface.t1 }]} numberOfLines={3}>
+                  {briefing.lastMove}
+                </Text>
+              </View>
+            ) : null}
+            {briefing.lastQuestion ? (
+              <View style={s.briefingRow}>
+                <Text style={[s.briefingLabel, { color: theme.surface.t3 }]}>THE QUESTION I LEFT YOU WITH</Text>
+                <Text style={[s.briefingValue, { color: theme.surface.t1, fontStyle: 'italic' }]} numberOfLines={3}>
+                  {briefing.lastQuestion}
+                </Text>
+              </View>
+            ) : null}
+            <View style={s.briefingStatsRow}>
+              {(briefing.factsCount ?? 0) > 0 ? (
+                <View style={[s.briefingStat, { borderColor: theme.surface.border }]}>
+                  <Text style={[s.briefingStatNum, { color: theme.surface.t1 }]}>{briefing.factsCount}</Text>
+                  <Text style={[s.briefingStatLabel, { color: theme.surface.t3 }]}>facts on you</Text>
+                </View>
+              ) : null}
+              {typeof briefing.daysSinceLast === 'number' && briefing.daysSinceLast > 0 ? (
+                <View style={[s.briefingStat, { borderColor: theme.surface.border }]}>
+                  <Text style={[s.briefingStatNum, { color: theme.surface.t1 }]}>{briefing.daysSinceLast}d</Text>
+                  <Text style={[s.briefingStatLabel, { color: theme.surface.t3 }]}>since last</Text>
+                </View>
+              ) : null}
+              {(briefing.appsCount ?? 0) > 0 ? (
+                <View style={[s.briefingStat, { borderColor: theme.surface.border }]}>
+                  <Text style={[s.briefingStatNum, { color: theme.surface.t1 }]}>{briefing.appsCount}</Text>
+                  <Text style={[s.briefingStatLabel, { color: theme.surface.t3 }]}>tracked apps</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
+        {/* State of mind - tap-to-log mood. Dilly conditions session
+            tone on the answer, so picking 'drained' lands a softer
+            opening than 'fired up'. The chip persists locally + writes
+            a fact to memory so the chapter generator can read it. */}
+        <Text style={[s.sectionTitle, { color: theme.accent, marginTop: 22 }]}>HOW ARE YOU WALKING IN?</Text>
+        <View style={s.moodRow}>
+          {PREP_MOODS.map(m => {
+            const active = selectedMood === m.id;
+            return (
+              <AnimatedPressable
+                key={m.id}
+                onPress={() => onPickMood(m.id, m.label)}
+                scaleDown={0.94}
+                style={[
+                  s.moodChip,
+                  { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+                  active && { backgroundColor: theme.accentSoft, borderColor: theme.accent },
+                ]}
+              >
+                <Text style={s.moodEmoji}>{m.emoji}</Text>
+                <Text style={[s.moodLabel, { color: active ? theme.accent : theme.surface.t2 }]}>{m.label}</Text>
+              </AnimatedPressable>
+            );
+          })}
+        </View>
+
+        {/* Likely asks - 3 questions Dilly is probably going to lead
+            with, derived from profile signals. Lets the user pre-think
+            so they walk in with substance instead of getting stuck on
+            a cold open. */}
+        {askPreview.length > 0 ? (
+          <>
+            <Text style={[s.sectionTitle, { color: theme.accent, marginTop: 22 }]}>WHAT I'LL PROBABLY ASK</Text>
+            <View style={s.asksList}>
+              {askPreview.map((q, i) => (
+                <View
+                  key={i}
+                  style={[s.askRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+                >
+                  <View style={[s.askNum, { backgroundColor: theme.accentSoft }]}>
+                    <Text style={[s.askNumText, { color: theme.accent }]}>{i + 1}</Text>
+                  </View>
+                  <Text style={[s.askText, { color: theme.surface.t1 }]}>{q}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
         {/* Notes */}
-        <Text style={[s.sectionTitle, { color: theme.accent }]}>YOUR NOTES</Text>
+        <Text style={[s.sectionTitle, { color: theme.accent, marginTop: 22 }]}>YOUR NOTES</Text>
 
         {(!notesData || notesData.notes.length === 0) && (
           <FadeInView delay={0}>
@@ -449,4 +653,113 @@ const s = StyleSheet.create({
   input: { flex: 1, minHeight: 36, maxHeight: 100, fontSize: 14, paddingVertical: 6 },
   sendBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   ack: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
+
+  // ── Briefing card (what Dilly remembers walking in) ──────────────
+  briefingCard: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+  },
+  briefingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  briefingEyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+  },
+  briefingRow: { gap: 4 },
+  briefingLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  briefingValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  briefingStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  briefingStat: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  briefingStatNum: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  briefingStatLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+
+  // ── Mood chips (state of mind walking into the session) ──────────
+  moodRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 16,
+  },
+  moodChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  moodEmoji: { fontSize: 13 },
+  moodLabel: { fontSize: 12, fontWeight: '700', letterSpacing: -0.1 },
+
+  // ── Likely-asks list (what Dilly will probably ask) ──────────────
+  asksList: {
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  askRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  askNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  askNumText: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: -0.1,
+  },
+  askText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
 });

@@ -14,8 +14,9 @@
     },
     "ios": {
       "supportsTablet": false,
+      "appleTeamId": "F46NQK75DK",
       "bundleIdentifier": "com.dilly.app",
-      "buildNumber": "432",
+      "buildNumber": "436",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -26,6 +27,9 @@
         "NSRemindersUsageDescription": "Dilly creates Reminders for application deadlines, interview prep, and weekly career check-ins in a dedicated 'Dilly' list.",
         "UIBackgroundModes": ["fetch", "processing"],
         "BGTaskSchedulerPermittedIdentifiers": ["dilly-warm-cache"]
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.dilly.app"]
       }
     },
     "android": {
@@ -51,7 +55,21 @@
         {
           "contactsPermission": "Dilly saves networking contacts you meet (with a 'Met through Dilly' note) and finds warm intros to companies in your phone before applying."
         }
-      ]
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosShareExtensionName": "Send to Dilly",
+          "iosAppGroupIdentifier": "group.com.dilly.app",
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          },
+          "androidIntentFilters": ["text/*"]
+        }
+      ],
+      "@bacons/apple-targets"
     ],
     "extra": {
       "router": {},

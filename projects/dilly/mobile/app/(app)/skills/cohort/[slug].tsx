@@ -122,7 +122,15 @@ export default function CohortScreen() {
       if (lengthFilter === 'short')  params.set('max_duration_min', '15');
       if (lengthFilter === 'medium') params.set('max_duration_min', '45');
       const res = await dilly.get(`/skill-lab/videos?${params.toString()}`).catch(() => null);
-      setVideos(Array.isArray(res?.videos) ? res.videos : []);
+      // Defensive: drop any items missing the bare-minimum fields we
+      // dereference unconditionally during render. Bad rows from the
+      // API previously crashed the cohort screen with "undefined is
+      // not an object" inside the videos.map().
+      const raw: any[] = Array.isArray(res?.videos) ? res.videos : [];
+      const safe: Video[] = raw.filter(v =>
+        v && typeof v === 'object' && typeof v.id === 'string' && typeof v.title === 'string'
+      );
+      setVideos(safe);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -331,7 +339,11 @@ function StartHereCard({ video, step, theme, onPress }: {
       ]}
     >
       <View style={{ position: 'relative' }}>
-        <Image source={{ uri: video.thumbnail_url }} style={styles.shThumb} resizeMode="cover" />
+        {video?.thumbnail_url ? (
+          <Image source={{ uri: video.thumbnail_url }} style={styles.shThumb} resizeMode="cover" />
+        ) : (
+          <View style={[styles.shThumb, { backgroundColor: theme.surface.s2 }]} />
+        )}
         <View style={[styles.shStep, { backgroundColor: theme.accent }]}>
           <Text style={styles.shStepText}>{step}</Text>
         </View>
@@ -359,7 +371,11 @@ function LibraryRow({ video, theme, onPress }: {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={styles.libRow}>
       <View style={styles.libThumbWrap}>
-        <Image source={{ uri: video.thumbnail_url }} style={styles.libThumb} resizeMode="cover" />
+        {video?.thumbnail_url ? (
+          <Image source={{ uri: video.thumbnail_url }} style={styles.libThumb} resizeMode="cover" />
+        ) : (
+          <View style={[styles.libThumb, { backgroundColor: theme.surface.s2 }]} />
+        )}
         {dur ? (
           <View style={styles.durTag}>
             <Text style={styles.durTagText}>{dur}</Text>
