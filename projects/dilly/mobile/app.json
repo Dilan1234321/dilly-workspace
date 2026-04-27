@@ -32,7 +32,9 @@
         "BGTaskSchedulerPermittedIdentifiers": [
           "dilly-warm-cache"
         ],
-        "NSCalendarsWriteOnlyAccessUsageDescription": "Allow Dilly to add interview reminders and weekly briefs to your calendar."
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Allow Dilly to add interview reminders and weekly briefs to your calendar.",
+        "NSSupportsLiveActivities": true,
+        "NSSupportsLiveActivitiesFrequentUpdates": true
       },
       "entitlements": {
         "com.apple.security.application-groups": [

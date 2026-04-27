@@ -52,6 +52,7 @@
 import WidgetKit
 import SwiftUI
 import AppIntents
+import ActivityKit
 
 // MARK: - Shared data model
 
@@ -821,6 +822,160 @@ struct DillyTodayView: View {
     }
 }
 
+// MARK: - Live Activities (Chapter sessions)
+
+/// Live Activity for an in-progress Chapter session — the weekly
+/// advisory ritual. Shows on the lock screen as a banner, in the
+/// Dynamic Island as compact + expanded regions, and ends gracefully
+/// when the user finishes Screen 5 (or 5+ minutes after no activity).
+///
+/// The mobile app starts/updates/ends this activity via a tiny
+/// ActivityKit native module. While active, the user sees their
+/// Chapter progress without opening the app — same psychology as
+/// Apple Maps "navigation in progress" or Apple Music "song playing."
+
+struct ChapterActivityAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var currentScreen: Int
+        var totalScreens: Int
+        var screenLabel: String   // e.g., "Surface", "Synthesis", "Recap"
+        var startedAt: Date       // for elapsed-time computation
+    }
+
+    var chapterId: String
+    var chapterTitle: String      // e.g., "Chapter 4 · Apr 27"
+}
+
+@available(iOS 16.2, *)
+struct ChapterLiveActivityWidget: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: ChapterActivityAttributes.self) { context in
+            // Lock-screen / banner presentation
+            ChapterLockBannerView(
+                state: context.state,
+                attributes: context.attributes
+            )
+            .activityBackgroundTint(Color(hex: 0x1A0E40))
+            .activitySystemActionForegroundColor(Color.white)
+        } dynamicIsland: { context in
+            DynamicIsland {
+                // Expanded (when user long-presses or activity is most recent)
+                DynamicIslandExpandedRegion(.leading) {
+                    HStack(spacing: 6) {
+                        DillyFaceView(
+                            size: 36, mood: .focused, accessory: .pencil,
+                            inkColor: Color(hex: 0xE2D6FF),
+                            ringColor: Color(hex: 0xE2D6FF).opacity(0.4),
+                            ringFill: Color.clear
+                        )
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("CHAPTER")
+                                .font(.system(size: 8, weight: .black))
+                                .tracking(1.0)
+                                .foregroundColor(Color.white.opacity(0.6))
+                            Text(context.state.screenLabel.uppercased())
+                                .font(.system(size: 13, weight: .heavy))
+                                .foregroundColor(Color.white)
+                        }
+                    }
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("\(context.state.currentScreen) / \(context.state.totalScreens)")
+                            .font(.system(size: 18, weight: .black, design: .rounded))
+                            .foregroundColor(Color.white)
+                        Text("screens")
+                            .font(.system(size: 9, weight: .heavy))
+                            .tracking(0.8)
+                            .foregroundColor(Color.white.opacity(0.6))
+                    }
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    // Progress bar — visual stripe across the bottom
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.white.opacity(0.15))
+                                .frame(height: 4)
+                            Capsule()
+                                .fill(Color(hex: 0xE2D6FF))
+                                .frame(
+                                    width: geo.size.width * progressFraction(state: context.state),
+                                    height: 4
+                                )
+                        }
+                    }
+                    .frame(height: 4)
+                    .padding(.top, 4)
+                }
+            } compactLeading: {
+                // Compact left side (when island is small + active)
+                Image(systemName: "moon.stars.fill")
+                    .foregroundColor(Color(hex: 0xE2D6FF))
+            } compactTrailing: {
+                Text("\(context.state.currentScreen)/\(context.state.totalScreens)")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundColor(Color(hex: 0xE2D6FF))
+            } minimal: {
+                // Tiny circular dot when island is showing multiple activities
+                Image(systemName: "moon.stars.fill")
+                    .foregroundColor(Color(hex: 0xE2D6FF))
+            }
+            .keylineTint(Color(hex: 0xE2D6FF))
+            .widgetURL(URL(string: "dilly:///(app)/chapter"))
+        }
+    }
+
+    private func progressFraction(state: ChapterActivityAttributes.ContentState) -> Double {
+        let total = max(1, state.totalScreens)
+        return min(1.0, max(0.0, Double(state.currentScreen) / Double(total)))
+    }
+}
+
+@available(iOS 16.2, *)
+struct ChapterLockBannerView: View {
+    let state: ChapterActivityAttributes.ContentState
+    let attributes: ChapterActivityAttributes
+
+    var body: some View {
+        HStack(spacing: 12) {
+            DillyFaceView(
+                size: 48, mood: .focused, accessory: .pencil,
+                inkColor: Color(hex: 0xE2D6FF),
+                ringColor: Color(hex: 0xE2D6FF).opacity(0.4),
+                ringFill: Color.white.opacity(0.05)
+            )
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Image(systemName: "moon.stars.fill")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundColor(Color(hex: 0xC9B8FF))
+                    Text("CHAPTER IN SESSION")
+                        .font(.system(size: 9, weight: .black))
+                        .tracking(1.4)
+                        .foregroundColor(Color(hex: 0xC9B8FF))
+                }
+                Text(state.screenLabel)
+                    .font(.system(size: 17, weight: .heavy, design: .serif))
+                    .foregroundColor(Color.white)
+                    .lineLimit(1)
+                Text("\(state.currentScreen) of \(state.totalScreens) · \(elapsedString())")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Color.white.opacity(0.7))
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+    }
+
+    private func elapsedString() -> String {
+        let secs = max(0, Int(Date().timeIntervalSince(state.startedAt)))
+        let m = secs / 60
+        return m == 0 ? "just started" : (m == 1 ? "1 min" : "\(m) min")
+    }
+}
+
+
 // MARK: - Bundle
 
 @main
@@ -832,5 +987,11 @@ struct DillyWidgetBundle: WidgetBundle {
         DillyProfileWidget()
         // LARGE — mission. Question + One Move + Tonight in one panel.
         DillyTodayWidget()
+        // Live activity — Chapter session in progress (Dynamic Island
+        // + lock-screen banner). Available on iOS 16.2+; on older
+        // OSes the bundle entry is skipped at runtime.
+        if #available(iOS 16.2, *) {
+            ChapterLiveActivityWidget()
+        }
     }
 }

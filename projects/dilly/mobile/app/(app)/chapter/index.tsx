@@ -29,6 +29,7 @@ import AnimatedPressable from '../../../components/AnimatedPressable';
 import { cancelMissReminder, scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
 import { scheduleOutcomePushes } from '../../../hooks/useOutcomePushes';
 import { triggerCelebration } from '../../../hooks/useCelebration';
+import * as DillyActivity from 'dilly-activity';
 import { showToast } from '../../../lib/globalToast';
 
 // ─── Default export: gates on CHAPTER_V2_ENABLED ──────────────────────
@@ -354,6 +355,46 @@ function ChapterV1() {
   const isFirst = index === 0;
   const isLast = chapter ? index === chapter.screens.length - 1 : false;
   const chapterCount = chapter?.count || 1;
+
+  // Live Activity wiring — start when the chapter loads, update when
+  // the user advances screens, end when they finish or leave. The
+  // activity shows in the Dynamic Island + lock-screen banner so
+  // users see Chapter progress without keeping the app foregrounded.
+  // No-op on iOS < 16.2 / non-iOS / when the user has disabled
+  // Live Activities in Settings.
+  const liveActivityIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!chapter?.id) return;
+    let cancelled = false;
+    (async () => {
+      const id = await DillyActivity.startChapter(
+        chapter.id,
+        `Chapter ${chapter.count || 1}`,
+        chapter.screens.length,
+      );
+      if (!cancelled) liveActivityIdRef.current = id ? chapter.id : null;
+    })();
+    return () => {
+      cancelled = true;
+      // End the activity when the chapter screen unmounts or chapter
+      // changes. Activity will fade gracefully via the .after dismissal
+      // policy declared in the native module.
+      if (liveActivityIdRef.current) {
+        DillyActivity.endChapter(liveActivityIdRef.current).catch(() => {});
+        liveActivityIdRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapter?.id]);
+
+  // Update the activity whenever the screen index changes — keeps the
+  // Dynamic Island progress count + screen label in sync.
+  useEffect(() => {
+    if (!chapter?.id || !liveActivityIdRef.current) return;
+    const scr = chapter.screens[index];
+    const label = SLOT_LABELS[scr?.slot || ''] || (scr?.slot || '').replace(/_/g, ' ');
+    DillyActivity.updateChapter(chapter.id, index + 1, label).catch(() => {});
+  }, [index, chapter?.id, chapter?.screens]);
 
   function advance() {
     if (!chapter) return;

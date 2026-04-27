@@ -56,7 +56,8 @@
     "react-native-youtube-iframe": "^2.4.1",
     "expo-apple-authentication": "~7.2.4",
     "expo-auth-session": "~7.0.0",
-    "expo-crypto": "~15.0.7"
+    "expo-crypto": "~15.0.7",
+    "dilly-activity": "file:./modules/dilly-activity"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
