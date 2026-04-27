@@ -105,6 +105,12 @@ async def send_verification_code(request: Request, body: AuthSendCodeRequest):
                 "Please use your work email to sign up as a recruiter. "
                 "Free email providers (Gmail, Yahoo, etc.) are not accepted."
             )
+    elif intent == "general":
+        # General (non-student) path: any valid email accepted. Used for the
+        # 14+ non-student situations (jobholder, parent returning, veteran,
+        # etc.) where forcing .edu would block valid signups.
+        if not email or "@" not in email or "." not in email:
+            raise errors.validation_error("Enter a valid email address.")
     else:
         # Student path: require .edu (any .edu domain, no school whitelist)
         if not re.search(r"\.edu\s*$", email):
@@ -138,7 +144,12 @@ async def auth_verify_code(request: Request, body: AuthVerifyCodeRequest):
     email = (body.email or "").strip().lower()
     code = (body.code or "").strip()
     intent = (body.intent or "student").strip().lower()
-    account_type = "recruiter" if intent == "recruiter" else "student"
+    if intent == "recruiter":
+        account_type = "recruiter"
+    elif intent == "general":
+        account_type = "general"
+    else:
+        account_type = "student"
 
     from projects.dilly.api.schools import get_school_from_email
     from projects.dilly.api.auth_store import (
@@ -170,8 +181,10 @@ async def auth_verify_code(request: Request, body: AuthVerifyCodeRequest):
             )
         except Exception:
             pass
-    else:
-        # Guarantee a students row exists from the moment email is verified
+    elif account_type == "student":
+        # Guarantee a students row exists from the moment email is verified.
+        # Only runs for actual student accounts — general (non-student
+        # situations like jobholder, parent returning, veteran) skip this.
         try:
             import psycopg2, os as _os
             _pw = _os.environ.get("DILLY_DB_PASSWORD", "")

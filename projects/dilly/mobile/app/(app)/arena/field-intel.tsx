@@ -531,9 +531,17 @@ export default function FieldIntelScreen() {
       <View style={{ paddingHorizontal: 16, marginTop: 28 }}>
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => openDillyOverlay({
-            initialMessage: `I just read the AI Field Intelligence for ${cohortName}. ${pulse ? `${pulse.ai_fluency_pct}% of active listings in my field require AI skills, and I rank #${pulse.cross_cohort_rank} most AI-exposed out of ${pulse.cross_cohort_total} fields. ` : ''}What should I actually do in the next 30 days to position myself on the right side of this shift?`,
-          })}
+          onPress={() => {
+            const parts: string[] = [`I just read the AI Field Intelligence for ${cohortName}.`]
+            if (pulse?.ai_fluency_pct) {
+              parts.push(`${pulse.ai_fluency_pct}% of active listings in my field require AI skills.`)
+            }
+            if (pulse && pulse.cross_cohort_total > 0 && pulse.cross_cohort_rank > 0) {
+              parts.push(`I rank #${pulse.cross_cohort_rank} most AI-exposed out of ${pulse.cross_cohort_total} fields.`)
+            }
+            parts.push(`What should I actually do in the next 30 days to position myself on the right side of this shift?`)
+            openDillyOverlay({ initialMessage: parts.join(' ') })
+          }}
           style={[s.hookCta, { backgroundColor: theme.accent }]}
         >
           <Ionicons name="sparkles" size={15} color="#FFF" />

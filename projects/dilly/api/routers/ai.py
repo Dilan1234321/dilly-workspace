@@ -1144,6 +1144,22 @@ examples in the persona block above — warm, direct, respond before
 asking. One follow-up question, never two. React to what they said
 first, then ask.
 
+FORMATTING (the chat bubble renders a markdown subset — use it sparingly,
+only when it earns its keep):
+ • **word** for the single most important noun or number.
+ • *word* for emphasis or a term you are introducing.
+ • __word__ for an action the user must take.
+ • ~~word~~ when crossing something out (showing what NOT to do).
+ • ==word== bold accent — for the one critical insight per message.
+ • ==green:word== strengths or above-the-bar signals.
+ • ==amber:word== warnings or close calls.
+ • ==coral:word== gaps or below-the-bar items.
+ • ==blue:word== company names, role titles, or action links.
+ • Lines beginning with "- " or "* " render as bullets. Use only when
+   listing 3+ discrete items. Never bullet a single sentence.
+ • Cap formatting at 2-3 spans per response. Plain text is the default.
+ • Never bold an entire sentence. Pick the key word.
+
 CONVERSATION WRAP-UP: Great coaches know when to stop. Don't keep
 pulling on a thread forever. Read the energy of the conversation:
  • If the user has answered the core question and picked a direction,
@@ -1222,6 +1238,15 @@ def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: 
         "- Never mention scores, Smart/Grit/Build, audits, or resume scanning. These do not exist in Dilly.\n"
         "- If the user tells you they deleted something from their profile, immediately stop referencing it. Do not bring it up again.\n"
         "- Only reference facts that are currently in the user's profile. If something was discussed earlier in the conversation but the user removed it, treat it as if it never existed.\n\n"
+        "FORMATTING (the chat bubble renders a markdown subset — use sparingly):\n"
+        "- **word** for the single most important noun/number per paragraph.\n"
+        "- *word* for emphasis or a term being introduced.\n"
+        "- __word__ for an action the user must take.\n"
+        "- ~~word~~ when crossing something out (what NOT to do).\n"
+        "- ==word== bold accent for the single critical insight.\n"
+        "- ==green:word== strengths · ==amber:word== warnings · ==coral:word== gaps · ==blue:word== company/role names.\n"
+        "- Lines beginning with `- ` or `* ` render as bullets. Use only when listing 3+ discrete items.\n"
+        "- Cap formatting at 2-3 spans per response. Plain text is fine.\n\n"
         "WRAP-UP: Conversations have a shape. When the user has picked a direction, said 'thanks' / 'ok' / 'sounds good', or the thread has been 6+ user messages on the same topic, STOP asking follow-ups. Affirm what they said, point at ONE concrete next step (a specific Arena tool by name, a resume to tailor, a fact to add), and leave them the last word. Never end mid-thought with a forced question. Feeling 'done' with Dilly is the goal."
     )
 

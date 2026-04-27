@@ -125,10 +125,16 @@ export default function VerifyScreen() {
       setError(null);
       try {
         const emailToVerify = isReturning ? returningEmail.trim() : email;
+        // Pass intent so the backend creates the right account_type. Without
+        // this, every verify falls through to account_type='student' even
+        // when the user picked a non-student situation (jobholder, parent
+        // returning, veteran, etc.). userType is set by choose-path.tsx
+        // based on which email field they used.
+        const intent = userType === 'general' ? 'general' : 'student';
         const res = await fetch(`${API_BASE}/auth/verify-code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: emailToVerify, code }),
+          body: JSON.stringify({ email: emailToVerify, code, intent }),
         });
         const data = await res.json();
         if (!res.ok) {

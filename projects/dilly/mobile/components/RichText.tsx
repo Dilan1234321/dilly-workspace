@@ -11,6 +11,7 @@
  *   ==amber:text==  → bold amber (#FF9F0A)
  *   ==blue:text==   → bold blue (#0A84FF)
  *   ==coral:text==  → bold coral (#FF453A)
+ *   - item / * item → bullet (rendered as •  item)
  *
  * Nesting: bold + italic can combine (**_text_** or *__text__*)
  * Line breaks (\n) render as newlines.
@@ -195,9 +196,18 @@ interface RichTextProps {
   baseStyle?: TextStyle;
 }
 
+// Convert bullet-style lines (- foo / * foo) into a bullet glyph so the
+// existing inline tokenizer renders them naturally. We do not touch *foo*
+// inline italics — only `- ` or `* ` at the start of a line (after optional
+// whitespace) qualifies. Two trailing spaces give a small gap between the
+// bullet and the text so wrapped lines still read as a list item.
+function preprocessBullets(input: string): string {
+  return input.replace(/^([ \t]*)[-*][ \t]+(?=\S)/gm, '$1•  ');
+}
+
 export default function RichText({ text, baseStyle }: RichTextProps) {
   const theme = useResolvedTheme();
-  const tokens = parse(text);
+  const tokens = parse(preprocessBullets(text));
   const linkColor = theme.accent;
 
   return (

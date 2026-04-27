@@ -1048,13 +1048,13 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               return (
               <Wrapper key={msg.id} index={msg.id}>
                 {msg.role === 'user' ? (
-                  <View style={[s.msgRow, { justifyContent: 'flex-end' }]}>
+                  <View style={[s.msgRow, { justifyContent: 'flex-end', marginRight: -16 }]}>
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onLongPress={() => copyMessage(msg.id, msg.content)}
                       delayLongPress={400}
                     >
-                      <View style={[s.userBubble, { backgroundColor: theme.accentSoft }]}>
+                      <View style={[s.userBubble, { backgroundColor: theme.accentSoft, borderTopRightRadius: 18, borderBottomRightRadius: 0 }]}>
                         <Text style={[s.msgText, { color: theme.surface.t1 }]}>{msg.content}</Text>
                       </View>
                     </TouchableOpacity>

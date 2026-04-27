@@ -1468,7 +1468,7 @@ function SeekerHome() {
             below Jobs so there is exactly one rendering on Home. */}
         <FadeInView delay={12}>
           <View style={{ alignItems: 'center', marginVertical: 16 }}>
-            <DillyFace size={showJourney ? 100 : 80} />
+            <DillyFace size={showJourney ? 100 : 80} mood="warm" />
           </View>
           <AnimatedPressable
             onPress={() => openDillyOverlay({
