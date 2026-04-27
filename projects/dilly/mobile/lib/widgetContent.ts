@@ -176,6 +176,111 @@ async function resolveMirror(): Promise<string | undefined> {
   return undefined;
 }
 
+/** Pull the user's most recent profile facts so the Dilly Profile
+ *  widget can rotate through them. The widget shows a different fact
+ *  each timeline refresh — feels like Dilly is recalling things about
+ *  you, not just showing a static count. */
+async function resolveProfile(): Promise<{
+  factCount?: number;
+  categoryCount?: number;
+  recentFacts?: string[];
+  latestFactDate?: string;
+  latestFactCategory?: string;
+}> {
+  try {
+    const mem = await dilly.get('/memory').catch(() => null);
+    const items: any[] = Array.isArray((mem as any)?.items)
+      ? (mem as any).items
+      : Array.isArray(mem) ? (mem as any) : [];
+    if (!items.length) return {};
+
+    // Filter out facts the user wouldn't want surfaced on a home
+    // screen — anything in the always-private buckets (weaknesses,
+    // fears, life context, contact info). Same exclusion list used by
+    // the chat opening-fact picker so the widget never surprises the
+    // user with vulnerable content.
+    const PRIVATE = new Set([
+      'weakness', 'fear', 'challenge', 'concern',
+      'life_context', 'areas_for_improvement',
+      'personal', 'contact', 'phone', 'email_address',
+    ]);
+    const surfaceable = items.filter((it: any) => {
+      const cat = String(it?.category || '').toLowerCase();
+      return cat && !PRIVATE.has(cat);
+    });
+
+    // Sort newest-first by created_at if present, else by id (rough
+    // proxy for insertion order on the backend).
+    surfaceable.sort((a: any, b: any) => {
+      const at = String(a?.created_at || a?.id || '');
+      const bt = String(b?.created_at || b?.id || '');
+      return bt.localeCompare(at);
+    });
+
+    // Render each fact as a short, quote-friendly line. Prefer
+    // "label: value" when both exist; fall back to whichever is set.
+    const recentFacts: string[] = [];
+    for (const it of surfaceable.slice(0, 8)) {
+      const label = String(it?.label || '').trim();
+      const value = String(it?.value || '').trim();
+      let line = '';
+      if (value && label && value.length > label.length + 5) {
+        line = value;
+      } else if (label && value) {
+        line = `${label}: ${value}`;
+      } else {
+        line = label || value;
+      }
+      // Strip any markdown emphasis the AI might have left in.
+      line = line.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+      if (line.length >= 8 && line.length <= 220) {
+        recentFacts.push(line);
+      }
+      if (recentFacts.length >= 6) break;
+    }
+
+    const categories = new Set<string>();
+    for (const it of items) {
+      const c = String(it?.category || '').toLowerCase();
+      if (c) categories.add(c);
+    }
+
+    // Most recent capture: short human-readable date string.
+    let latestFactDate = '';
+    let latestFactCategory = '';
+    if (surfaceable[0]) {
+      latestFactCategory = String(surfaceable[0]?.category || '').replace(/_/g, ' ');
+      const ts = surfaceable[0]?.created_at;
+      if (ts) {
+        try {
+          const d = new Date(ts);
+          if (!isNaN(d.getTime())) {
+            const today = new Date();
+            const sameDay = d.toDateString() === today.toDateString();
+            const yest = new Date(today); yest.setDate(today.getDate() - 1);
+            const isYest = d.toDateString() === yest.toDateString();
+            if (sameDay) latestFactDate = 'today';
+            else if (isYest) latestFactDate = 'yesterday';
+            else {
+              latestFactDate = d.toLocaleDateString(undefined, { weekday: 'short' });
+            }
+          }
+        } catch {}
+      }
+    }
+
+    return {
+      factCount: items.length,
+      categoryCount: categories.size,
+      recentFacts,
+      latestFactDate,
+      latestFactCategory,
+    };
+  } catch {
+    return {};
+  }
+}
+
 async function resolveTruthStreak(): Promise<number> {
   // Best-effort - reads a local AsyncStorage tally maintained by the
   // truth-answer queue drainer. If nothing yet, return 0.
@@ -208,11 +313,12 @@ function stripFormatting(s: string): string {
  *  from the widget extension. */
 export async function refreshAllWidgets(): Promise<void> {
   try {
-    const [oneMove, tonight, mirror, streak] = await Promise.all([
+    const [oneMove, tonight, mirror, streak, profile] = await Promise.all([
       resolveOneMove(),
       resolveTonight(),
       resolveMirror(),
       resolveTruthStreak(),
+      resolveProfile(),
     ]);
 
     // Day-rotation gates the question + truth so each calendar day
@@ -230,10 +336,18 @@ export async function refreshAllWidgets(): Promise<void> {
       oneMoveDeepLink: oneMove.deepLink,
       tonightTitle: tonight.title,
       tonightDeepLink: tonight.deepLink,
+      // Honest Mirror is gone from the widget bundle as of build 441,
+      // but we still write the field so older installs that haven't
+      // upgraded the widget binary yet keep working.
       mirrorSentence: mirror,
       truthQuestion: truth,
       truthAnswered: truthAnsweredToday,
       truthStreakDays: streak,
+      profileFactCount: profile.factCount,
+      profileCategoryCount: profile.categoryCount,
+      profileRecentFacts: profile.recentFacts,
+      profileLatestFactDate: profile.latestFactDate,
+      profileLatestFactCategory: profile.latestFactCategory,
     };
     await writeWidgetData(payload);
   } catch {

@@ -8,12 +8,17 @@
  * widgets (after Chapter, score update, daily refresh), it calls
  * writeWidgetData() with the latest values.
  *
- * Five widgets currently consume this data:
+ * Six widgets currently consume this data:
  *   1. Today's Question (todaysQuestion)
  *   2. Your One Move (oneMoveTitle / oneMoveBody / oneMoveDeepLink)
  *   3. Tonight's 15 Minutes (tonightTitle / tonightDeepLink)
- *   4. Honest Mirror (mirrorSentence)
+ *   4. Dilly Profile (profileFactCount / profileCategoryCount /
+ *      profileRecentFacts / profileLatestFactDate / profileLatestFactCategory)
+ *      [REPLACED Honest Mirror — "living, breathing profile" feel:
+ *       the widget rotates through the user's actual recent facts so
+ *       every refresh shows a different "Dilly remembers..." line.]
  *   5. Moment of Truth (truthQuestion / truthAnswered / truthStreakDays)
+ *   6. Dilly Today summary (large) — uses Question + One Move + Tonight
  *
  * The widget renders empty hints when fields are missing, so partial
  * payloads are safe.
@@ -51,6 +56,19 @@ export interface WidgetData {
   tonightTitle?: string;
   tonightDeepLink?: string;
 
+  // Dilly Profile widget (replaces Honest Mirror).
+  // The widget rotates through profileRecentFacts on each timeline
+  // refresh so the user sees a different "Dilly remembers: ..." line
+  // every time iOS reloads — gives the profile a living/breathing feel.
+  profileFactCount?: number;
+  profileCategoryCount?: number;
+  profileRecentFacts?: string[];      // 3-6 most recent facts as quoted lines
+  profileLatestFactDate?: string;     // short string like "Tue" or "Mar 12"
+  profileLatestFactCategory?: string; // e.g. "achievement", "skill"
+
+  // Honest Mirror retired — kept here as deprecated for backward-compat
+  // with old App Group data the widget bundle still understands.
+  /** @deprecated Removed in build 441; widget no longer renders this. */
   mirrorSentence?: string;
 
   truthQuestion?: string;
