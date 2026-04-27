@@ -448,6 +448,13 @@ function SeekerProfileScreen() {
       setShowQrFullscreen(true);
       // Clear the param so back-nav then re-opening Career Center doesn't reopen the modal
       try { router.setParams({ openQr: undefined as any }); } catch {}
+      // Donate the Dilly Card activity so iOS surfaces "Open my Dilly
+      // Card" as a Spotlight + lock-screen suggestion at venues / on
+      // days the user typically reaches for it.
+      try {
+        const { donateActivity, ACTIVITY_DILLY_CARD } = require('../../lib/siriDonations');
+        donateActivity?.(ACTIVITY_DILLY_CARD);
+      } catch {}
     }
   }, [searchParams?.openQr]);
   const [webSections, setWebSections] = useState<Record<string, boolean>>({
