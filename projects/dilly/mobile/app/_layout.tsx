@@ -22,7 +22,6 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { registerNotificationCategories } from '../lib/notifications';
 import { registerBackgroundRefresh } from '../lib/backgroundRefresh';
 import { indexAppSections, onSpotlightTap } from '../lib/spotlight';
-import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useResolvedTheme } from '../hooks/useTheme';
 
@@ -296,72 +295,14 @@ export default function RootLayout() {
   }
 
   return (
-    <ShareIntentProvider
-      options={{
-        debug: false,
-        // Bridge incoming share intents into deep links our /share
-        // route handles. Each share opens the app at /share, which
-        // reads the intent + posts the URL to the backend, then
-        // routes to /jobs with a success toast.
-        resetOnBackground: true,
-      }}
-    >
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <ErrorBoundary surface="Dilly" resetKey={pathname}>
-            <ShareIntentReceiver />
-            <ThemedAppStack pathname={pathname} />
-          </ErrorBoundary>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    </ShareIntentProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ErrorBoundary surface="Dilly" resetKey={pathname}>
+          <ThemedAppStack pathname={pathname} />
+        </ErrorBoundary>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
-}
-
-/** Mounts inside the provider and listens for incoming share intents.
- *  When the user taps "Send to Dilly" from any other app's share sheet,
- *  iOS launches Dilly with a payload of the URL/text being shared. We
- *  forward it to the backend ingestion endpoint and route the user to
- *  the jobs tab so they can see what was added. */
-function ShareIntentReceiver() {
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
-  useEffect(() => {
-    if (!hasShareIntent || !shareIntent) return;
-    (async () => {
-      try {
-        const url = shareIntent?.webUrl || shareIntent?.text || '';
-        if (!url) { resetShareIntent(); return; }
-        // Save as a tracked application so the link shows up on the
-        // Jobs/Tracker tab. Best-effort - if the user is not signed
-        // in or the network is offline, we still surface a "saved
-        // locally" toast so the share doesn't appear to vanish.
-        const { dilly } = await import('../lib/dilly');
-        const host = (() => {
-          try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'Saved link'; }
-        })();
-        await dilly.fetch('/applications', {
-          method: 'POST',
-          body: JSON.stringify({
-            company: host,
-            role: 'Sent to Dilly',
-            status: 'saved',
-            notes: 'Shared from another app via Send to Dilly.',
-            job_url: url,
-          }),
-        }).catch(() => {});
-        try {
-          const { showToast } = await import('../lib/globalToast');
-          showToast({ message: `Dilly saved this link from ${host}.`, type: 'success' });
-        } catch {}
-        try {
-          router.push('/(app)/jobs' as any);
-        } catch {}
-      } finally {
-        resetShareIntent();
-      }
-    })();
-  }, [hasShareIntent, shareIntent, resetShareIntent]);
-  return null;
 }
 
 /** Crossfade overlay that fires when the OS dark/light mode toggles.

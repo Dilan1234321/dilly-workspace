@@ -51,18 +51,6 @@
         {
           "contactsPermission": "Dilly saves networking contacts you meet (with a 'Met through Dilly' note) and finds warm intros to companies in your phone before applying."
         }
-      ],
-      [
-        "expo-share-intent",
-        {
-          "iosShareExtensionName": "Send to Dilly",
-          "iosActivationRules": {
-            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
-            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
-            "NSExtensionActivationSupportsText": true
-          },
-          "androidIntentFilters": ["text/*"]
-        }
       ]
     ],
     "extra": {
