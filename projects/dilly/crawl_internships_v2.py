@@ -3269,6 +3269,38 @@ def crawl_all():
     except Exception as e:
         print(f"[discovered-boards] load failed: {e}")
 
+    # Discovered Workday tenants — different shape than GH/Lever/Ashby
+    # because Workday needs (tenant, wd_number, site_path) not just a
+    # slug. Hand off to fetch_workday_tenant for the actual scrape; the
+    # rows come back as a flat job list and write_multi_company_feed
+    # groups them by company. Without this block, every Workday tenant
+    # discovered by /cron/discover-boards just sits in the table doing
+    # nothing because fetch_all_workday only reads its hardcoded
+    # WORKDAY_TENANTS list.
+    try:
+        from projects.dilly.api.ingest.slug_discovery import list_discovered as _list_disc_wd
+        from dilly_core.job_source_workday import fetch_workday_tenant, WORKDAY_TENANTS
+        wd_seen = {t[0] for t in WORKDAY_TENANTS}
+        wd_rows = [r for r in _list_disc_wd("workday") if r["slug"] not in wd_seen and r.get("wd_number") and r.get("site_path")]
+        if wd_rows:
+            print(f"\n[workday discovered] Crawling {len(wd_rows)} newly-found tenants...")
+            wd_jobs_all: list[dict] = []
+            for r in wd_rows:
+                slug = r["slug"]
+                wd = r["wd_number"]
+                site = r["site_path"]
+                name = r.get("display_name") or slug.replace("-", " ").title()
+                try:
+                    wd_jobs_all.extend(fetch_workday_tenant(slug, wd, site, name, "Enterprise", None))
+                except Exception as e:
+                    print(f"  {slug} ERROR: {e}")
+                time.sleep(0.4)
+            if wd_jobs_all:
+                new_wd = write_multi_company_feed(conn, wd_jobs_all, "workday", "Enterprise")
+                total_found += len(wd_jobs_all); total_new += new_wd
+    except Exception as e:
+        print(f"[workday discovered] load failed: {e}")
+
     # ── Multi-company feeds (RemoteOK, WWR, Built In) ───────────────
     # Each call returns jobs from MANY different companies at once.
     # write_multi_company_feed groups by company and inserts in batches.
