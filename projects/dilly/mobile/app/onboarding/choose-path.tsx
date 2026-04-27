@@ -273,43 +273,30 @@ export default function ChoosePathScreen() {
                   Both flows route through _completeOAuthSignIn which
                   mirrors the email-code post-auth onboarding flow. */}
               {Platform.OS === 'ios' ? (
-                <TouchableOpacity
-                  style={[s.oauthButtonApple, oauthLoading ? s.buttonDisabled : null]}
-                  onPress={handleAppleSignIn}
-                  disabled={!!oauthLoading}
-                  activeOpacity={0.9}
-                >
-                  {oauthLoading === 'apple' ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
-                      <Text style={s.oauthAppleText}>Sign in with Apple</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity
-                style={[s.oauthButtonGoogle, oauthLoading ? s.buttonDisabled : null, { marginTop: Platform.OS === 'ios' ? 10 : 0 }]}
-                onPress={handleGoogleSignIn}
-                disabled={!!oauthLoading}
-                activeOpacity={0.9}
-              >
-                {oauthLoading === 'google' ? (
-                  <ActivityIndicator size="small" color="#1F1F1F" />
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="logo-google" size={18} color="#1F1F1F" />
-                    <Text style={s.oauthGoogleText}>Sign in with Google</Text>
+                <>
+                  <TouchableOpacity
+                    style={[s.oauthButtonApple, oauthLoading ? s.buttonDisabled : null]}
+                    onPress={handleAppleSignIn}
+                    disabled={!!oauthLoading}
+                    activeOpacity={0.9}
+                  >
+                    {oauthLoading === 'apple' ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                        <Text style={s.oauthAppleText}>Sign in with Apple</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {oauthError ? <Text style={[s.errorText, { marginTop: 8 }]}>{oauthError}</Text> : null}
+                  <View style={s.divider}>
+                    <View style={s.dividerLine} />
+                    <Text style={s.dividerText}>or use email</Text>
+                    <View style={s.dividerLine} />
                   </View>
-                )}
-              </TouchableOpacity>
-              {oauthError ? <Text style={[s.errorText, { marginTop: 8 }]}>{oauthError}</Text> : null}
-              <View style={s.divider}>
-                <View style={s.dividerLine} />
-                <Text style={s.dividerText}>or use email</Text>
-                <View style={s.dividerLine} />
-              </View>
+                </>
+              ) : null}
               <Text style={s.sectionLabel}>Your email</Text>
               <View style={s.inputWrapper}>
                 <TextInput
