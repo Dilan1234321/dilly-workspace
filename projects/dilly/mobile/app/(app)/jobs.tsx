@@ -975,9 +975,11 @@ export default function JobsScreen() {
       </Modal>
 
       {noticedLine ? (
-        <View style={[styles.noticedStrip, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
-          <Ionicons name="sparkles" size={14} color={theme.accent} />
-          <Text style={[styles.noticedEyebrow, { color: theme.accent }]}>DILLY NOTICED</Text>
+        <View style={[styles.noticedStrip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <View style={styles.noticedTopRow}>
+            <Ionicons name="sparkles" size={13} color={theme.accent} />
+            <Text style={[styles.noticedEyebrow, { color: theme.accent }]}>TODAY'S READ</Text>
+          </View>
           <Text style={[styles.noticedLine, { color: theme.surface.t1 }]}>{noticedLine}</Text>
         </View>
       ) : null}
@@ -1091,36 +1093,69 @@ interface CardCommonProps {
 }
 
 function HeroCard(props: CardCommonProps) {
-  const { job, profile, theme, expanded } = props;
+  const { job, profile, theme, expanded, gapVideoId, onApply } = props;
   const story = buildFitStory(job, profile);
   const posted = daysAgo(job.posted_date);
 
   return (
     <TouchableOpacity
-      activeOpacity={0.9}
+      activeOpacity={0.92}
       onPress={() => props.onExpand(job)}
-      style={[styles.hero, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+      style={[styles.hero, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '60' }]}
     >
+      {/* Accent bar at the top of the hero - reads as "this is the
+          one Dilly picked", visually distinct from the other cards. */}
+      <View style={[styles.heroAccentBar, { backgroundColor: theme.accent }]} />
       <View style={styles.heroTop}>
-        <Text style={[styles.heroEyebrow, { color: theme.accent }]}>TOP MATCH FOR YOU</Text>
+        <View style={styles.heroEyebrowRow}>
+          <Ionicons name="sparkles" size={11} color={theme.accent} />
+          <Text style={[styles.heroEyebrow, { color: theme.accent }]}>DILLY'S TOP PICK FOR YOU</Text>
+        </View>
         {posted ? <Text style={[styles.heroPosted, { color: theme.surface.t3 }]}>{posted}</Text> : null}
       </View>
-      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginTop: 8 }}>
-        <CompanyLogo job={job} size={44} theme={theme} />
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginTop: 10 }}>
+        <CompanyLogo job={job} size={56} theme={theme} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.heroTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{job.title}</Text>
           <Text style={[styles.heroCompany, { color: theme.surface.t2 }]} numberOfLines={1}>
-            {job.company}{job.location_city ? ` · ${job.location_city}` : ''}
+            {job.company}{job.location_city ? ` · ${job.location_city}` : job.remote ? ' · Remote' : ''}
           </Text>
         </View>
       </View>
-      {story ? <Text style={[styles.heroStory, { color: theme.surface.t1 }]}>{story}</Text> : null}
-
-      {expanded ? <ExpandedDetails {...props} /> : (
-        <View style={[styles.heroApply, { backgroundColor: theme.accent }]}>
-          <Text style={styles.heroApplyText}>See the fit</Text>
-          <Ionicons name="arrow-forward" size={14} color="#fff" />
+      {story ? (
+        <View style={[styles.heroStoryWrap, { borderLeftColor: theme.accent }]}>
+          <Text style={[styles.heroStory, { color: theme.surface.t1 }]}>{story}</Text>
         </View>
+      ) : null}
+
+      {/* Action row on collapsed hero - Apply primary, optional skill
+          gap secondary. Same idea as JobCard but bigger because this
+          is THE pick. */}
+      {!expanded ? (
+        <View style={styles.heroActionRow}>
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={(e) => { e.stopPropagation?.(); onApply(job); }}
+            style={[styles.heroApply, { backgroundColor: theme.accent }]}
+          >
+            <Ionicons name="arrow-forward" size={14} color="#fff" />
+            <Text style={styles.heroApplyText}>Apply</Text>
+          </TouchableOpacity>
+          {gapVideoId ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={(e) => { e.stopPropagation?.(); router.push(`/skills/video/${gapVideoId}`); }}
+              style={[styles.heroSkillBtn, { borderColor: theme.accentBorder }]}
+            >
+              <Ionicons name="play-circle" size={14} color={theme.accent} />
+              <Text style={[styles.heroSkillText, { color: theme.accent }]}>Skill gap · 1 video</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ flex: 1 }} />
+          )}
+        </View>
+      ) : (
+        <ExpandedDetails {...props} />
       )}
     </TouchableOpacity>
   );
@@ -1493,19 +1528,66 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
 
-  noticedStrip: { marginHorizontal: 16, borderRadius: 13, borderWidth: 1, padding: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  noticedStrip: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  noticedTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
   noticedEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   noticedLine:    { fontSize: 13, fontWeight: '600', flexShrink: 1, width: '100%', marginTop: 4 },
 
-  hero: { marginHorizontal: 16, marginTop: 16, padding: 18, borderRadius: 16, borderWidth: 1 },
+  hero: {
+    marginHorizontal: 16, marginTop: 16, padding: 20, paddingTop: 22,
+    borderRadius: 18, borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  heroAccentBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 4 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heroEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   heroPosted:  { fontSize: 11, fontWeight: '600' },
-  heroTitle:   { fontSize: 20, fontWeight: '800', letterSpacing: -0.3, lineHeight: 26 },
+  heroTitle:   { fontSize: 21, fontWeight: '900', letterSpacing: -0.4, lineHeight: 27 },
   heroCompany: { fontSize: 13, fontWeight: '600', marginTop: 4 },
-  heroStory:   { fontSize: 14, fontStyle: 'italic', lineHeight: 20, marginTop: 12 },
-  heroApply:   { flexDirection: 'row', gap: 6, alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, marginTop: 14 },
-  heroApplyText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  heroStoryWrap: {
+    marginTop: 14,
+    paddingLeft: 12,
+    borderLeftWidth: 3,
+  },
+  heroStory:   { fontSize: 14, fontStyle: 'italic', lineHeight: 20, fontWeight: '500' },
+  heroActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+  },
+  heroApply: {
+    flexDirection: 'row', gap: 6, alignItems: 'center',
+    paddingHorizontal: 18, paddingVertical: 11, borderRadius: 999,
+  },
+  heroApplyText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  heroSkillBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  heroSkillText: { fontSize: 12, fontWeight: '700' },
 
   bandLabel: { fontSize: 11, fontWeight: '900', letterSpacing: 1.6 },
   bandSub:   { fontSize: 12, marginTop: 2 },
