@@ -17,6 +17,7 @@
       "appleTeamId": "F46NQK75DK",
       "bundleIdentifier": "com.dilly.app",
       "buildNumber": "444",
+      "deploymentTarget": "16.0",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true

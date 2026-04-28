@@ -161,7 +161,7 @@ struct DillyAppShortcuts: AppShortcutsProvider {
             intent: LogWinIntent(),
             phrases: [
                 "Log a win in \(.applicationName)",
-                "Add a Dilly win",
+                "Add a win in \(.applicationName)",
                 "I shipped something in \(.applicationName)",
             ],
             shortTitle: "Log a win",
@@ -172,7 +172,7 @@ struct DillyAppShortcuts: AppShortcutsProvider {
             phrases: [
                 "What's my mission in \(.applicationName)",
                 "Open today in \(.applicationName)",
-                "Show my Dilly today",
+                "Show my today in \(.applicationName)",
             ],
             shortTitle: "Today",
             systemImageName: "sun.max.fill"
@@ -181,7 +181,7 @@ struct DillyAppShortcuts: AppShortcutsProvider {
             intent: StartChapterIntent(),
             phrases: [
                 "Start a chapter in \(.applicationName)",
-                "New Dilly chapter",
+                "New chapter in \(.applicationName)",
             ],
             shortTitle: "New chapter",
             systemImageName: "book.fill"
@@ -190,7 +190,7 @@ struct DillyAppShortcuts: AppShortcutsProvider {
             intent: OpenVoiceIntent(),
             phrases: [
                 "Open voice in \(.applicationName)",
-                "Talk to Dilly",
+                "Talk to \(.applicationName)",
             ],
             shortTitle: "Voice",
             systemImageName: "waveform"

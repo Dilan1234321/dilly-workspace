@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.license        = 'MIT'
   s.author         = 'Dilly'
   s.homepage       = 'https://dilly.app'
-  s.platforms      = { :ios => '16.2' }
+  s.platforms      = { :ios => '16.0' }
   s.source         = { git: '' }
   s.static_framework = true
 

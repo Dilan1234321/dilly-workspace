@@ -376,11 +376,33 @@ private struct AccessoryOverlay: View {
 // MARK: - Gradient backgrounds (per-widget palette × time-of-day)
 
 struct WidgetGradient: View {
-    enum Mood { case lateNight, goldenHour, deepEvening, journalCream, vibrantAccent, dusk }
+    // forestPulse — small widget. Emerald growth/habit energy that
+    //   stands apart from the large dusk + medium cream.
+    // midnightAurora — large widget. 3-stop deep-navy → indigo → warm
+    //   horizon glow. More sophisticated than the old 2-stop dusk.
+    enum Mood { case lateNight, goldenHour, deepEvening, journalCream, vibrantAccent, dusk, forestPulse, midnightAurora }
     let mood: Mood
     let time: TimeOfDay
     var body: some View {
-        LinearGradient(colors: colors(), startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
+        ZStack {
+            LinearGradient(colors: colors(), startPoint: .topLeading, endPoint: .bottomTrailing)
+            // Subtle radial highlight in the upper-left adds dimension —
+            // makes the gradient feel like a 3D surface rather than flat
+            // paint. Very faint so it never competes with content.
+            if hasHighlight {
+                RadialGradient(
+                    colors: [Color.white.opacity(0.18), Color.white.opacity(0)],
+                    center: .topLeading, startRadius: 0, endRadius: 220
+                ).blendMode(.softLight)
+            }
+        }
+        .ignoresSafeArea()
+    }
+    private var hasHighlight: Bool {
+        switch mood {
+        case .midnightAurora, .forestPulse, .dusk, .lateNight, .deepEvening: return true
+        default: return false
+        }
     }
     private func colors() -> [Color] {
         switch mood {
@@ -425,6 +447,25 @@ struct WidgetGradient: View {
             case .midday:  return [Color(hex: 0x4F7DC6), Color(hex: 0xA0588F)]
             case .evening: return [Color(hex: 0x32487E), Color(hex: 0x631B5C)]
             case .night:   return [Color(hex: 0x1A2244), Color(hex: 0x230F2B)]
+            }
+        case .forestPulse:
+            // Emerald → deep forest. Carries growth/habit energy
+            // without competing with the small flame badge.
+            switch time {
+            case .morning: return [Color(hex: 0x6BC18A), Color(hex: 0x1F5235)]
+            case .midday:  return [Color(hex: 0x4FAE76), Color(hex: 0x1A4530)]
+            case .evening: return [Color(hex: 0x2F8A5C), Color(hex: 0x0F2E23)]
+            case .night:   return [Color(hex: 0x1F5240), Color(hex: 0x05140E)]
+            }
+        case .midnightAurora:
+            // 3-stop: deep midnight navy → indigo → warm aurora glow.
+            // Reads like a premium night sky. The warm glow at the
+            // bottom-right anchors it without making it look hot.
+            switch time {
+            case .morning: return [Color(hex: 0x4B6FB5), Color(hex: 0x2A2F70), Color(hex: 0xC56F8E)]
+            case .midday:  return [Color(hex: 0x3A5398), Color(hex: 0x1F1F60), Color(hex: 0xA85878)]
+            case .evening: return [Color(hex: 0x1F2D6A), Color(hex: 0x110F46), Color(hex: 0x7B2F58)]
+            case .night:   return [Color(hex: 0x101535), Color(hex: 0x05071F), Color(hex: 0x3A1330)]
             }
         }
     }
@@ -477,6 +518,78 @@ struct EmptyHint: View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundColor(.secondary)
             Text(line).font(.system(size: 13, weight: .medium)).foregroundColor(.secondary).lineLimit(3)
+        }
+    }
+}
+
+/// Seven dots, one per day of the week. Days before today are filled
+/// based on streak depth (capped at 7). Today's dot pulses (faint
+/// outline + slightly larger). Future days are dim. Reads at a glance:
+/// "this is my week, this is where I am, this is what's left."
+struct WeekDotsRow: View {
+    let streakDays: Int
+    let today: Int  // 1=Sun ... 7=Sat from Calendar
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(1...7, id: \.self) { day in
+                dot(for: day)
+            }
+            Spacer(minLength: 0)
+            Text(weekStreakLabel)
+                .font(.system(size: 9, weight: .heavy)).tracking(0.8)
+                .foregroundColor(Color.white.opacity(0.6))
+        }
+    }
+    @ViewBuilder
+    private func dot(for day: Int) -> some View {
+        if day < today {
+            // Past day this week — filled if streak covers it.
+            let daysBack = today - day
+            let filled = daysBack <= streakDays
+            Circle()
+                .fill(filled ? Color.white.opacity(0.9) : Color.white.opacity(0.18))
+                .frame(width: 8, height: 8)
+        } else if day == today {
+            // Today — outlined ring with a small dot inside.
+            ZStack {
+                Circle().stroke(Color.white.opacity(0.85), lineWidth: 1.4).frame(width: 11, height: 11)
+                Circle().fill(Color.white).frame(width: 4, height: 4)
+            }
+        } else {
+            // Future day — faint outline only.
+            Circle().stroke(Color.white.opacity(0.25), lineWidth: 1).frame(width: 8, height: 8)
+        }
+    }
+    private var weekStreakLabel: String {
+        if streakDays >= 7 { return "PERFECT WEEK" }
+        if streakDays >= 3 { return "ON A ROLL" }
+        if streakDays >= 1 { return "BUILDING" }
+        return "START THIS WEEK"
+    }
+}
+
+/// Subtle constellation in the upper-right of the large widget.
+/// Three stars connected by faint lines — adds atmospheric depth
+/// without competing with content. Pure decoration.
+struct ConstellationDecoration: View {
+    var body: some View {
+        Canvas { ctx, size in
+            // Three star positions inside the frame.
+            let p1 = CGPoint(x: size.width * 0.18, y: size.height * 0.30)
+            let p2 = CGPoint(x: size.width * 0.55, y: size.height * 0.55)
+            let p3 = CGPoint(x: size.width * 0.85, y: size.height * 0.20)
+            // Lines between them — very faint.
+            var path = Path()
+            path.move(to: p1); path.addLine(to: p2)
+            path.move(to: p2); path.addLine(to: p3)
+            ctx.stroke(path, with: .color(Color.white.opacity(0.18)), lineWidth: 0.6)
+            // Stars (small filled circles + faint glow).
+            for (p, r) in [(p1, 1.6), (p2, 2.2), (p3, 1.8)] {
+                let core = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
+                let halo = Path(ellipseIn: CGRect(x: p.x - r * 2.2, y: p.y - r * 2.2, width: r * 4.4, height: r * 4.4))
+                ctx.fill(halo, with: .color(Color.white.opacity(0.10)))
+                ctx.fill(core, with: .color(Color.white.opacity(0.85)))
+            }
         }
     }
 }
@@ -600,7 +713,7 @@ struct MomentOfTruthWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DillyProvider()) { entry in
             MomentOfTruthView(entry: entry)
-                .containerBackground(for: .widget) { WidgetGradient(mood: .vibrantAccent, time: entry.timeOfDay) }
+                .containerBackground(for: .widget) { WidgetGradient(mood: .forestPulse, time: entry.timeOfDay) }
         }
         .configurationDisplayName("Moment of Truth")
         .description("One question a day. Build the streak.")
@@ -676,7 +789,7 @@ struct MomentOfTruthView: View {
                         Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy))
                         Text("Yes, today").font(.system(size: 11, weight: .heavy))
                     }
-                    .foregroundColor(Color(hex: 0x2C0A18)).padding(.horizontal, 10).padding(.vertical, 6)
+                    .foregroundColor(Color(hex: 0x0F2E23)).padding(.horizontal, 10).padding(.vertical, 6)
                     .background(Color.white).clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -709,7 +822,7 @@ struct DillyTodayWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DillyProvider()) { entry in
             DillyTodayView(entry: entry)
-                .containerBackground(for: .widget) { WidgetGradient(mood: .dusk, time: entry.timeOfDay) }
+                .containerBackground(for: .widget) { WidgetGradient(mood: .midnightAurora, time: entry.timeOfDay) }
         }
         .configurationDisplayName("Dilly Today")
         .description("Today's Question, your One Move, and Tonight's 15 minutes — all in one.")
@@ -759,39 +872,74 @@ struct DillyTodayView: View {
     }
 
     private var homeLarge: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
-                DillyFaceView(size: 44, mood: .warm, accessory: .none,
-                    inkColor: Color.white, ringColor: Color.white.opacity(0.45), ringFill: Color.white.opacity(0.1))
-                VStack(alignment: .leading, spacing: 1) {
-                    EyebrowLabel(text: "DILLY · TODAY", tint: Color.white.opacity(0.85))
-                    Text(formattedDate()).font(.system(size: 11, weight: .semibold)).foregroundColor(Color.white.opacity(0.7))
-                }
-                Spacer()
-                // Streak flame badge — same one from the small Moment of
-                // Truth widget. Pulled into the Large header so users
-                // who pin only the Large still see their streak.
-                if let streak = entry.data.truthStreakDays, streak > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill").font(.system(size: 11)).foregroundColor(Color.white)
-                        Text("\(streak)").font(.system(size: 13, weight: .black)).foregroundColor(Color.white)
+        ZStack(alignment: .topTrailing) {
+            // Decorative constellation in the upper-right corner. Three
+            // tiny stars + faint connecting lines — adds the "premium
+            // night sky" texture that Apple Weather pulls off without
+            // a single character of UI clutter.
+            ConstellationDecoration()
+                .frame(width: 110, height: 80)
+                .offset(x: 6, y: -4)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    DillyFaceView(size: 44, mood: .warm, accessory: .none,
+                        inkColor: Color.white, ringColor: Color.white.opacity(0.45), ringFill: Color.white.opacity(0.1))
+                    VStack(alignment: .leading, spacing: 1) {
+                        EyebrowLabel(text: "DILLY · TODAY", tint: Color.white.opacity(0.85))
+                        Text(formattedDate()).font(.system(size: 11, weight: .semibold)).foregroundColor(Color.white.opacity(0.7))
                     }
-                    .padding(.horizontal, 7).padding(.vertical, 3)
-                    .background(Color.white.opacity(0.18))
-                    .clipShape(Capsule())
+                    Spacer()
+                    // Streak flame badge — same one from the small Moment of
+                    // Truth widget. Pulled into the Large header so users
+                    // who pin only the Large still see their streak.
+                    if let streak = entry.data.truthStreakDays, streak > 0 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "flame.fill").font(.system(size: 11)).foregroundColor(Color.white)
+                            Text("\(streak)").font(.system(size: 13, weight: .black)).foregroundColor(Color.white)
+                        }
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(Color.white.opacity(0.18))
+                        .clipShape(Capsule())
+                    }
                 }
-            }
-            Divider().background(Color.white.opacity(0.2))
-            sectionRow(eyebrow: "TODAY · QUESTION", body: entry.data.todaysQuestion, icon: "moon.stars", fontSize: 14, italicStyle: true)
-            sectionRow(eyebrow: "THIS WEEK · ONE MOVE", body: entry.data.oneMoveTitle, icon: "flag.checkered", fontSize: 15, italicStyle: false)
-            sectionRow(eyebrow: "TONIGHT · 15 MIN", body: entry.data.tonightTitle, icon: "play.circle", fontSize: 14, italicStyle: false)
-            Spacer(minLength: 0)
-            HStack { Spacer()
-                Text("Tap to open Dilly").font(.system(size: 10, weight: .heavy)).tracking(1.0).foregroundColor(Color.white.opacity(0.7))
+                // Week progress bar — 7 dots, one per day of the week.
+                // Filled dots = days with a recorded answer or win in
+                // the last 7 days. The dots before today are filled
+                // based on streak; today's dot pulses softly via
+                // opacity. Glanceable habit progress without crowding.
+                WeekDotsRow(streakDays: entry.data.truthStreakDays ?? 0, today: Calendar.current.component(.weekday, from: entry.date))
+                Divider().background(Color.white.opacity(0.2))
+                sectionRow(eyebrow: "TODAY · QUESTION", body: entry.data.todaysQuestion, icon: "moon.stars", fontSize: 14, italicStyle: true)
+                sectionRow(eyebrow: "THIS WEEK · ONE MOVE", body: entry.data.oneMoveTitle, icon: "flag.checkered", fontSize: 15, italicStyle: false)
+                sectionRow(eyebrow: "TONIGHT · 15 MIN", body: entry.data.tonightTitle, icon: "play.circle", fontSize: 14, italicStyle: false)
+                Spacer(minLength: 0)
+                // Recent-win footer line — pulled from profile latest
+                // facts. Reads like a small reminder that Dilly knows
+                // what you've done. Falls back to a neutral CTA.
+                recentSignalFooter
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(URL(string: "dilly:///(app)"))
+    }
+
+    @ViewBuilder
+    private var recentSignalFooter: some View {
+        if let recent = (entry.data.profileRecentFacts ?? []).first, !recent.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkle").font(.system(size: 9, weight: .heavy)).foregroundColor(Color.white.opacity(0.55))
+                Text(recent)
+                    .font(.system(size: 11, weight: .semibold, design: .serif)).italic()
+                    .foregroundColor(Color.white.opacity(0.78))
+                    .lineLimit(1).truncationMode(.tail)
+                Spacer(minLength: 0)
+            }
+        } else {
+            HStack { Spacer()
+                Text("Tap to open Dilly").font(.system(size: 10, weight: .heavy)).tracking(1.0).foregroundColor(Color.white.opacity(0.7))
+            }
+        }
     }
 
     @ViewBuilder

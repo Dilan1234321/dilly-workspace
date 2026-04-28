@@ -2,7 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>AppGroupIdentifier</key>
+	<string>group.com.dilly.app</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>dilly-warm-cache</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleAllowMixedLocalizations</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
@@ -28,7 +36,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>dilly</string>
-				<string>com.dilly.app</string>
+				<string>com.googleusercontent.apps.67780456310-mgekhblfqmkl0qqa6va631hp5jjafudu</string>
 			</array>
 		</dict>
 		<dict>
@@ -39,9 +47,34 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>437</string>
+	<string>444</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>airmail</string>
+		<string>message</string>
+		<string>bluemail</string>
+		<string>canary</string>
+		<string>edisonmail</string>
+		<string>szn-email</string>
+		<string>fastmail</string>
+		<string>x-gmxmail-netid-v1</string>
+		<string>googlegmail</string>
+		<string>mailrumail</string>
+		<string>ms-outlook</string>
+		<string>protonmail</string>
+		<string>ctxmail</string>
+		<string>readdle-spark</string>
+		<string>superhuman</string>
+		<string>telekommail</string>
+		<string>tutanota</string>
+		<string>x-webdemail-netid-v1</string>
+		<string>ymail</string>
+		<string>yandexmail</string>
+		<string>appcenter-f45b4c0b-75c9-2d01-7ab6-41f6a6015be2</string>
+		<string>mymail-mailto</string>
+	</array>
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -58,9 +91,13 @@
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your calendars</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your calendars</string>
+	<string>Dilly syncs your application deadlines, interviews, and Chapter sessions to your calendar so they live alongside the rest of your week.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Allow Dilly to add interview reminders and weekly briefs to your calendar.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your camera</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Dilly saves networking contacts you meet (with a 'Met through Dilly' note) and finds warm intros to companies in your phone before applying.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
 	<key>NSLocalNetworkUsageDescription</key>
@@ -74,13 +111,59 @@
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your reminders</string>
 	<key>NSRemindersUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your reminders</string>
+	<string>Dilly creates Reminders for application deadlines, interview prep, and weekly career check-ins in a dedicated 'Dilly' list.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
 	</array>
 	<key>RCTNewArchEnabled</key>
 	<true/>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeDate</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Mission + read</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Today</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.dilly.app.shortcut.today</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAdd</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Log a win</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.dilly.app.shortcut.log-win</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeCompose</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>New chapter</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.dilly.app.shortcut.new-chapter</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAudio</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Voice mode</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.dilly.app.shortcut.voice</string>
+		</dict>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

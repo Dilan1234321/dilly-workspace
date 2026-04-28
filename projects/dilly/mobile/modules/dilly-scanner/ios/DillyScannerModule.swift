@@ -73,6 +73,15 @@ public class DillyScannerModule: Module {
     }
 
     fileprivate func recognizeText(in cgImage: CGImage, completion: @escaping (String) -> Void) {
+        DillyScannerOCR.recognizeText(in: cgImage, completion: completion)
+    }
+}
+
+/// Free-function OCR helper. Pulled out of the Module class so the
+/// VNDocumentCameraViewControllerDelegate can call it without needing
+/// to construct a Module (which requires an appContext).
+private enum DillyScannerOCR {
+    static func recognizeText(in cgImage: CGImage, completion: @escaping (String) -> Void) {
         let request = VNRecognizeTextRequest { req, _ in
             let observations = (req.results as? [VNRecognizedTextObservation]) ?? []
             let text = observations
@@ -120,15 +129,16 @@ private class ScannerDelegate: NSObject, VNDocumentCameraViewControllerDelegate 
         }
 
         if extractText {
-            // Run OCR on each page, then concatenate.
-            let module = DillyScannerModule()
+            // Run OCR on each page, then concatenate. Uses the free
+            // DillyScannerOCR helper since constructing a Module
+            // here would need an appContext we don't have.
             var combined = ""
             let group = DispatchGroup()
             for i in 0..<scan.pageCount {
                 let img = scan.imageOfPage(at: i)
                 guard let cg = img.cgImage else { continue }
                 group.enter()
-                module.recognizeText(in: cg) { text in
+                DillyScannerOCR.recognizeText(in: cg) { text in
                     combined += (combined.isEmpty ? "" : "\n\n") + text
                     group.leave()
                 }

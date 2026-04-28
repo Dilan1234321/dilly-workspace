@@ -25,8 +25,8 @@ public class DillyWalletModule: Module {
         }
 
         AsyncFunction("hasPass") { (passTypeId: String, serial: String, promise: Promise) in
-            let exists = self.passLibrary.containsPass(withType: passTypeId, serialNumber: serial)
-            promise.resolve(exists)
+            let pass = self.passLibrary.pass(withPassTypeIdentifier: passTypeId, serialNumber: serial)
+            promise.resolve(pass != nil)
         }
 
         AsyncFunction("addPass") { (urlString: String, headers: [String: String]?, promise: Promise) in
