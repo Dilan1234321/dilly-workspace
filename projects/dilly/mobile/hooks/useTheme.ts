@@ -87,12 +87,11 @@ export interface AccentPreset {
 }
 
 export const ACCENT_PRESETS: AccentPreset[] = [
-  // Dilly's house accent. Deep indigo on light surfaces matches the
-  // brand on the website. On dark surfaces it gets too muddy, so we
-  // swap to a light blue (cornflower) — same vibe, way more readable
-  // against a dark bg. The swap fires automatically via resolveTheme
-  // when the system color scheme is dark and autoDark is on.
-  { id: 'indigo',    label: 'Dilly',     color: '#2B3A8E', darkColor: '#7EB5FF', darkLabel: 'Dilly' },
+  // Note: the original "Dilly" preset (deep indigo #2B3A8E) was removed
+  // per product direction — it was too close to Navy and the "Dilly"
+  // label was confusing as both a theme name and the product name.
+  // Stored 'indigo' values are migrated to 'navy' on load (see
+  // _hydrate). Navy is now the brand-default accent.
   { id: 'navy',      label: 'Navy',      color: '#0F2A6B', darkColor: '#7EB5FF', darkLabel: 'Cornflower' },
   { id: 'sky',       label: 'Sky',       color: '#0A84FF' },
   { id: 'teal',      label: 'Teal',      color: '#0D9488' },
@@ -289,7 +288,7 @@ export const ACCENT_STYLE_PRESETS: Record<AccentStyleId, AccentStylePreset> = {
 /* ─────────────────────────────────────────────────────────────── */
 
 export const DEFAULT_CONFIG: ThemeConfig = {
-  accent: 'indigo',
+  accent: 'navy',
   surface: 'cloud',
   shape: 'standard',
   type: 'dilly',
@@ -297,6 +296,17 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   accentStyle: 'solid',
   autoDark: true,
 };
+
+/** Translate a legacy stored ThemeConfig in place. Currently used to
+ *  migrate the removed 'indigo' (Dilly) accent to 'navy', the closest
+ *  surviving preset. Returns the same shape so callers can spread
+ *  it back into _config. */
+function _migrateLegacyConfig(c: Partial<ThemeConfig>): Partial<ThemeConfig> {
+  if (c && (c as any).accent === 'indigo') {
+    return { ...c, accent: 'navy' };
+  }
+  return c;
+}
 
 /* ─────────────────────────────────────────────────────────────── */
 /* Resolved theme - what components actually consume                */
@@ -437,7 +447,7 @@ async function _hydrate() {
       !storedUser || !currentEmail || storedUser.toLowerCase() === currentEmail
     );
     if (canUseLocal && raw) {
-      const parsed = JSON.parse(raw);
+      const parsed = _migrateLegacyConfig(JSON.parse(raw));
       _config = { ...DEFAULT_CONFIG, ...parsed };
       _listeners.forEach(l => l(_config));
     }
@@ -454,7 +464,7 @@ async function _hydrate() {
       const { cacheProfileSlim } = await import('../lib/profileCache');
       cacheProfileSlim(profile).catch(() => {});
     } catch {}
-    const serverTheme = profile?.theme;
+    const serverTheme = _migrateLegacyConfig(profile?.theme);
     if (serverTheme && typeof serverTheme === 'object') {
       const merged = { ...DEFAULT_CONFIG, ..._config, ...serverTheme };
       // Only apply if it's genuinely different from what we already have.

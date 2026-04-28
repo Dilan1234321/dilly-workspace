@@ -345,13 +345,13 @@ export default function VerifyScreen() {
             <Ionicons name="person-outline" size={22} color={colors.indigo} />
           </View>
           <Text style={styles.heading}>Welcome back.</Text>
-          <Text style={styles.sub}>Enter your .edu email to get back in.</Text>
+          <Text style={styles.sub}>Enter your email to get back in.</Text>
 
           <TextInput
             style={[styles.emailInput, error ? { borderColor: colors.coral } : {}]}
             value={returningEmail}
             onChangeText={v => { setReturningEmail(v); setError(null); }}
-            placeholder="you@university.edu"
+            placeholder="you@email.com"
             placeholderTextColor={colors.t3}
             keyboardType="email-address"
             autoCapitalize="none"

@@ -340,7 +340,7 @@ const ss = StyleSheet.create({
   },
   orbOuter: {
     width: ORB_SIZE, height: ORB_SIZE, borderRadius: ORB_SIZE / 2,
-    borderWidth: 1, borderColor: 'rgba(43,58,142,0.20)',
+    borderWidth: 2, borderColor: 'rgba(43,58,142,0.20)',
     backgroundColor: 'transparent',
     alignItems: 'center', justifyContent: 'center',
   },
@@ -349,7 +349,7 @@ const ss = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 3,
     borderColor: 'rgba(43,58,142,1)',
   },
   contentBlock: {

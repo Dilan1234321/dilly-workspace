@@ -135,7 +135,11 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const circular = circularProp !== undefined
     ? circularProp
     : hasAccessory;
-  const resolvedEyeBoost = eyeBoostProp !== undefined ? eyeBoostProp : (hasAccessory ? 1.4 : 1);
+  // Pencil gets the biggest eyes (matches the website hero illustration);
+  // other accessories use a slightly smaller boost. Plain face = 1.0.
+  const resolvedEyeBoost = eyeBoostProp !== undefined
+    ? eyeBoostProp
+    : (accessory === 'pencil' ? 1.65 : (hasAccessory ? 1.4 : 1));
   const TRAVEL = size * 0.15
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
@@ -363,7 +367,14 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const circularBorderColor = isDarkSurface
     ? 'rgba(255,255,255,0.08)'
     : 'rgba(43,58,142,0.12)'
-  const circularBorder = circular ? Math.max(1.5, Math.round(size * 0.012)) : 0
+  // Briefcase variant uses a thicker border to read as a confident,
+  // job-ready chip — the default circular border was too thin to hold
+  // its own at small sizes on the Jobs surfaces. ~2.5x the default.
+  const circularBorder = circular
+    ? (accessory === 'briefcase'
+        ? Math.max(3, Math.round(size * 0.028))
+        : Math.max(1.5, Math.round(size * 0.012)))
+    : 0
   return (
     <View style={{
       width: outerW,
@@ -723,13 +734,15 @@ function BriefcaseAccessory({ cx, cy, s, pulseAnim, mood }: Omit<AccessoryProps,
   const LEATHER_DARK = m.leatherDark
   const BRASS = '#B88A1F'
   const HIGHLIGHT = '#5C4626'
-  // Sized + placed to occupy the pencil's hand zone (cx+11..cx+22,
-  // cy+5..cy+15). Bigger than v1 so it reads at glance.
-  const bodyX = cx + 11 * s
-  const bodyY = cy + 7 * s
-  const bodyW = 12 * s
-  const bodyH = 9 * s
-  const cornerR = 1 * s
+  // Sized + placed to occupy the pencil's hand zone (cx+9..cx+24,
+  // cy+5..cy+17). Bumped from 12x9 → 16x12 per product direction so
+  // the briefcase reads as a confident accessory at glance, not a
+  // small detail tucked into the corner.
+  const bodyX = cx + 9 * s
+  const bodyY = cy + 6 * s
+  const bodyW = 16 * s
+  const bodyH = 12 * s
+  const cornerR = 1.3 * s
   const handleY = bodyY - 1.5 * s
   const handleLeftX = bodyX + 2.2 * s
   const handleRightX = bodyX + bodyW - 2.2 * s

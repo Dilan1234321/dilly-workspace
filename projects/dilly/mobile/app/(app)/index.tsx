@@ -1483,12 +1483,11 @@ function SeekerHome() {
                 FACTS
               </Text>
             </AnimatedPressable>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[s.toolRow, { paddingLeft: 4, paddingRight: 4 }]}
-              style={{ flex: 1 }}
-            >
+            {/* No-scroll fixed row: 5 tools distributed evenly across
+                the remaining width. Each item shrinks to fit so
+                everything visible at a glance, vertically centered
+                with the FactCircle. */}
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', height: 64 }}>
               {[
                 { icon: 'document-text' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
                 { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
@@ -1496,14 +1495,24 @@ function SeekerHome() {
                 { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar' as any) },
                 { icon: 'color-palette' as const, color: '#00C853', label: 'Customize', onPress: () => router.push('/(app)/customize' as any) },
               ].map(tool => (
-                <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
-                  <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
-                    <Ionicons name={tool.icon} size={20} color={tool.color} />
+                <AnimatedPressable key={tool.label} onPress={tool.onPress} scaleDown={0.92} style={{ alignItems: 'center', flex: 1 }}>
+                  <View style={{
+                    width: 40, height: 40, borderRadius: 12,
+                    alignItems: 'center', justifyContent: 'center',
+                    marginBottom: 4,
+                    backgroundColor: tool.color + '10',
+                  }}>
+                    <Ionicons name={tool.icon} size={18} color={tool.color} />
                   </View>
-                  <Text style={[s.toolLabel, { color: theme.surface.t2, fontFamily: theme.type.body }]}>{tool.label}</Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{ fontSize: 9, fontWeight: '700', color: theme.surface.t2, fontFamily: theme.type.body }}
+                  >
+                    {tool.label}
+                  </Text>
                 </AnimatedPressable>
               ))}
-            </ScrollView>
+            </View>
           </View>
         </FadeInView>
 
