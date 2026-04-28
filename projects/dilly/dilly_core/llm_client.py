@@ -160,9 +160,13 @@ def get_chat_completion(
         return None
     model = (model or os.environ.get("DILLY_LLM_MODEL") or os.environ.get("MERIDIAN_LLM_MODEL") or "claude-haiku-4-5-20251001").strip()
 
-    # Wrap the system prompt in a cache block when it's long enough to
-    # be worth caching. The 4000-char threshold is ~1k tokens — below
-    # that the cache overhead eats the savings.
+    # Wrap the system prompt in a cache block. Cache write costs 1.25x
+    # input price and cache reads cost 0.10x — so caching pays off
+    # after just ~1.3 reads. Anthropic's MINIMUM cacheable size for
+    # Haiku is 2048 tokens (~8000 chars) so we only wrap above that
+    # — under it the SDK will reject the cache_control marker. The
+    # main voice system prompt is well above this; the profile
+    # extractor is below and can't be cached at this layer.
     if isinstance(system, str) and len(system) >= 4000:
         system_param: Any = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
     else:

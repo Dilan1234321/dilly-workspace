@@ -61,52 +61,15 @@ VOICE_SCORES_VIZ_INSTRUCTIONS = (
     "If the user is not asking about their audit scores, omit the token. If there are no scores in context, do not use the token; tell them to run a resume audit first."
 )
 
-VOICE_INLINE_VISUALS_BLOCK = """**Inline visuals (optional, sparingly):** The app can render small cards from exact markers. Prefer **one primary visual per reply** (plus short prose). Do not stack many markers in one message.
+VOICE_INLINE_VISUALS_BLOCK = """**Inline visuals (sparingly, one per reply):** Use ONLY when the data is in context.
 
-- **[[top_recs_visual]]** \u2014 When you summarize their **top 2\u20133 audit recommendations**. The app fills cards from live recommendation data. Put the token on its own line after a short intro sentence. If recommendations are not in context, omit it.
-- **[[deadline_timeline_visual]]** \u2014 When you walk through **their saved deadlines** (order or urgency). The app draws from calendar/profile data. If they have no deadlines in context, omit it.
-- **[[interview_agenda_visual]]** or **[[interview_agenda_visual:0]]** \u2026 **:3** \u2014 Interview prep strip; optional digit highlights a step (0=Research, 1=Stories, 2=Practice, 3=Review). When you give a **numbered interview prep plan**, put this token on its own line **before** the list so the app shows the strip (you may still keep the list in prose below).
-- **[[calendar_saved_visual]]** \u2014 When you confirm you **saved something to their calendar** (deadline, meeting, Zoom, coffee chat, reminder). Put this token on its own line at the **start** of the reply so the app shows a green "Saved to your calendar" card; keep your confirmation sentence short below it. Optional richer card (one-line label):
-[[calendar_saved]]
-Zoom \u00b7 IBM recruiter \u00b7 Mar 15
-[[/calendar_saved]]
-- **Before/after rewrite** (exact lines):
-[[before_after]]
-BEFORE: (weak bullet or sentence)
-AFTER: (stronger version)
-[[/before_after]]
-- **Fact chips** (one `Label: value` per line, up to about 8):
-[[chips]]
-Firm: Goldman
-Role: Summer Analyst
-[[/chips]]
-- **Numbered steps**:
-[[steps]]
-1. First concrete step
-2. Second step
-[[/steps]]
-- **Application card** (when discussing a specific company they are tracking \u2014 copy **exact** company name from context `applications_preview`):
-[[application_card]]
-Company: (exact name from tracker)
-Role: (optional)
-Status: (optional, e.g. Applied)
-Deadline: (optional, YYYY-MM-DD or short date)
-[[/application_card]]
-- **Next three moves** (after coaching \u2014 **this** conversation's concrete actions, max 3 lines):
-[[next_moves]]
-First short action
-Second short action
-Third short action
-[[/next_moves]]
-- **Story arc** (interview prep / narrative \u2014 labeled beats, e.g. Education, Experience, Proof):
-[[story_timeline]]
-Education: (one line)
-Experience: (one line)
-Proof: (one line)
-[[/story_timeline]]
-- **[[peer_context_visual]]** \u2014 On its own line when you compare them to **peers** on their track. The app draws Top % tiles from audit data. Only if peer percentiles exist in context; otherwise skip.
-
-If a visual has no backing data in context, skip that marker and answer in plain text."""
+- `[[top_recs_visual]]` on its own line when summarizing top audit recommendations.
+- `[[deadline_timeline_visual]]` when walking through saved deadlines.
+- `[[calendar_saved_visual]]` at the START of replies confirming a calendar save.
+- `[[before_after]]\\nBEFORE: ...\\nAFTER: ...\\n[[/before_after]]` for rewrites.
+- `[[chips]]\\nLabel: value\\n[[/chips]]` for fact chips (max 8 lines).
+- `[[steps]]\\n1. step\\n2. step\\n[[/steps]]` for numbered steps.
+- `[[peer_context_visual]]` when comparing to peers (only if peer data exists)."""
 
 
 # ---------------------------------------------------------------------------

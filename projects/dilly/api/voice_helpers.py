@@ -338,12 +338,11 @@ def build_voice_system_prompt(context: dict[str, Any]) -> str:
     features = _load_app_features()
     if features:
         parts.append("**App features (answer 'where do I...?' from this list only):**")
-        for f in features[:20]:
+        for f in features[:10]:
             name = f.get("name") or ""
             desc = f.get("description") or ""
-            when = f.get("when") or ""
             if name:
-                parts.append(f"- {name}: {desc}. {when}")
+                parts.append(f"- {name}: {desc}")
         parts.append("")
 
     tone = (context.get("voice_tone") or "").strip().lower()
@@ -1001,6 +1000,31 @@ def extract_beyond_resume_from_message(user_message: str) -> list[dict]:
     return []
 
 
+_BEYOND_RESUME_HINT_RE = re.compile(
+    r"\b("
+    # Verbs of doing/being that signal new facts
+    r"work(ed|ing)?|intern(ed|ing|ship)?|join(ed)?|start(ed)?|"
+    r"built|building|made|launch(ed)?|ship(ped)?|created|design(ed)?|"
+    r"learn(ed|ing)?|stud(y|ied|ying)|us(e|ed|ing)|know|"
+    r"led|lead(ing)?|manag(e|ed|ing)|run(ning)?|"
+    r"appl(y|ied|ying)|interview(ed|ing)?|met|meet(ing)?|talk(ed|ing)?|"
+    r"got|received|offered|accepted|reject(ed)?|"
+    # Feelings (emotion type)
+    r"feel(ing)?|felt|stress(ed)?|nervous|excit(ed|ing)|anxious|worried|happy|sad|frustrat(ed|ing)|"
+    # Possessives that often precede facts
+    r"my|i'?ve|i'?m|i\s+(have|had|do|did|am|was|will)|"
+    # Common career objects
+    r"resume|internship|job|offer|company|recruit(er|ing)|deadline|application|class(es)?|course|"
+    r"project|skill|tool|language|framework|library|certif(y|ied|ication)|club|team|research"
+    r")\b",
+    re.I,
+)
+
+# Capitalized-token regex: catches likely proper nouns (companies, people, schools).
+# Two consecutive uppercase letters or a capitalized word ≥4 chars after lowercase.
+_PROPER_NOUN_RE = re.compile(r"\b[A-Z][a-zA-Z]{2,}\b")
+
+
 def extract_beyond_resume_with_llm(
     user_message: str,
     history: list[dict] | None = None,
@@ -1016,6 +1040,13 @@ def extract_beyond_resume_with_llm(
     already_captured: items already in beyond_resume so we skip re-extracting them.
     Only adds new items — the profile store deduplicates, but skipping here saves LLM tokens.
 
+    Cost gate: profile extraction is the single most expensive recurring
+    LLM call in voice (called every turn). Most messages have nothing
+    new to extract — short replies, questions, fillers like "yes",
+    "what about that?", "tell me more". Skip the LLM entirely unless
+    the message looks substantive: long enough OR contains a verb of
+    doing OR contains a likely proper noun.
+
     Returns list of { type, text, captured_at } with types: skill, experience, project,
     person, company, event, emotion, other.
     """
@@ -1025,6 +1056,17 @@ def extract_beyond_resume_with_llm(
             return []
     except ImportError:
         return []
+
+    msg = user_message.strip()
+    # Skip if too short to plausibly contain a new fact.
+    if len(msg) < 20:
+        return []
+    # Long messages always go through (likely substantive even without
+    # specific keywords). Short-to-medium messages need a verb-of-doing
+    # OR a proper noun to be worth the LLM call.
+    if len(msg) < 120:
+        if not (_BEYOND_RESUME_HINT_RE.search(msg) or _PROPER_NOUN_RE.search(msg)):
+            return []
 
     # Build conversation window (last 8 turns) so the LLM has full context.
     transcript_lines: list[str] = []

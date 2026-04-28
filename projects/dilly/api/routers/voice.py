@@ -145,18 +145,20 @@ def _maybe_enqueue_memory_extract(
     assistant_reply: str,
     is_session_ending: bool = False,
 ) -> None:
-    """Queue memory extraction every 4 messages or session ending.
+    """Queue memory extraction every 6 messages or session ending.
 
-    This must never block voice responses.
+    This must never block voice responses. Was every 4 msgs but that
+    fired twice in a typical 8-msg session and dominated the cost.
+    Every 6 keeps mid-session capture working without doubling up.
     """
     if not email or not conv_id:
         return
     hist = history if isinstance(history, list) else []
     # Include this completed turn in count.
     message_count = len(hist) + 2
-    if message_count < 4 and not is_session_ending:
+    if message_count < 6 and not is_session_ending:
         return
-    if not is_session_ending and (message_count % 4 != 0):
+    if not is_session_ending and (message_count % 6 != 0):
         return
     recent_messages: list[dict[str, str]] = []
     for row in hist[-6:]:
@@ -184,15 +186,19 @@ def _maybe_enqueue_voice_output_extract(
     assistant_reply: str,
     is_session_ending: bool = False,
 ) -> None:
-    """Queue conversation output extraction every 6 messages or session ending."""
+    """Queue conversation output extraction at session end only.
+
+    Was running every 6 messages, but the output it produces overlaps
+    heavily with what memory_extraction (every 4 messages) already
+    captures. End-of-session only halves the per-conversation cost
+    without losing data — the user closes the chat and the same
+    extraction still fires once over the full transcript.
+    """
     if not email or not conv_id:
         return
+    if not is_session_ending:
+        return
     hist = history if isinstance(history, list) else []
-    message_count = len(hist) + 2
-    if message_count < 6 and not is_session_ending:
-        return
-    if not is_session_ending and (message_count % 6 != 0):
-        return
     recent_messages: list[dict[str, str]] = []
     for row in hist[-12:]:
         if not isinstance(row, dict):
