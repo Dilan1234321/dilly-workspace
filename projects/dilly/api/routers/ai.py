@@ -2015,29 +2015,40 @@ async def ai_chat(request: Request, body: ChatRequest):
             try:
                 from projects.dilly.api.memory_extraction import run_extraction
 
-                # Mid-session extraction throttled to every 5th user msg.
-                # Why: /ai/chat/flush already runs full extraction when
-                # the overlay closes, so per-turn extraction is just a
-                # safety net for force-quits. Running it every turn was
-                # the dominant cost on every conversation — a 6-msg chat
-                # paid for 6 separate Haiku extraction calls when 1
-                # at-flush call captures the same facts.
-                # The regex pass still runs unconditionally inside
-                # run_extraction (use_llm=False here) so literal facts
-                # ("I know Python") still get caught for free on every
-                # turn. Only the Haiku-inferred facts wait for flush.
-                _user_msg_n = sum(
-                    1 for _m in raw_messages if (_m.get("role") or "") == "user"
-                )
-                _do_llm_extract = (_user_msg_n > 0 and _user_msg_n % 5 == 0)
+                # Per-turn LLM extraction on EVERY user message + skip
+                # the trivial gate. User explicitly chose working over
+                # cheap: prior throttle (every 5th msg) + gating meant
+                # short conversations never produced facts. The flush
+                # at session close was the safety net but mobile
+                # lifecycle (background, force-quit, network blip)
+                # made it unreliable. Running per-turn means facts
+                # land regardless of how the chat ends.
+                # Cost: ~$0.005 extra per chat reply (~6c per 6-msg
+                # convo). User OK with this.
+                _do_llm_extract = True
                 result = await asyncio.to_thread(
                     run_extraction,
                     email,
                     conv_id_resolved,
                     full_messages[-12:],
-                    _do_llm_extract,    # use_llm — only every 5th user msg
-                    False,              # skip_llm_trivial_gate
+                    _do_llm_extract,    # use_llm — every turn
+                    True,               # skip_llm_trivial_gate — never gate
                 )
+                # Diagnostic so Railway logs show whether extraction
+                # actually produced facts on each chat turn. Helps us
+                # diagnose "I'm chatting but my profile isn't growing"
+                # without instrumentation rounds.
+                try:
+                    _items_added = result.get("items_added") if isinstance(result, dict) else None
+                    print(
+                        f"[CHAT_EXTRACT] email={email[:6]}*** "
+                        f"conv={conv_id_resolved[:8]} "
+                        f"user_msgs={sum(1 for m in raw_messages if (m.get('role') or '') == 'user')} "
+                        f"items_added={_items_added}",
+                        flush=True,
+                    )
+                except Exception:
+                    pass
                 new_ids = set(result.get("item_ids") or [])
                 after = get_memory_surface(email) or {}
                 added_rows: list[dict[str, Any]] = []
@@ -2424,10 +2435,23 @@ async def ai_chat_flush(request: Request, body: ChatFlushRequest):
     # facts. Wrapped in a try/except: if the Haiku call fails we still
     # return 200 with an empty list so the client's close animation
     # doesn't break on us.
+    # skip_llm_trivial_gate=True at flush — if the user closed the
+    # chat, they had a real conversation, run extraction regardless
+    # of how the messages "score" on the trivial heuristic.
     added: list[dict[str, Any]] = []
     try:
         from projects.dilly.api.memory_extraction import run_extraction
-        result = await asyncio.to_thread(run_extraction, email, conv_id, messages[-30:], use_llm)
+        result = await asyncio.to_thread(run_extraction, email, conv_id, messages[-30:], use_llm, True)
+        try:
+            print(
+                f"[CHAT_FLUSH_EXTRACT] email={email[:6]}*** "
+                f"conv={conv_id[:8]} "
+                f"user_msgs={user_msg_count} use_llm={use_llm} "
+                f"items_added={result.get('items_added') if isinstance(result, dict) else None}",
+                flush=True,
+            )
+        except Exception:
+            pass
 
         new_ids = set(result.get("item_ids") or [])
         # Read the updated surface to return the actual fact payloads.

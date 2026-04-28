@@ -613,18 +613,20 @@ def extract_memory_items(
     # (category, label) below. This is what makes "messages 0..5 all
     # get added once the user hits the 5-message mark" actually hold
     # in the presence of transient LLM failures.
+    llm_items: list[dict[str, Any]] = []
     if use_llm:
         # Cost gate: skip the LLM call when the conversation is trivial
         # (greetings, acks, one-word replies). Regex already ran above
         # so literal facts are still captured. Only inferential/LLM facts
         # are skipped on trivial conversations, which is correct.
-        llm_items: list[dict[str, Any]] = []
         if skip_gate or _messages_worth_extracting(messages):
             try:
                 llm_items = _extract_memory_items_llm(
                     uid, conv_id, messages, existing_items, skip_trivial_gate=skip_gate
                 )
-            except Exception:
+            except Exception as _e:
+                import sys as _sys
+                _sys.stderr.write(f"[extract_memory_items] llm error: {_e}\n")
                 llm_items = []
         # Union: dedupe by (category, label) so we do not double-count.
         seen_keys: set[tuple[str, str]] = set()
@@ -638,7 +640,7 @@ def extract_memory_items(
                 seen_keys.add(k)
                 new_items.append(it)
     else:
-        new_items = regex_items
+        new_items = list(regex_items)
 
     # Killed the "second-chance" fallback LLM call. It fired when the
     # primary extractor returned [] hoping a different prompt would
@@ -653,10 +655,24 @@ def extract_memory_items(
         (str(i.get("category") or "").lower(), str(i.get("label") or "").strip().lower())
         for i in existing_items
     }
+    pre_dedup_count = len(new_items)
     new_items = [
         it for it in new_items
         if (str(it.get("category") or "").lower(), str(it.get("label") or "").strip().lower()) not in existing_keys
     ]
+    # Diagnostic: how the funnel actually performed for this batch.
+    # Helps diagnose "Dilly's not learning" — is regex empty? Is LLM
+    # returning []? Is dedup eating everything? Each step logged.
+    try:
+        import sys as _sys
+        _sys.stderr.write(
+            f"[extract_memory_items] uid={uid[:6]}*** "
+            f"regex={len(regex_items)} llm={len(llm_items)} "
+            f"pre_dedup={pre_dedup_count} after_existing_dedup={len(new_items)} "
+            f"existing={len(existing_items)} use_llm={use_llm} skip_gate={skip_gate}\n"
+        )
+    except Exception:
+        pass
     return new_items
 
 
@@ -676,6 +692,8 @@ def _extract_memory_items_llm(
     system = """You are building a Dilly Profile by extracting everything you can learn about a student from their conversation with Dilly, their AI career coach.
 
 Dilly Profiles capture EVERYTHING about a user — not just career facts, but who they are as a person. The goal is to know the user beyond their resume: what they couldn't fit on one page, what drives them, what they're like to work with, and what a recruiter or advisor would want to know.
+
+EAGERNESS RULE: Err strongly on the side of EXTRACTING. If a user mentions a class, a tool, a company, a person's name, a feeling, an opinion, a goal, a project, a hobby, an interview, a deadline, a worry, a hope — capture it. Even if it sounds small, it could be the detail that makes Dilly remember them. The downstream system handles deduping and pruning. The cost of a missed fact (Dilly looks dumb, profile stays empty) is much worse than the cost of an over-eager extraction (one extra row that gets cleaned up later). When in doubt, INCLUDE.
 
 Extract ANY new information the student reveals. Be thorough — if they mention something, capture it. Categories:
 

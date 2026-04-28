@@ -145,8 +145,9 @@ def _normalize_memory_item(email: str, raw: dict[str, Any]) -> dict[str, Any] | 
     if not category or not label or not value:
         return None
     # Reject single-character values — always LLM/parser garbage (e.g. "S", "D", "J").
-    # Reject labels under 3 chars for the same reason.
-    if len(value) < 2 or len(label) < 3:
+    # Labels can be 2 chars (real cases: "PM", "C++", "AI", "ML", "UX") so
+    # the previous 3-char minimum was eating legitimate skill labels.
+    if len(value) < 2 or len(label) < 2:
         return None
     source = str(raw.get("source") or "voice").strip().lower()
     if source not in {"voice", "audit", "profile", "application"}:
@@ -433,6 +434,7 @@ def save_memory_surface(
     session_captures: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     try:
+        _saved = 0
         if items is not None:
             for row in items:
                 if not isinstance(row, dict):
@@ -440,6 +442,18 @@ def save_memory_surface(
                 norm = _normalize_memory_item(email, row)
                 if norm:
                     _pg_upsert_item(email, norm)
+                    _saved += 1
+            # Diagnostic — persist count to stderr so we can see writes
+            # land vs silently fail. Helps diagnose "Dilly says she
+            # learned 5 things but my profile didn't grow."
+            try:
+                import sys as _sys
+                _sys.stderr.write(
+                    f"[save_memory_surface] uid={email[:6]}*** "
+                    f"requested={len(items)} normalized_saved={_saved}\n"
+                )
+            except Exception:
+                pass
         if narrative is not _SENTINEL:
             _pg_save_narrative(email, narrative, narrative_updated_at)
         elif narrative_updated_at is not None:
