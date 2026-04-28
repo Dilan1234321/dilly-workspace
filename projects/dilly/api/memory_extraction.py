@@ -632,16 +632,13 @@ def extract_memory_items(
     else:
         new_items = regex_items
 
-    # Second-chance path: memory-profile LLM + regex both empty, but the user
-    # may still have said something concrete. Reuse Voice's beyond-resume
-    # Haiku (one call) so facts land in My Dilly.
-    if use_llm and not new_items:
-        try:
-            bridged = _coach_beyond_resume_memory_items(uid, conv_id, messages, existing_items)
-            if bridged:
-                new_items = bridged
-        except Exception:
-            pass
+    # Killed the "second-chance" fallback LLM call. It fired when the
+    # primary extractor returned [] hoping a different prompt would
+    # find something — but if the primary extractor (which is broad
+    # and tuned for this exact job) found nothing, the bridge call
+    # almost never found anything either. Cost was ~0.3c per chat
+    # turn for ~no payoff. The regex pass above still runs so literal
+    # facts ("I know Python") still get caught for free.
 
     # Dedup against existing memory (same category+label).
     existing_keys = {
@@ -742,7 +739,11 @@ Extract new memory items now. Return JSON array only."""
         system,
         user_prompt,
         model="claude-haiku-4-5-20251001",
-        max_tokens=1200,
+        # max_tokens was 1200 — but real extraction output is JSON of
+        # 1–5 facts averaging ~50 tokens each. 400 caps the worst case
+        # without truncating real responses. Direct cost cut: ~3x on
+        # output billing for this call (Haiku output is $4/M).
+        max_tokens=400,
         temperature=0.2,
         log_email=uid,
         log_feature="extraction",

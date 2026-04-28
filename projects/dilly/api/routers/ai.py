@@ -1995,16 +1995,22 @@ async def ai_chat(request: Request, body: ChatRequest):
             try:
                 from projects.dilly.api.memory_extraction import run_extraction
 
-                # skip_llm_trivial_gate=True: always attempt Haiku for this turn
-                # (model may still return []). Otherwise short user replies never
-                # reached the LLM because _messages_worth_extracting blocked twice.
+                # skip_llm_trivial_gate now FALSE — trivial user turns
+                # ("yes", "tell me more", "thanks", "ok") have no new
+                # facts to extract, so burning a Haiku call on them is
+                # wasted spend. The regex pass still runs unconditionally
+                # for literal facts ("I know Python") so the
+                # short-message-extraction concern that drove the True
+                # default is already covered. This is the single biggest
+                # remaining cost on a 6-msg conversation: 6 forced LLM
+                # calls vs ~2 actually-warranted ones.
                 result = await asyncio.to_thread(
                     run_extraction,
                     email,
                     conv_id_resolved,
                     full_messages[-12:],
-                    True,
-                    True,
+                    True,    # use_llm
+                    False,   # skip_llm_trivial_gate
                 )
                 new_ids = set(result.get("item_ids") or [])
                 after = get_memory_surface(email) or {}
