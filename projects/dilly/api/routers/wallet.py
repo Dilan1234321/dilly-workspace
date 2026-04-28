@@ -274,14 +274,12 @@ def get_career_pass_url(request: Request):
     # instead of api.trydilly.com), causing the iOS Wallet downloader
     # to error with DNS-not-found. Inferring from request is correct
     # because the mobile app already hit the right host to get here.
-    # Hardcode the public production hostname. The iOS Wallet
-    # downloader (PKAddPassesViewController) fetches this URL with no
-    # auth headers, so it MUST resolve to the public DNS name. Earlier
-    # we tried request.url.netloc and Host headers — both can resolve
-    # to internal Railway hostnames behind the proxy, which DNS-fail
-    # on the device. WALLET_PUBLIC_BASE_URL env var still overrides
-    # for staging/local builds.
-    base = (os.environ.get("WALLET_PUBLIC_BASE_URL") or "https://api.trydilly.com").strip().rstrip("/")
+    # ALWAYS return the public production hostname. Env var override
+    # was removed because it was the source of multi-day DNS errors:
+    # if WALLET_PUBLIC_BASE_URL was ever set to a wrong value (e.g.
+    # api.dilly.app), the iOS Wallet downloader couldn't resolve it.
+    # Hardcoded api.trydilly.com is what the rest of the app uses.
+    base = "https://api.trydilly.com"
     return {
         "url": f"{base}/wallet/career-pass",
         "serial": _serial_for(email),

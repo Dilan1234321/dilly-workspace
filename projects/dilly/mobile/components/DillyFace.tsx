@@ -650,7 +650,7 @@ function CrownAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scr
 /** Briefcase for Jobs / Internship Tracker surfaces. Sits in the
  *  bottom-right hand zone like the pencil. Leather-brown body with a
  *  brass clasp + arched handle. */
-function BriefcaseAccessory({ cx, cy, s, mood }: Omit<AccessoryProps, 'kind' | 'scribbleAnim' | 'color'> & { color?: string; mood?: DillyMood }) {
+function BriefcaseAccessory({ cx, cy, s, pulseAnim, mood }: Omit<AccessoryProps, 'kind' | 'scribbleAnim' | 'color'> & { color?: string; mood?: DillyMood }) {
   const m = briefcaseMoodStyle(mood)
   const LEATHER = m.leather
   const LEATHER_DARK = m.leatherDark

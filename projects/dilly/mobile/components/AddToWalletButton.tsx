@@ -78,6 +78,11 @@ export default function AddToWalletButton() {
         notify('Wallet pass server is not ready. Check Railway env vars.', 'error');
         return;
       }
+      // DEBUG: surface the URL we're about to fetch so the user can
+      // tell me exactly what hostname is being passed to PassKit.
+      // Earlier "DOWNLOAD_FAILED: hostname not found" errors couldn't
+      // be diagnosed because we never saw the URL.
+      console.log('[Wallet] addPass URL =', meta.url);
       const { authHeaders } = await import('../lib/auth');
       const headers = await authHeaders();
       try {
@@ -89,13 +94,11 @@ export default function AddToWalletButton() {
           notify('Wallet returned without adding the pass.', 'error');
         }
       } catch (passErr: any) {
-        // Surface the native error verbatim so we know what's wrong:
-        // INVALID_PASS = signing/asset issue; DOWNLOAD_FAILED = HTTP
-        // error (likely auth or 503 from server); NO_PRESENTER = view
-        // controller hierarchy issue; INVALID_URL = bad URL.
+        // Surface the native error verbatim AND the URL we tried so
+        // hostname-related failures are diagnosable in one screenshot.
         const code = passErr?.code || 'UNKNOWN';
         const msg = passErr?.message || String(passErr);
-        notify(`${code}: ${msg}`, 'error');
+        notify(`${code}: ${msg}\nURL: ${meta.url}`, 'error');
       }
     } catch (e: any) {
       notify(e?.message || 'Could not add to Wallet.', 'error');
