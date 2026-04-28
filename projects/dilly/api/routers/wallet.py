@@ -235,6 +235,42 @@ def _facts_from_profile(profile: Dict[str, Any]) -> List[Dict[str, str]]:
 # ─── Endpoints ───────────────────────────────────────────────────────
 
 
+@router.get("/wallet/health")
+def wallet_health():
+    """Diagnostic: tells you exactly which wallet env var is missing
+    or what's wrong with the certs. Hit this URL directly in a browser
+    when "INVALID_PASS" errors are happening — the response tells you
+    which Railway env var to check."""
+    needed = ["WALLET_PASS_TYPE_ID", "WALLET_TEAM_ID", "WALLET_CERT_PEM", "WALLET_KEY_PEM", "WALLET_WWDR_PEM"]
+    missing = [k for k in needed if not (os.environ.get(k) or "").strip()]
+    if missing:
+        return {"ok": False, "missing_env_vars": missing}
+    # Try loading the certs — surfaces malformed PEM errors.
+    try:
+        certs = _load_certs()
+    except HTTPException as e:
+        return {"ok": False, "cert_load_error": str(e.detail)}
+    except Exception as e:
+        return {"ok": False, "cert_load_error": f"{type(e).__name__}: {str(e)[:300]}"}
+    # Check pass icon assets exist.
+    asset_status: Dict[str, bool] = {}
+    for asset in ("icon.png", "icon@2x.png", "logo.png", "logo@2x.png"):
+        asset_status[asset] = (_ASSETS_DIR / asset).exists()
+    # Try a minimal sign to confirm the cert chain works.
+    try:
+        sig = _sign_manifest(b'{"icon.png":"abc"}')
+        sig_ok = bool(sig and len(sig) > 100)
+    except Exception as e:
+        return {"ok": False, "sign_error": f"{type(e).__name__}: {str(e)[:300]}", "assets": asset_status}
+    return {
+        "ok": True,
+        "pass_type_id": os.environ["WALLET_PASS_TYPE_ID"],
+        "team_id": os.environ["WALLET_TEAM_ID"],
+        "assets": asset_status,
+        "signature_bytes": len(sig) if sig_ok else 0,
+    }
+
+
 @router.get("/wallet/career-pass")
 def get_career_pass(request: Request):
     """Return the .pkpass file directly. Mobile wraps the URL with

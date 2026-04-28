@@ -753,7 +753,7 @@ export default function ResumeGenerateScreen() {
             onDownload={handleDownload}
             onReset={handleReset}
             onEdit={handleFieldEdit}
-            profileName={profileName}
+            profileName={profile?.name || profile?.full_name || ''}
           />
         )}
 
