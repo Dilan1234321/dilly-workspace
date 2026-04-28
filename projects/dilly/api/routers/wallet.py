@@ -276,7 +276,16 @@ def get_career_pass_url(request: Request):
     # because the mobile app already hit the right host to get here.
     base = (os.environ.get("WALLET_PUBLIC_BASE_URL") or "").strip().rstrip("/")
     if not base:
-        base = f"{request.url.scheme}://{request.url.netloc}"
+        # Try the Host header first — that's what the client used to
+        # reach us. request.url.netloc is unreliable behind a proxy
+        # (Railway etc.) where it may resolve to an internal hostname.
+        host = (request.headers.get("host") or "").strip()
+        if host:
+            scheme = (request.headers.get("x-forwarded-proto") or "https").split(",")[0].strip()
+            base = f"{scheme}://{host}"
+        else:
+            # Final fallback to the production hostname.
+            base = "https://api.trydilly.com"
     return {
         "url": f"{base}/wallet/career-pass",
         "serial": _serial_for(email),

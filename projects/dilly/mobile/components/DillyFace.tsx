@@ -584,13 +584,13 @@ function Accessory({ kind, cx, cy, s, color, scribbleAnim, pulseAnim, isDark, mo
 // concerned tilts the trophy downward like it's slipping.
 function trophyMoodStyle(mood?: DillyMood): { gold: string; goldDark: string; rotate: number; scale: number } {
   switch (mood) {
-    case 'celebrating': return { gold: '#FFD24A', goldDark: '#C68A1A', rotate: -8,  scale: 1.08 }
-    case 'proud':       return { gold: '#F2C84B', goldDark: '#B88A1F', rotate: -3,  scale: 1.04 }
+    case 'celebrating': return { gold: '#FFD24A', goldDark: '#C68A1A', rotate: -15, scale: 1.18 }
+    case 'proud':       return { gold: '#F2C84B', goldDark: '#B88A1F', rotate: -10, scale: 1.12 }
     case 'happy':
-    case 'warm':        return { gold: '#E5B143', goldDark: '#B88A1F', rotate: -2,  scale: 1.02 }
+    case 'warm':        return { gold: '#E5B143', goldDark: '#B88A1F', rotate:  -6, scale: 1.06 }
     case 'thinking':
-    case 'thoughtful':  return { gold: '#C9C2B5', goldDark: '#7E7768', rotate:  4,  scale: 0.96 }
-    case 'concerned':   return { gold: '#A89A75', goldDark: '#6B5F45', rotate:  10, scale: 0.92 }
+    case 'thoughtful':  return { gold: '#A8A39A', goldDark: '#6E6A60', rotate:  10, scale: 0.90 }
+    case 'concerned':   return { gold: '#8C8270', goldDark: '#544D3E', rotate:  18, scale: 0.85 }
     default:            return { gold: '#E5B143', goldDark: '#B88A1F', rotate:  0,  scale: 1.00 }
   }
 }
@@ -603,15 +603,15 @@ function briefcaseMoodStyle(mood?: DillyMood): { leather: string; leatherDark: s
   switch (mood) {
     case 'confident':
     case 'direct':
-    case 'proud':       return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate: -3 }
+    case 'proud':       return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate: -8  }
     case 'attentive':
-    case 'focused':     return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  5 }
+    case 'focused':     return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  12 }
     case 'curious':
-    case 'open':        return { leather: '#4A3823', leatherDark: '#2F2415', rotate: -6 }
+    case 'open':        return { leather: '#4A3823', leatherDark: '#2F2415', rotate: -14 }
     case 'thinking':
-    case 'thoughtful':  return { leather: '#5A4938', leatherDark: '#3A2D22', rotate:  0 }
-    case 'concerned':   return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  8 }
-    default:            return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  0 }
+    case 'thoughtful':  return { leather: '#7A6852', leatherDark: '#5A4938', rotate:  4  }
+    case 'concerned':   return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  18 }
+    default:            return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  0  }
   }
 }
 
