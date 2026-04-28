@@ -73,14 +73,38 @@ const CORAL = colors.coral;
 
 type Stage = 'idle' | 'generating' | 'done' | 'error' | 'not_ready';
 
+// Truth-ledger citation. Per-bullet sources resolved server-side from
+// the user's Dilly Profile facts (F<n>) or original resume bullets
+// (Rb<n>). The mobile UI shows a small chip on each bullet so users
+// can see exactly where every line came from — kills hallucinations
+// because every claim traces to real captured data.
+interface BulletCitation {
+  citation_id: string;
+  type: 'profile_fact' | 'original_bullet' | 'jd_keyword';
+  text: string;
+  category?: string;
+}
+interface GeneratedBullet {
+  text: string;
+  citations?: BulletCitation[];
+  unsourced?: boolean;
+}
+interface TruthLedger {
+  total_bullets: number;
+  sourced_bullets: number;
+  sourced_pct: number;
+  unsourced_bullet_ids: string[];
+  fully_sourced: boolean;
+}
+
 interface GeneratedSection {
   key: string;
   label: string;
   contact?: { name?: string; email?: string; phone?: string; location?: string; linkedin?: string };
   education?: { university?: string; major?: string; minor?: string; graduation?: string; location?: string; gpa?: string; honors?: string };
-  experiences?: { company?: string; role?: string; date?: string; location?: string; bullets?: { text: string }[] }[];
-  projects?: { name?: string; date?: string; tech?: string; bullets?: { text: string }[] }[];
-  simple?: { lines?: string[] };
+  experiences?: { company?: string; role?: string; date?: string; location?: string; bullets?: GeneratedBullet[] }[];
+  projects?: { name?: string; date?: string; tech?: string; bullets?: GeneratedBullet[] }[];
+  simple?: { lines?: string[]; citations_by_line?: BulletCitation[][] };
 }
 
 // Pull the first non-empty string from a list of profile shapes.
@@ -962,6 +986,88 @@ function ProofChip({ icon, text }: { icon: any; text: string }) {
   );
 }
 
+/** Truth-ledger chip rendered at the right of each generated bullet.
+ *  Tap to see the underlying source — which Dilly Profile fact or
+ *  original resume bullet the line traces back to. Unsourced bullets
+ *  get a red warning chip so the user can see Dilly couldn't ground it. */
+function BulletSourceChip({ citations, unsourced }: { citations?: BulletCitation[]; unsourced?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const cites = citations || [];
+  if (unsourced) {
+    return (
+      <TouchableOpacity onPress={() => setOpen(v => !v)} activeOpacity={0.7}>
+        <View style={ledgerStyles.chipUnsourced}>
+          <Ionicons name="alert-circle" size={10} color="#B91C1C" />
+          <Text style={ledgerStyles.chipUnsourcedText}>unsourced</Text>
+        </View>
+        {open && (
+          <View style={ledgerStyles.tooltip}>
+            <Text style={ledgerStyles.tooltipUnsourced}>
+              Dilly couldn't ground this in your profile. Tell her about it in chat to back it up, or rewrite the bullet.
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+  if (cites.length === 0) return null;
+  return (
+    <TouchableOpacity onPress={() => setOpen(v => !v)} activeOpacity={0.7}>
+      <View style={ledgerStyles.chip}>
+        <Ionicons name="checkmark-circle" size={10} color="#15803D" />
+        <Text style={ledgerStyles.chipText}>
+          {cites.length === 1 ? '1 source' : `${cites.length} sources`}
+        </Text>
+      </View>
+      {open && (
+        <View style={ledgerStyles.tooltip}>
+          {cites.map((c, i) => (
+            <View key={i} style={{ marginBottom: i < cites.length - 1 ? 6 : 0 }}>
+              <Text style={ledgerStyles.tooltipBadge}>
+                {c.type === 'profile_fact' ? 'FROM YOUR DILLY PROFILE'
+                  : c.type === 'original_bullet' ? 'FROM YOUR EXISTING RESUME'
+                  : 'JD KEYWORD BRIDGE'}
+              </Text>
+              <Text style={ledgerStyles.tooltipText}>{c.text}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+const ledgerStyles = StyleSheet.create({
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: '#DCFCE7',
+    alignSelf: 'flex-start',
+    marginTop: 3, marginLeft: 6,
+  },
+  chipText: { fontSize: 9, fontWeight: '700', color: '#15803D', letterSpacing: 0.2 },
+  chipUnsourced: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+    alignSelf: 'flex-start',
+    marginTop: 3, marginLeft: 6,
+  },
+  chipUnsourcedText: { fontSize: 9, fontWeight: '700', color: '#B91C1C', letterSpacing: 0.2 },
+  tooltip: {
+    marginTop: 4, marginLeft: 6,
+    padding: 8, borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1, borderColor: '#E2E8F0',
+    maxWidth: 280,
+  },
+  tooltipBadge: { fontSize: 8, fontWeight: '800', letterSpacing: 0.6, color: '#64748B', marginBottom: 2 },
+  tooltipText: { fontSize: 11, color: '#0F172A', lineHeight: 15 },
+  tooltipUnsourced: { fontSize: 11, color: '#7F1D1D', lineHeight: 15 },
+});
+
 function FieldLabel({ text, required, top, inline }: { text: string; required?: boolean; top?: boolean; inline?: boolean }) {
   return (
     <Text style={[styles.fieldLabel, { marginTop: top ? 14 : (inline ? 0 : 0), marginBottom: 6 }]}>
@@ -1127,6 +1233,44 @@ function DonePhase({
           <ScoreRow key={label} label={label} value={value as number} />
         ))}
       </View>
+
+      {/* TRUTH LEDGER trust badge — every bullet on this resume traces
+          back to a captured Dilly Profile fact or your existing resume.
+          The single biggest reason students don't trust AI-written
+          resumes is "did the model invent something?" — this badge
+          tells them no, and they can tap each bullet to see where it
+          came from. */}
+      {atsInfo?.truth_ledger && atsInfo.truth_ledger.total_bullets > 0 && (
+        <View style={[
+          styles.scorecardCard,
+          {
+            backgroundColor: theme.surface.s1,
+            borderColor: atsInfo.truth_ledger.fully_sourced ? '#86EFAC' : theme.surface.border,
+            marginTop: 12,
+          },
+        ]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons
+              name={atsInfo.truth_ledger.fully_sourced ? 'shield-checkmark' : 'shield-half'}
+              size={18}
+              color={atsInfo.truth_ledger.fully_sourced ? '#15803D' : theme.surface.t2}
+            />
+            <Text style={{ fontSize: 13, fontWeight: '800', color: theme.surface.t1, letterSpacing: 0.2, flex: 1 }}>
+              {atsInfo.truth_ledger.fully_sourced
+                ? '100% sourced from your profile'
+                : `${atsInfo.truth_ledger.sourced_pct}% of bullets sourced`}
+            </Text>
+            <Text style={{ fontSize: 11, color: theme.surface.t3 }}>
+              {atsInfo.truth_ledger.sourced_bullets}/{atsInfo.truth_ledger.total_bullets}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 11, color: theme.surface.t2, marginTop: 6, lineHeight: 15 }}>
+            {atsInfo.truth_ledger.fully_sourced
+              ? 'Every bullet traces back to a captured fact in your Dilly Profile or your existing resume. Tap any bullet to see the source. No hallucinations.'
+              : `${atsInfo.truth_ledger.total_bullets - atsInfo.truth_ledger.sourced_bullets} bullet${atsInfo.truth_ledger.total_bullets - atsInfo.truth_ledger.sourced_bullets === 1 ? '' : 's'} couldn't be grounded in your profile. Look for the red "unsourced" tag — rewrite or tell Dilly about it in chat.`}
+          </Text>
+        </View>
+      )}
 
       {/* Gaps / missing keyword warnings - only when present */}
       {atsInfo?.keyword_warning && Array.isArray(atsInfo?.missing_keywords) && atsInfo.missing_keywords.length > 0 && (
@@ -1452,6 +1596,9 @@ function SectionView({
                       multiline
                       placeholder="Tap to add a bullet"
                     />
+                    {typeof b !== 'string' && (
+                      <BulletSourceChip citations={b.citations} unsourced={b.unsourced} />
+                    )}
                   </View>
                 </View>
               ))}
@@ -1463,12 +1610,16 @@ function SectionView({
               </Text>
               <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' · ')}</Text>
               {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
-                <Highlighted
-                  key={bi}
-                  style={styles.previewBullet}
-                  text={`• ${typeof b === 'string' ? b : b.text}`}
-                  keywords={keywordSet}
-                />
+                <View key={bi}>
+                  <Highlighted
+                    style={styles.previewBullet}
+                    text={`• ${typeof b === 'string' ? b : b.text}`}
+                    keywords={keywordSet}
+                  />
+                  {typeof b !== 'string' && (
+                    <BulletSourceChip citations={b.citations} unsourced={b.unsourced} />
+                  )}
+                </View>
               ))}
             </>
           )}
@@ -1491,6 +1642,9 @@ function SectionView({
                       multiline
                       placeholder="Tap to add a bullet"
                     />
+                    {typeof b !== 'string' && (
+                      <BulletSourceChip citations={b.citations} unsourced={b.unsourced} />
+                    )}
                   </View>
                 </View>
               ))}
@@ -1500,12 +1654,16 @@ function SectionView({
               <Text style={styles.previewEntryTitle}>{proj.name}</Text>
               <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' · ')}</Text>
               {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
-                <Highlighted
-                  key={bi}
-                  style={styles.previewBullet}
-                  text={`• ${typeof b === 'string' ? b : b.text}`}
-                  keywords={keywordSet}
-                />
+                <View key={bi}>
+                  <Highlighted
+                    style={styles.previewBullet}
+                    text={`• ${typeof b === 'string' ? b : b.text}`}
+                    keywords={keywordSet}
+                  />
+                  {typeof b !== 'string' && (
+                    <BulletSourceChip citations={b.citations} unsourced={b.unsourced} />
+                  )}
+                </View>
               ))}
             </>
           )}

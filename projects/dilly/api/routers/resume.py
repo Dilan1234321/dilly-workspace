@@ -2872,8 +2872,9 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
                 # Ranker failed — fall back to top-N by default ordering.
                 selected_facts = candidate_facts[:MAX_FACTS_TO_LLM]
 
-        # Render selected facts for the Sonnet prompt, grouped by category
-        # so the LLM can see the shape of the profile.
+        # Render selected facts for the Sonnet prompt with stable IDs
+        # (F1, F2, ...). The LLM cites these IDs on each bullet so we
+        # can build the truth ledger — every bullet traces to a fact.
         cat_labels = {
             "achievement": "Achievements", "goal": "Goals",
             "target_company": "Target Companies",
@@ -2891,26 +2892,59 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
             "interest": "Interests",
         }
         if selected_facts:
-            grouped: dict[str, list] = {}
-            for f in selected_facts:
-                grouped.setdefault(f.get("category", "other"), []).append(f)
+            # Tag each fact with a stable F-id and keep the mapping so
+            # post-processing can resolve the LLM's citations back to
+            # the real Dilly Profile rows.
+            fact_id_map: dict[str, dict] = {}
+            grouped: dict[str, list[tuple[str, dict]]] = {}
+            for i, f in enumerate(selected_facts):
+                fid = f"F{i + 1}"
+                fact_id_map[fid] = f
+                grouped.setdefault(f.get("category", "other"), []).append((fid, f))
             lines = []
             for cat, items in grouped.items():
                 label = cat_labels.get(cat, cat.replace("_", " ").title())
                 entries = "; ".join(
-                    f"{(i.get('label') or '').strip()}: {(i.get('value') or '').strip()}"
-                    for i in items
+                    f"[{fid}] {(item.get('label') or '').strip()}: {(item.get('value') or '').strip()}"
+                    for fid, item in items
                 )
                 lines.append(f"  {label}: {entries}")
             profile_facts_text = "\n".join(lines)
             if narrative:
                 profile_facts_text = (
-                    f"NARRATIVE: {narrative}\n\nRELEVANT FACTS ("
+                    f"NARRATIVE: {narrative}\n\nRELEVANT FACTS with citation IDs ("
                     f"{len(selected_facts)} of {len(candidate_facts)} "
                     f"ranked by job relevance):\n{profile_facts_text}"
                 )
     except Exception:
         pass
+    # Default empty fact_id_map outside the try so downstream code can
+    # always reference it without try/except.
+    if 'fact_id_map' not in locals():
+        fact_id_map = {}
+
+    # Tag every base-resume bullet with a stable ID (Rb1, Rb2, ...) so
+    # the LLM can cite "Rb<n>" when a generated bullet is rooted in
+    # an existing resume bullet. Build a parallel id_map so post-
+    # processing can resolve citations back to the original text.
+    bullet_id_map: dict[str, str] = {}
+    _rb_counter = 0
+    for sec in base_sections:
+        if not isinstance(sec, dict):
+            continue
+        # Bullets live in different containers depending on section.
+        for container_key in ("experiences", "projects"):
+            for entry in sec.get(container_key) or []:
+                if not isinstance(entry, dict):
+                    continue
+                for b in entry.get("bullets") or []:
+                    if not isinstance(b, dict):
+                        continue
+                    _rb_counter += 1
+                    rb_id = f"Rb{_rb_counter}"
+                    bullet_id_map[rb_id] = (b.get("text") or "").strip()
+                    # Stash on the bullet so the LLM sees it in JSON input.
+                    b["_cite_id"] = rb_id
 
     # Serialize base resume as readable text for context
     base_resume_json = json.dumps(base_sections, separators=(",", ":")) if base_sections else "[]"
@@ -3389,6 +3423,40 @@ CORE DOCTRINE — VIOLATING ANY OF THESE IS A FAILURE:
    CUT the rest. Better to have a tight, scannable one-pager than
    a stuffed two-pager that recruiters skim past.
 
+10. TRUTH LEDGER (NEW — every bullet MUST be sourced). Each bullet you
+    output must include a `sources` array of citation IDs that prove
+    the bullet is grounded in real user data. Three valid citation
+    types:
+
+      - "F<n>" — a Dilly Profile fact id (you see these in the
+        STUDENT'S DILLY PROFILE block as `[F1]`, `[F2]`, etc.).
+        Use when the bullet pulls a skill, experience, project,
+        achievement, or detail from the profile.
+
+      - "Rb<n>" — an original resume bullet id (you see these as
+        the `_cite_id` field inside the STUDENT'S CURRENT RESUME
+        JSON, attached to each bullet in `experiences[].bullets`
+        and `projects[].bullets`). Use when the bullet is a
+        kept / lightly-rewritten version of an existing resume
+        bullet.
+
+      - "JD" — used ONLY when bridging keywords (rule 3). Means
+        "this exact phrase came from matching the JD's vocabulary
+        to a profile fact via a bridge". MUST appear alongside an
+        F<n> or Rb<n> citation, never alone.
+
+    Every bullet's `sources` array MUST have at least one F<n> or
+    Rb<n> entry. A bullet with empty sources or only "JD" is
+    treated as a hallucination and gets flagged in the UI as
+    unsourced — the user sees a warning. So: never emit a bullet
+    without a real citation. If you can't cite a fact or original
+    bullet, the bullet shouldn't exist.
+
+    Same rule applies to Skills section entries — each one needs a
+    `sources` array if it's a skill the user has (not generic JD
+    keywords). If you list "Python" because the profile has fact F7
+    saying "Built Flask app in Python", cite F7.
+
 ═══════════════════════════════════════════════════════════════════════
 ATS FORMATTING (specific to this company's parser):
 
@@ -3400,10 +3468,13 @@ Return ONLY valid JSON — a JSON array of resume section objects matching this 
 [
   {{"key": "contact", "label": "Contact", "contact": {{"name": "", "email": "", "phone": "", "location": "", "linkedin": ""}}}},
   {{"key": "education", "label": "Education", "education": {{"id": "", "university": "", "major": "", "minor": "", "graduation": "", "location": "", "honors": "", "gpa": ""}}}},
-  {{"key": "professional_experience", "label": "Experience", "experiences": [{{"id": "", "company": "", "role": "", "date": "", "location": "", "bullets": [{{"id": "", "text": ""}}]}}]}},
-  {{"key": "projects", "label": "Projects", "projects": [{{"id": "", "name": "", "date": "", "location": "", "tech": "", "bullets": [{{"id": "", "text": ""}}]}}]}},
-  {{"key": "skills", "label": "Skills", "simple": {{"id": "", "lines": [""]}}}}
+  {{"key": "professional_experience", "label": "Experience", "experiences": [{{"id": "", "company": "", "role": "", "date": "", "location": "", "bullets": [{{"id": "", "text": "", "sources": ["F1", "Rb3"]}}]}}]}},
+  {{"key": "projects", "label": "Projects", "projects": [{{"id": "", "name": "", "date": "", "location": "", "tech": "", "bullets": [{{"id": "", "text": "", "sources": ["F12"]}}]}}]}},
+  {{"key": "skills", "label": "Skills", "simple": {{"id": "", "lines": [""], "sources_by_line": [["F7", "F11"]]}}}}
 ]
+
+EVERY bullet MUST have a non-empty `sources` array citing F<n> or Rb<n> (or both). Skills section: `sources_by_line` is parallel to `lines`; each entry is the array of citations supporting that line of skills.
+
 Include only sections that have content. Do not include markdown, explanations, or any text outside the JSON array."""
 
     # Add gaps instruction if applicable
@@ -3455,6 +3526,92 @@ Include only sections that have content. Do not include markdown, explanations, 
             status_code=502,
             detail=f"Resume generation failed: {type(e).__name__}: {str(e)[:200]}",
         )
+
+    # ── TRUTH LEDGER: validate sources + build the per-bullet citation
+    # map the mobile UI uses to render the "sourced" chip and tooltip.
+    # For every bullet we collect:
+    #   - the cited Fn / Rbn IDs the LLM emitted
+    #   - the resolved human-readable text for each (so the UI can
+    #     show "from your profile: 'Built Flask app in Python'" on tap)
+    #   - a flag if the bullet has no real sources (potential
+    #     hallucination — gets flagged in the mobile UI)
+    # Returns a `truth_ledger` dict alongside the sections, plus a
+    # rolled-up sourced_pct.
+    truth_ledger: dict[str, list[dict]] = {}  # bullet_id -> [{citation_id, type, text}]
+    total_bullets = 0
+    sourced_bullets = 0
+    unsourced_bullet_ids: list[str] = []
+
+    def _resolve_citation(cite_id: str) -> dict | None:
+        cid = (cite_id or "").strip()
+        if not cid:
+            return None
+        if cid == "JD":
+            return {"citation_id": "JD", "type": "jd_keyword", "text": "JD keyword bridge"}
+        if cid.startswith("F") and cid in fact_id_map:
+            f = fact_id_map[cid]
+            label = (f.get("label") or "").strip()
+            value = (f.get("value") or "").strip()
+            text = f"{label}: {value}" if label and value else (label or value or "")
+            return {
+                "citation_id": cid, "type": "profile_fact",
+                "category": f.get("category", ""),
+                "text": text[:200],
+            }
+        if cid.startswith("Rb") and cid in bullet_id_map:
+            return {
+                "citation_id": cid, "type": "original_bullet",
+                "text": bullet_id_map[cid][:200],
+            }
+        return None  # unknown citation — drop silently, treat as no source
+
+    def _process_bullets(bullets: list, owner_label: str) -> None:
+        nonlocal total_bullets, sourced_bullets
+        for b in bullets:
+            if not isinstance(b, dict):
+                continue
+            total_bullets += 1
+            bid = (b.get("id") or "").strip() or f"{owner_label}-b{total_bullets}"
+            srcs_raw = b.get("sources") or []
+            resolved: list[dict] = []
+            has_real = False
+            for cid in srcs_raw if isinstance(srcs_raw, list) else []:
+                r = _resolve_citation(str(cid))
+                if r:
+                    resolved.append(r)
+                    if r["type"] in ("profile_fact", "original_bullet"):
+                        has_real = True
+            truth_ledger[bid] = resolved
+            # Carry citation back onto the bullet so the mobile editor
+            # has it inline (no need to look up a parallel map).
+            b["citations"] = resolved
+            b["unsourced"] = not has_real
+            if has_real:
+                sourced_bullets += 1
+            else:
+                unsourced_bullet_ids.append(bid)
+
+    for sec in sections:
+        if not isinstance(sec, dict):
+            continue
+        for entry in sec.get("experiences") or []:
+            if isinstance(entry, dict):
+                _process_bullets(entry.get("bullets") or [], "exp")
+        for entry in sec.get("projects") or []:
+            if isinstance(entry, dict):
+                _process_bullets(entry.get("bullets") or [], "proj")
+        # Skills section: parallel sources_by_line
+        skills_simple = sec.get("simple") if sec.get("key") == "skills" else None
+        if isinstance(skills_simple, dict):
+            lines = skills_simple.get("lines") or []
+            sbl = skills_simple.get("sources_by_line") or []
+            resolved_lines = []
+            for i, line in enumerate(lines):
+                cites = sbl[i] if i < len(sbl) and isinstance(sbl[i], list) else []
+                resolved_lines.append([_resolve_citation(str(c)) for c in cites if _resolve_citation(str(c))])
+            skills_simple["citations_by_line"] = resolved_lines
+
+    sourced_pct = round(100.0 * sourced_bullets / total_bullets) if total_bullets else 100
 
     # Count matched keywords
     jd_lower = job_description.lower()
@@ -3524,6 +3681,17 @@ Include only sections that have content. Do not include markdown, explanations, 
         # Tell the mobile how many facts Dilly actually used for this resume,
         # so the UI can show "built from 47 of your 312 profile facts"
         "facts_used": len(selected_facts) if selected_facts else 0,
+        # ── TRUTH LEDGER ──
+        # Per-bullet citations are now inline on each bullet (`citations`
+        # + `unsourced` fields). These rolled-up summaries drive the
+        # trust badge at the top of the resume preview.
+        "truth_ledger": {
+            "total_bullets": total_bullets,
+            "sourced_bullets": sourced_bullets,
+            "sourced_pct": sourced_pct,
+            "unsourced_bullet_ids": unsourced_bullet_ids,
+            "fully_sourced": (sourced_pct == 100 and total_bullets > 0),
+        },
         "plan": _resume_plan,
         "resumes_used": new_resume_count,
         "resumes_remaining": resume_remaining,
