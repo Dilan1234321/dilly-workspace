@@ -890,6 +890,16 @@ function SeekerProfileScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />}
       >
 
+        {/* Add to Apple Wallet — top of profile, always visible (not
+            gated by editMode or slug). Self-hides on Android. Tapping
+            shows a toast with diagnostic info if the native module
+            isn't loaded yet. */}
+        <FadeInView delay={0}>
+          <View style={{ marginBottom: 14 }}>
+            <AddToWalletButton />
+          </View>
+        </FadeInView>
+
         {/* QR Code CTA. Kept prominent here because the header icon
             was invisible to most testers. Renamed from "Your business
             card" to "Your Dilly QR Code" so it reads like a modern
@@ -1742,7 +1752,6 @@ function SeekerProfileScreen() {
                       <Text style={{ fontSize: 13, fontWeight: '700', color: theme.accent }}>Share</Text>
                     </AnimatedPressable>
                   </View>
-                  <AddToWalletButton />
                 </View>
               ) : (
                 <Text style={{ fontSize: 12, color: colors.t3, fontStyle: 'italic' }}>Setting up your profile link...</Text>

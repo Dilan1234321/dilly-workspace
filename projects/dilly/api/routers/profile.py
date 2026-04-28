@@ -1062,7 +1062,7 @@ async def _upload_profile_transcript_impl(request: Request, file: UploadFile):
             "transcript_honors": result.honors,
             "transcript_major": result.major,
             "transcript_minor": result.minor,
-            "transcript_school": result.school,
+            "transcript_school": getattr(result, "school", None),
             "transcript_warnings": getattr(result, "warnings", []) or [],
         }
         try:
@@ -1110,7 +1110,7 @@ async def _upload_profile_transcript_impl(request: Request, file: UploadFile):
                 "honors": result.honors,
                 "major": result.major,
                 "minor": result.minor,
-                "school": result.school,
+                "school": getattr(result, "school", None),
                 "warnings": getattr(result, "warnings", []),
             },
         }
