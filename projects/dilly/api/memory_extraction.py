@@ -49,7 +49,15 @@ def estimate_score_impact(items: list[dict[str, Any]], latest_audit: dict | None
 
 
 def _existing_memory_for_prompt(items: list[dict[str, Any]]) -> list[dict[str, str]]:
-    return [{"category": str(i.get("category") or ""), "label": str(i.get("label") or "")} for i in items]
+    # Cost knob: dedup-set sent to the LLM was unbounded — for a power
+    # user with 100+ facts, that's an extra ~600 tokens of input per
+    # extraction call (every chat turn). Cap at the most-recent 25
+    # items, which is enough to dedup the typical "in-this-conversation"
+    # repetitions without paying for the full history. Items further
+    # back in time get caught by the post-LLM (category,label) dedup
+    # against ALL existing items in extract_memory_items.
+    capped = items[-25:] if len(items) > 25 else items
+    return [{"category": str(i.get("category") or ""), "label": str(i.get("label") or "")} for i in capped]
 
 
 def _messages_worth_extracting(messages: list[dict[str, Any]]) -> bool:

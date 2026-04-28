@@ -17,17 +17,65 @@ Switch back anytime with DILLY_BACKEND_PROVIDER=anthropic (or unset).
 
 import json
 import os
+import sys
 from typing import Any, Optional
+
+
+# One-shot startup banner so Railway logs make it obvious which provider
+# is going to handle backend LLM work. Helps diagnose "why didn't my
+# costs drop after the routing change" — the answer is almost always
+# "OPENAI_API_KEY isn't set in this environment".
+_STARTUP_LOGGED = False
+
+
+def _log_startup_route_once() -> None:
+    global _STARTUP_LOGGED
+    if _STARTUP_LOGGED:
+        return
+    _STARTUP_LOGGED = True
+    try:
+        has_openai = bool(os.environ.get("OPENAI_API_KEY", "").strip())
+        explicit = (os.environ.get("DILLY_BACKEND_PROVIDER") or "").strip().lower()
+        chosen = _provider()
+        sys.stderr.write(
+            f"[LLM_STARTUP] backend_provider={chosen} "
+            f"(OPENAI_API_KEY={'set' if has_openai else 'MISSING'} "
+            f"DILLY_BACKEND_PROVIDER={explicit or '<unset>'}). "
+            f"User-facing /ai/chat always uses Anthropic Haiku regardless.\n"
+        )
+    except Exception:
+        pass
 
 
 def _provider() -> str:
     """Which provider to use for non-user-facing LLM work.
-    Returns 'openai' or 'anthropic'. Default: anthropic (safe fallback
-    if OPENAI_API_KEY is missing)."""
-    p = (os.environ.get("DILLY_BACKEND_PROVIDER") or "").strip().lower()
-    if p == "openai" and os.environ.get("OPENAI_API_KEY", "").strip():
+    Returns 'openai' or 'anthropic'.
+
+    Default policy (changed 2026-04-28): if OPENAI_API_KEY is available,
+    default to OpenAI for backend work. gpt-4o-mini is ~5-7x cheaper than
+    Haiku 4.5 ($0.15/M vs $0.80/M input, $0.60/M vs $4.00/M output) at
+    comparable quality for structured-JSON tasks (extraction, audit
+    explains, narrative generation, ATS classification). The user-facing
+    /ai/chat call uses anthropic.Anthropic directly and is NOT routed
+    through this client, so chat quality is unaffected.
+
+    Explicit overrides:
+      - DILLY_BACKEND_PROVIDER=anthropic  → force Anthropic for all
+        backend calls (escape hatch if OpenAI quality regresses)
+      - DILLY_BACKEND_PROVIDER=openai     → keep current behavior
+        (no-op since openai is now the default)
+      - Caller passing model='claude-...' → forces Anthropic regardless
+    """
+    explicit = (os.environ.get("DILLY_BACKEND_PROVIDER") or "").strip().lower()
+    has_openai = bool(os.environ.get("OPENAI_API_KEY", "").strip())
+    if explicit == "anthropic":
+        return "anthropic"
+    if explicit == "openai" and has_openai:
         return "openai"
-    return "anthropic"
+    # Default: prefer OpenAI when key is available. Falls back to
+    # Anthropic when OPENAI_API_KEY isn't set so the system stays
+    # functional without operator action.
+    return "openai" if has_openai else "anthropic"
 
 
 def _openai_model() -> str:
@@ -137,12 +185,15 @@ def get_chat_completion(
     tokens (~4000 chars) we wrap it in an ephemeral prompt-cache block.
     OpenAI auto-caches prefixes server-side so no wrapping is needed.
     """
+    # Log the routing config once on first call so it's visible in
+    # Railway logs even if no other LLM call hits an error.
+    _log_startup_route_once()
     # Route to OpenAI if configured. Only skip this when the caller
     # explicitly passed a Claude-family model (we never send claude-*
     # names to OpenAI since it would fail).
     caller_forced_anthropic = bool(model and model.lower().startswith("claude"))
     if _provider() == "openai" and not caller_forced_anthropic:
-        return _get_chat_completion_openai(
+        result = _get_chat_completion_openai(
             system, user,
             model=None if (model and model.lower().startswith("claude")) else model,
             max_tokens=max_tokens,
@@ -151,6 +202,22 @@ def get_chat_completion(
             log_feature=log_feature,
             log_metadata=log_metadata,
         )
+        if result is not None:
+            return result
+        # OpenAI returned None — could be missing key, network blip, or
+        # an OpenAI-side error. Fall back to Anthropic so backend
+        # features (especially profile extraction) keep working. The
+        # cost regresses to Haiku pricing for this one call but the
+        # feature still produces output.
+        try:
+            import sys as _sys
+            _sys.stderr.write(
+                f"[LLM_ROUTE] feature={log_feature} openai returned None, "
+                f"falling back to anthropic\n"
+            )
+        except Exception:
+            pass
+        # Fall through to the Anthropic path below.
 
     try:
         from anthropic import Anthropic
