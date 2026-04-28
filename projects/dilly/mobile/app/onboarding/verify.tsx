@@ -192,7 +192,14 @@ export default function VerifyScreen() {
             const patch: Record<string, string> = {};
             if (pendingPath) patch.user_path = pendingPath;
             if (pendingPlan) patch.plan = pendingPlan;
-            if (userType === 'general' || userType === 'professional') {
+            // Determine "is this a non-student situation" using AsyncStorage
+            // path as the durable source of truth, not just the URL param.
+            // URL params get stripped between expo-router navigations.
+            const isNonStudent =
+              userType === 'general' ||
+              userType === 'professional' ||
+              (pendingPath && pendingPath !== 'student');
+            if (isNonStudent) {
               patch.user_type = 'general';
             }
             if (Object.keys(patch).length > 0) {
@@ -219,9 +226,16 @@ export default function VerifyScreen() {
           //   i_have_a_job  -> profile-holder (4 short steps, no resume)
           //   student path  -> profile        (existing student flow)
           //   anyone else   -> profile-pro    (general seeker flow)
+          // Use resolvedPath (AsyncStorage) as the source of truth — URL
+          // userType param can get stripped between screens.
+          const isExplicitStudent = resolvedPath === 'student';
+          const isNonStudentRoute =
+            userType === 'general' ||
+            userType === 'professional' ||
+            (resolvedPath && !isExplicitStudent);
           if (resolvedPath === 'i_have_a_job') {
             router.replace('/onboarding/profile-holder');
-          } else if (userType === 'general' || userType === 'professional') {
+          } else if (isNonStudentRoute) {
             router.replace('/onboarding/profile-pro');
           } else {
             router.replace('/onboarding/profile');

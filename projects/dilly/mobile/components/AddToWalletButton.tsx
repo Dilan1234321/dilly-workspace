@@ -80,12 +80,22 @@ export default function AddToWalletButton() {
       }
       const { authHeaders } = await import('../lib/auth');
       const headers = await authHeaders();
-      const ok = await wallet.addPass(meta.url, headers as Record<string, string>);
-      if (ok) {
-        setAdded(true);
-        notify('Added to Apple Wallet.', 'success');
-      } else {
-        notify('Wallet did not add the pass. Try again.', 'error');
+      try {
+        const ok = await wallet.addPass(meta.url, headers as Record<string, string>);
+        if (ok) {
+          setAdded(true);
+          notify('Added to Apple Wallet.', 'success');
+        } else {
+          notify('Wallet returned without adding the pass.', 'error');
+        }
+      } catch (passErr: any) {
+        // Surface the native error verbatim so we know what's wrong:
+        // INVALID_PASS = signing/asset issue; DOWNLOAD_FAILED = HTTP
+        // error (likely auth or 503 from server); NO_PRESENTER = view
+        // controller hierarchy issue; INVALID_URL = bad URL.
+        const code = passErr?.code || 'UNKNOWN';
+        const msg = passErr?.message || String(passErr);
+        notify(`${code}: ${msg}`, 'error');
       }
     } catch (e: any) {
       notify(e?.message || 'Could not add to Wallet.', 'error');

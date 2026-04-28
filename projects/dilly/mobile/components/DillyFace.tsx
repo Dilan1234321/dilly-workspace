@@ -491,8 +491,8 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
       {/* Arched "smiling eyes" - only visible on celebrating / proud. */}
       {archEyes && (
         <>
-          <Path d={archLPath} stroke={ink} strokeWidth={2.2 * s} strokeLinecap="round" fill="none" />
-          <Path d={archRPath} stroke={ink} strokeWidth={2.2 * s} strokeLinecap="round" fill="none" />
+          <Path d={archLPath} stroke={ink} strokeWidth={Math.max(2, 2.2 * s)} strokeLinecap="round" fill="none" />
+          <Path d={archRPath} stroke={ink} strokeWidth={Math.max(2, 2.2 * s)} strokeLinecap="round" fill="none" />
         </>
       )}
 
@@ -509,11 +509,15 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
         opacity={browLiftAnim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.6, 1] }) as unknown as number}
       />
 
-      {/* Smile / frown */}
+      {/* Smile / frown — enforce a minimum 2px stroke so the smile
+          stays visible even when DillyFace is rendered tiny (widget
+          chips, in-app pills, log-a-win button, etc.). 2.2*s falls
+          below 1px once the face is shrunk past ~36pt, which made
+          the smile disappear and Dilly look expressionless. */}
       <AnimatedPath
         d={smilePath}
         stroke={ink}
-        strokeWidth={2.2 * s}
+        strokeWidth={Math.max(2, 2.2 * s)}
         strokeLinecap="round"
         fill="none"
       />
