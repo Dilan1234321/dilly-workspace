@@ -794,7 +794,13 @@ Extract new memory items now. Return JSON array only."""
         category = _canonical_memory_category(str(row.get("category") or ""))
         label = str(row.get("label") or "").strip()[:50]
         value = str(row.get("value") or "").strip()[:200]
-        if not category or category not in _MEMORY_CATEGORIES or not label or not value:
+        # Was strict-filtering against _MEMORY_CATEGORIES whitelist
+        # which silently dropped any LLM-emitted category not in the
+        # set. The downstream _normalize_memory_item is the canonical
+        # gate now (accepts any non-empty category) so we just need
+        # category to exist and label+value to be populated. The
+        # canonical-category mapping above handles common variants.
+        if not category or not label or not value:
             continue
         key = (category, label.lower())
         if key in seen:
