@@ -53,7 +53,156 @@ def _path(email: str) -> str:
     return os.path.join(folder, _THREADS_FILENAME)
 
 
-def _load(email: str) -> list[dict[str, Any]]:
+# ── PostgreSQL backend (durable across Railway deploys) ─────────────
+# Was filesystem-only. On Railway the disk wipes on every deploy —
+# users would lose chat history after each ship. PG keeps it durable
+# across deploys, restarts, sign-out/sign-in, and hard refreshes.
+# File path is kept as a one-time migration source on first read +
+# as a fallback when PG is unavailable.
+
+_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS chat_threads (
+  email                  TEXT NOT NULL,
+  conv_id                TEXT NOT NULL,
+  first_user_message     TEXT,
+  last_assistant_message TEXT,
+  first_turn_at          TEXT,
+  last_turn_at           TEXT,
+  turn_count             INT DEFAULT 0,
+  mode                   TEXT,
+  messages               JSONB DEFAULT '[]'::jsonb,
+  kept                   BOOLEAN DEFAULT FALSE,
+  name                   TEXT,
+  PRIMARY KEY (email, conv_id)
+);
+CREATE INDEX IF NOT EXISTS idx_chat_threads_email_last
+  ON chat_threads (email, last_turn_at DESC);
+"""
+
+_schema_ensured = False
+
+
+def _ensure_schema() -> None:
+    global _schema_ensured
+    if _schema_ensured:
+        return
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(_SCHEMA_SQL)
+        _schema_ensured = True
+    except Exception:
+        # If PG is unavailable on import we fall back to file path.
+        pass
+
+
+def _row_to_dict(row: tuple) -> dict[str, Any]:
+    return {
+        "email": row[0],
+        "conv_id": row[1],
+        "first_user_message": row[2],
+        "last_assistant_message": row[3],
+        "first_turn_at": row[4],
+        "last_turn_at": row[5],
+        "turn_count": int(row[6] or 0),
+        "mode": row[7],
+        "messages": row[8] or [],
+        "kept": bool(row[9]),
+        "name": row[10],
+    }
+
+
+def _pg_load(email: str) -> list[dict[str, Any]] | None:
+    _ensure_schema()
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT email, conv_id, first_user_message, last_assistant_message, "
+                    "first_turn_at, last_turn_at, turn_count, mode, messages, kept, name "
+                    "FROM chat_threads WHERE LOWER(email) = LOWER(%s) "
+                    "ORDER BY last_turn_at DESC LIMIT %s",
+                    (email, _MAX_THREADS),
+                )
+                rows = cur.fetchall()
+                return [_row_to_dict(r) for r in rows]
+    except Exception:
+        return None
+
+
+def _pg_upsert(email: str, threads: list[dict[str, Any]]) -> bool:
+    _ensure_schema()
+    try:
+        from projects.dilly.api.database import get_db
+        import psycopg2.extras
+        # Build the upsert payload.
+        rows = []
+        for t in threads:
+            rows.append((
+                email,
+                t.get("conv_id") or "",
+                t.get("first_user_message"),
+                t.get("last_assistant_message"),
+                t.get("first_turn_at"),
+                t.get("last_turn_at"),
+                int(t.get("turn_count") or 0),
+                t.get("mode"),
+                json.dumps(t.get("messages") or []),
+                bool(t.get("kept", False)),
+                t.get("name"),
+            ))
+        if not rows:
+            return True
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                psycopg2.extras.execute_values(
+                    cur,
+                    """
+                    INSERT INTO chat_threads (
+                        email, conv_id, first_user_message, last_assistant_message,
+                        first_turn_at, last_turn_at, turn_count, mode, messages, kept, name
+                    ) VALUES %s
+                    ON CONFLICT (email, conv_id) DO UPDATE SET
+                        first_user_message = EXCLUDED.first_user_message,
+                        last_assistant_message = EXCLUDED.last_assistant_message,
+                        first_turn_at = COALESCE(chat_threads.first_turn_at, EXCLUDED.first_turn_at),
+                        last_turn_at = EXCLUDED.last_turn_at,
+                        turn_count = EXCLUDED.turn_count,
+                        mode = COALESCE(chat_threads.mode, EXCLUDED.mode),
+                        messages = EXCLUDED.messages,
+                        kept = EXCLUDED.kept,
+                        name = COALESCE(EXCLUDED.name, chat_threads.name)
+                    """,
+                    rows,
+                    template="(%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)",
+                )
+        return True
+    except Exception:
+        return False
+
+
+def _pg_delete_overage(email: str) -> None:
+    """Trim down to _MAX_THREADS rows, keeping all `kept=True` rows."""
+    _ensure_schema()
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM chat_threads WHERE LOWER(email) = LOWER(%s) "
+                    "AND kept = FALSE AND conv_id NOT IN ("
+                    "  SELECT conv_id FROM chat_threads WHERE LOWER(email) = LOWER(%s) "
+                    "  ORDER BY last_turn_at DESC LIMIT %s"
+                    ")",
+                    (email, email, _MAX_THREADS),
+                )
+    except Exception:
+        pass
+
+
+def _file_load(email: str) -> list[dict[str, Any]]:
     path = _path(email)
     if not path or not os.path.isfile(path):
         return []
@@ -67,10 +216,27 @@ def _load(email: str) -> list[dict[str, Any]]:
     return [r for r in data if isinstance(r, dict) and r.get("conv_id")]
 
 
+def _load(email: str) -> list[dict[str, Any]]:
+    """Read threads from PostgreSQL (durable) with file-fallback for
+    legacy data + transient PG outages. On first PG load we also
+    migrate any leftover file-disk threads up to PG so historical
+    data isn't lost when the user signs in after the deploy."""
+    pg = _pg_load(email)
+    if pg is not None:
+        # If PG returned empty AND there's file data on disk (from
+        # before the migration), upsert it and return it. One-time
+        # migration per user.
+        if not pg:
+            file_data = _file_load(email)
+            if file_data:
+                _pg_upsert(email, file_data)
+                return file_data
+        return pg
+    # PG totally unavailable — fall back to file.
+    return _file_load(email)
+
+
 def _save(email: str, threads: list[dict[str, Any]]) -> None:
-    path = _path(email)
-    if not path:
-        return
     # Sort by last_turn_at desc so the most recent are first.
     try:
         threads.sort(key=lambda r: r.get("last_turn_at", ""), reverse=True)
@@ -91,6 +257,16 @@ def _save(email: str, threads: list[dict[str, Any]]) -> None:
             threads.sort(key=lambda r: r.get("last_turn_at", ""), reverse=True)
         except Exception:
             pass
+    # Try PG first (durable across Railway deploys). File write is the
+    # belt-and-suspenders fallback so single-instance dev still works
+    # if PG is down.
+    pg_ok = _pg_upsert(email, threads)
+    if pg_ok:
+        _pg_delete_overage(email)
+    # Always also write to file as a local backup. Cheap; no harm.
+    path = _path(email)
+    if not path:
+        return
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         tmp = path + ".tmp"
