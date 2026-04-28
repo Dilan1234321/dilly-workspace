@@ -2224,6 +2224,37 @@ function SeekerProfileScreen() {
           </FadeInView>
         )}
 
+        {/* ── 8a. Career Type quiz — 90s forced-choice instrument
+            that produces one of 6 archetypes. Saves to
+            profile.career_archetype + 2 Memory facts. Cluster-3
+            P-lift: closes the personality-test gap. */}
+        {!profile.career_archetype && (
+          <FadeInView delay={411}>
+            <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>FIND YOUR CAREER TYPE</Text>
+            <AnimatedPressable
+              style={[d.resumeCard, {
+                backgroundColor: theme.surface.s1,
+                borderColor: theme.surface.border,
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                paddingVertical: 14,
+              }]}
+              onPress={() => router.push('/(app)/career-type' as any)}
+              scaleDown={0.98}
+            >
+              <View style={[d.strengthIcon, { backgroundColor: theme.accentSoft }]}>
+                <Ionicons name="compass-outline" size={18} color={theme.accent} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>Take the Career Type quiz</Text>
+                <Text style={[d.resumeSub, { color: theme.surface.t3 }]} numberOfLines={2}>
+                  8 questions, ~90 seconds. Shapes how every Dilly feature reads you.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
         {/* ── 8b. LinkedIn import — bootstraps the Dilly Profile in one
             tap. This is the #1 way to make Truth Ledger work for new
             users: a fresh import gives Dilly 30-50 facts in 30 seconds,

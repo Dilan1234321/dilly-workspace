@@ -373,6 +373,10 @@ function AppLayoutInner() {
         options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
+        name="career-type"
+        options={{ href: null, animation: 'fade' }}
+      />
+      <Tabs.Screen
         name="raise-brief"
         options={{ href: null, animation: 'fade' }}
       />
