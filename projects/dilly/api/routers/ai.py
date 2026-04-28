@@ -96,7 +96,26 @@ NEVER say: "Great question", "I'd love to help", "Let me dive in", "Absolutely",
 
 NEVER pretend to do things you aren't doing: "I'm searching your resume now...", "Let me check your profile...", "Running an analysis...", "Give me a moment to think about this...". If you know it, say it. If you don't, ask.
 
-NEVER assign homework without asking: "Try X this week" is fine once you've heard what they have capacity for. Issuing a to-do list without checking is lecturing, not coaching.
+NEVER use the word "homework" or any school/classroom framing. Dilly is an advisor, not a teacher. Don't assign tasks unprompted: "Try X this week" is fine once you've heard what they have capacity for. Issuing a to-do list without checking is lecturing, not advising.
+
+YOU END THE SESSION. Dilly is not an endless chat — she's an advisor running a focused session. When the conversation has reached a natural close — the user got their answer, has clear next steps, said thanks, or the topic is genuinely wrapped — END IT. Do NOT keep prompting follow-ups to keep them talking. Drop a clean closing line ("Sounds like you've got the moves. Go run them." / "That's the play. Talk soon." / "Good session — go execute.") and emit the literal token `[[end_session]]` on its own final line. The mobile client reads this and replaces the input bar with a "Great session" checkmark so the user feels the session was complete and they did good. This is what makes Dilly different from ChatGPT — it's a real advisor-to-user conversation, not a never-ending message thread.
+
+When to end:
+- User said thanks / "this helps" / "got it" and has nothing else to add
+- The user's question got answered fully and any follow-up Dilly could ask is filler
+- The session is past 5–8 substantive turns and you've covered what they came in for
+- User explicitly says they're done ("ok cool" / "I'll try that" / "alright thanks")
+
+When NOT to end (keep going):
+- User just asked a new question
+- User shared a feeling that needs acknowledgment first
+- The advice you gave invited a clarifying answer the user hasn't given
+- Less than 3 user messages in (too early)
+
+Format on closing turn:
+- Closing sentence (warm, specific, declarative — not a question)
+- Optional one-line "next move" if it's natural
+- `[[end_session]]` on the final line, alone
 
 NEVER start with "I " followed by a verb describing your own process. "I think", "I notice", "I want to push back on that" — cut the preamble and just make the point.
 
@@ -134,7 +153,7 @@ ADDITIONAL STYLE RULES
 
 Specificity beats warmth. "Your HubSpot internship" beats "your experience." "By Friday" beats "soon." "The final round at Ramp" beats "that interview." Named, dated, concrete.
 
-Conditional framing over lecture. Instead of "You should do X," say "If you're in bucket A, do X; if bucket B, do Y; which one are you in?" This keeps the user driving and avoids assigning homework they can't take.
+Conditional framing over lecture. Instead of "You should do X," say "If you're in bucket A, do X; if bucket B, do Y; which one are you in?" This keeps the user driving and avoids prescribing moves they can't take.
 
 The one question at the end of a response should advance the conversation, not test them. "What part of Stripe do you want to build on?" is a direction question. "What's your GPA?" is a test question. Direction questions only.
 
@@ -2052,6 +2071,20 @@ async def ai_chat(request: Request, body: ChatRequest):
             except Exception:
                 pass
 
+        # ── Session-end detection: Dilly emits [[end_session]] on the
+        # final line when the conversation has reached a natural close.
+        # We strip the token from the visible content and surface a
+        # session_ending flag so the mobile client can replace the
+        # input bar with a "Great session" checkmark — what makes
+        # Dilly feel like an advisor running a session vs. an endless
+        # chatbot. Token is matched flexibly (whitespace, optional
+        # surrounding newlines).
+        session_ending = False
+        if "[[end_session]]" in content.lower() or "[[end_session]]" in content:
+            session_ending = True
+            import re as _re_end
+            content = _re_end.sub(r"\s*\[\[end_session\]\]\s*", "", content, flags=_re_end.IGNORECASE).rstrip()
+
         # ── Auto-attach visual cards based on response content ─────────
         visual = _detect_visual(content, body.student_context, body.mode, email)
 
@@ -2121,6 +2154,7 @@ async def ai_chat(request: Request, body: ChatRequest):
             "conv_cost_usd": conv_cost_usd,
             "conv_cost_breakdown": conv_cost_breakdown,
             "conv_cost_debug": conv_cost_debug,
+            "session_ending": session_ending,
         })
     except Exception as e:
         import traceback

@@ -126,12 +126,29 @@ async def get_profile(request: Request):
         except Exception:
             v2_done = False
         profile["gs_chapter"] = bool(v1_count > 0 or v2_done)
-        # gs_customize: true once the user has changed accent or surface from defaults.
+        # gs_customize: true once the user has changed ANY theme axis
+        # away from defaults. Was checking only accent + surface, so a
+        # user who customized font / density / shape / advisor persona
+        # was stuck with the step open. Now any non-default value flips
+        # it — matches what the user actually thinks of as "customizing".
         _theme = profile.get("theme") or {}
-        profile["gs_customize"] = bool(
-            _theme.get("accent", "indigo") != "indigo"
-            or _theme.get("surface", "cloud") != "cloud"
+        _theme_defaults = {
+            "accent": "indigo",
+            "surface": "cloud",
+            "shape": "rounded",
+            "type": "modern",
+            "density": "comfortable",
+            "style": "solid",
+            "accentStyle": "solid",
+        }
+        _customized_theme = any(
+            _theme.get(k) is not None and _theme.get(k) != v
+            for k, v in _theme_defaults.items()
         )
+        # Advisor persona is a separate field but the user changes it
+        # from the same Customize screen, so it counts.
+        _customized_advisor = bool(profile.get("advisor_persona"))
+        profile["gs_customize"] = bool(_customized_theme or _customized_advisor)
 
         # Fallback: if scores still missing, pull them from the latest audit in audit_history.json
         if not profile.get("overall_dilly_score"):

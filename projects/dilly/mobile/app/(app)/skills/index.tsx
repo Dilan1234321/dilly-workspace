@@ -297,6 +297,24 @@ function FeedLanding() {
       .catch(() => {});
   }, []);
 
+  // Loading screen renders WITHOUT the page header so the user sees a
+  // clean "Dilly is picking" moment instead of double-stacking the
+  // "Skills" wordmark on top of the loading face. Header reappears
+  // once the feed lands.
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center', paddingTop: insets.top, paddingBottom: insets.bottom }}>
+        <DillyFace size={88} mood="curious" accessory="glasses" />
+        <Text style={{ marginTop: 16, fontSize: 13, fontWeight: '600', color: theme.surface.t2, letterSpacing: 0.3 }}>
+          Picking what to learn next…
+        </Text>
+        <Text style={{ marginTop: 4, fontSize: 11, color: theme.surface.t3, textAlign: 'center', maxWidth: 260, lineHeight: 16 }}>
+          Dilly is reading your profile and matching skills tuned to your trajectory.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <>
       <ScrollView
@@ -312,17 +330,7 @@ function FeedLanding() {
 
         <Text style={[feedStyles.subhead, { color: theme.surface.t2 }]}>{copy.subhead}</Text>
 
-        {loading ? (
-          <View style={feedStyles.loadingWrap}>
-            <DillyFace size={88} mood="curious" accessory="glasses" />
-            <Text style={{ marginTop: 16, fontSize: 13, fontWeight: '600', color: theme.surface.t2, letterSpacing: 0.3 }}>
-              Picking what to learn next…
-            </Text>
-            <Text style={{ marginTop: 4, fontSize: 11, color: theme.surface.t3, textAlign: 'center', maxWidth: 260, lineHeight: 16 }}>
-              Dilly is reading your profile and matching skills tuned to your trajectory.
-            </Text>
-          </View>
-        ) : !feed?.hero ? (
+        {!feed?.hero ? (
           <View style={feedStyles.emptyWrap}>
             <Text style={[feedStyles.emptyText, { color: theme.surface.t2 }]}>
               {copy.emptyState}

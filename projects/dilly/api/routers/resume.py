@@ -3377,6 +3377,18 @@ CORE DOCTRINE — VIOLATING ANY OF THESE IS A FAILURE:
    em dashes are a tell of AI-generated writing and the resume must not
    look AI-written. This applies to every string in the output.
 
+9. ONE PAGE MAXIMUM (HARD CONSTRAINT). Every resume Dilly generates
+   must fit on one page. Cut older / less-relevant roles, trim weak
+   bullets, drop sections (Projects, Activities, Awards) before they
+   become page two. This rule overrides the path-specific shape
+   guidance above (e.g. "TWO PAGES OK" for senior_reset) — the user
+   has set a hard one-page rule app-wide. Aim for: ~5 experiences
+   max with 2-4 bullets each, ~2-3 projects max with 1-2 bullets
+   each, contact + education + skills in compact single-line form.
+   If you can't fit everything, KEEP the JD-relevant content and
+   CUT the rest. Better to have a tight, scannable one-pager than
+   a stuffed two-pager that recruiters skim past.
+
 ═══════════════════════════════════════════════════════════════════════
 ATS FORMATTING (specific to this company's parser):
 

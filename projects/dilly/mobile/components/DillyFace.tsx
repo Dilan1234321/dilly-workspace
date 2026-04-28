@@ -119,14 +119,19 @@ function shapeFor(mood: DillyMood): MoodShape {
 /* ─────────────────────────────────────────────────────────────── */
 
 export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true, circular: circularProp }: DillyFaceProps) {
-  // When the pencil accessory is rendered, auto-apply the circular
-  // hero treatment (matches the website's AI coach surface). Pencil
-  // contexts are always "Dilly is thinking / writing" loading screens
-  // and look much more polished with the lavender bg + drop shadow.
-  // Caller can still pass `circular={false}` to opt out.
+  // ALL accessory variants now use the same "pencil-style" base:
+  // circular hero treatment (lavender bg, soft border, drop shadow)
+  // and the bigger eyes that match the website pencil DillyFace.
+  // The accessory (glasses, crown, trophy, briefcase, etc.) renders
+  // ON TOP of that consistent base. So crown = base + crown jewel,
+  // glasses = base + lenses, etc. — every variant feels like the
+  // same character, not a different illustration. Pass
+  // circular={false} explicitly to opt out (used by inline-text
+  // mini-faces like the "log a win" pill).
+  const hasAccessory = accessory && accessory !== 'none';
   const circular = circularProp !== undefined
     ? circularProp
-    : accessory === 'pencil';
+    : hasAccessory;
   const TRAVEL = size * 0.15
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
@@ -402,7 +407,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
               smilePath={smilePath}
               archEyes={shape.archEyes}
               ink={faceInk}
-              eyeBoost={accessory === 'pencil' ? 1.4 : 1}
+              eyeBoost={hasAccessory ? 1.4 : 1}
             />
             {/* Non-pencil accessories (magnifier, paintbrush) still
                 render inside the animated layer so they track with

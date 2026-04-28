@@ -367,6 +367,15 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   const [convCostBreakdown, setConvCostBreakdown] = useState<Array<{ feature: string; calls: number; usd: number }> | null>(null);
   const [convCostDebug, setConvCostDebug] = useState<Record<string, any> | null>(null);
   const [showCostDetail, setShowCostDetail] = useState(false);
+  // Session-end UI: when Dilly decides the conversation has reached
+  // a natural close (returns session_ending: true), we replace the
+  // input bar + suggestions with a celebratory checkmark so the user
+  // feels the session wrapped on a high. This is what differentiates
+  // Dilly from an endless ChatGPT thread — sessions have a beginning,
+  // middle, and end.
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const sessionEndScale = useRef(new Animated.Value(0)).current;
+  const sessionEndOpacity = useRef(new Animated.Value(0)).current;
   const suggestionsOpacity = useRef(new Animated.Value(0)).current;
   const initialMessageSent = useRef(false);
   const pendingInitialMessage = useRef<string | null>(null);
@@ -551,6 +560,20 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       if (data.conv_cost_debug && typeof data.conv_cost_debug === 'object') {
         setConvCostDebug(data.conv_cost_debug);
       }
+      // Dilly says the session has reached a natural close. We delay
+      // setting the flag until after the typing animation finishes
+      // so the closing line lands first, then the input bar swaps.
+      const _shouldEnd = !!data.session_ending;
+      if (_shouldEnd) {
+        // Defer slightly so the user reads the closing message first.
+        setTimeout(() => {
+          setSessionEnded(true);
+          Animated.parallel([
+            Animated.spring(sessionEndScale, { toValue: 1, useNativeDriver: true, tension: 70, friction: 6 }),
+            Animated.timing(sessionEndOpacity, { toValue: 1, duration: 320, useNativeDriver: true }),
+          ]).start();
+        }, 1800);
+      }
 
       // Synchronous memory extraction on the server: new facts are persisted
       // before this JSON returns. Broadcast so My Dilly + ProfileGrowthToast
@@ -684,6 +707,9 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       setConvCostUsd(null);
       setConvCostBreakdown(null);
       setShowCostDetail(false);
+      setSessionEnded(false);
+      sessionEndScale.setValue(0);
+      sessionEndOpacity.setValue(0);
 
       // Hydrate an in-progress chat if one is saved and no new
       // initialMessage seed is coming in. Incoming seed means the
@@ -965,6 +991,9 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                   setConvCostUsd(null);
                   setConvCostBreakdown(null);
                   setShowCostDetail(false);
+                  setSessionEnded(false);
+                  sessionEndScale.setValue(0);
+                  sessionEndOpacity.setValue(0);
                 }}
                 hitSlop={12}
               >
@@ -1090,7 +1119,11 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               return (
               <Wrapper key={msg.id} index={msg.id}>
                 {msg.role === 'user' ? (
-                  <View style={[s.msgRow, { justifyContent: 'flex-end', marginRight: -16 }]}>
+                  // alignSelf:'flex-end' makes the row hug the right
+                  // edge of the parent. Without it, the row was sizing
+                  // to bubble content and justifyContent:flex-end had
+                  // no effect (nothing to "end" against).
+                  <View style={[s.msgRow, { alignSelf: 'flex-end', justifyContent: 'flex-end', marginRight: -16 }]}>
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onLongPress={() => copyMessage(msg.id, msg.content)}
@@ -1171,6 +1204,84 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
             )}
           </ScrollView>
 
+          {/* Session-end celebration. Replaces the input bar +
+              suggestions when Dilly decides the conversation has
+              reached a natural close (server returns
+              session_ending: true after Dilly emits [[end_session]]).
+              Big check + "Great session" text spring in. The user
+              can still scroll the messages, tap "+ new chat" to
+              start fresh, or close the overlay. */}
+          {sessionEnded ? (
+            <Animated.View
+              style={{
+                paddingHorizontal: 24,
+                paddingTop: 18,
+                paddingBottom: insets.bottom + 24,
+                borderTopWidth: 1,
+                borderTopColor: theme.surface.border,
+                alignItems: 'center',
+                opacity: sessionEndOpacity,
+                transform: [{ scale: sessionEndScale }],
+              }}
+            >
+              <View style={{
+                width: 56, height: 56, borderRadius: 28,
+                backgroundColor: theme.accentSoft,
+                alignItems: 'center', justifyContent: 'center',
+                marginBottom: 12,
+              }}>
+                <Ionicons name="checkmark" size={32} color={theme.accent} />
+              </View>
+              <Text style={{
+                fontSize: 17, fontWeight: '800',
+                color: theme.surface.t1,
+                fontFamily: theme.type.display,
+                textAlign: 'center',
+                letterSpacing: 0.3,
+              }}>
+                Great session.
+              </Text>
+              <Text style={{
+                fontSize: 13, color: theme.surface.t2,
+                fontFamily: theme.type.body,
+                marginTop: 6, textAlign: 'center', maxWidth: 280,
+              }}>
+                Go run the moves. Dilly's saving what she learned.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  setSessionEnded(false);
+                  sessionEndScale.setValue(0);
+                  sessionEndOpacity.setValue(0);
+                  setMessages([]);
+                  setRichContext(null);
+                  convIdRef.current = null;
+                  initialMessageSent.current = false;
+                  pendingInitialMessage.current = null;
+                  AsyncStorage.removeItem(LIVE_CHAT_KEY).catch(() => {});
+                  setSuggestions(getInitialSuggestions(studentContext, mode));
+                  suggestionsOpacity.setValue(1);
+                  setConvCostUsd(null);
+                  setConvCostBreakdown(null);
+                }}
+                style={{
+                  marginTop: 18,
+                  paddingHorizontal: 22, paddingVertical: 10,
+                  borderRadius: 22,
+                  backgroundColor: theme.surface.s1,
+                  borderWidth: 1, borderColor: theme.surface.border,
+                  flexDirection: 'row', alignItems: 'center', gap: 8,
+                }}
+              >
+                <Ionicons name="add" size={14} color={theme.surface.t1} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>
+                  Start a new chat
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ) : null}
+
           {/* Memory progress pill - shows user how close they are to
               the threshold where Dilly actually saves things to their
               profile on chat close. Matches LLM_EXTRACTION_MIN_USER_MSGS
@@ -1178,8 +1289,8 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               so the bar feels like a product feature, not a cost gate.
               Disappears once threshold is hit. Never shown when typing
               or when suggestion chips are visible (reduces bottom-bar
-              clutter). */}
-          {(() => {
+              clutter). Hidden when the session has ended. */}
+          {!sessionEnded && (() => {
             // Memory progress pill. Mirrors the backend gate
             // (LLM_EXTRACTION_MIN_USER_MSGS = 5) so the user knows
             // how close they are to having this conversation
@@ -1208,8 +1319,8 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
             );
           })()}
 
-          {/* Suggestion chips */}
-          {suggestions.length > 0 && (
+          {/* Suggestion chips - hidden once Dilly has ended the session */}
+          {!sessionEnded && suggestions.length > 0 && (
             <Animated.View style={{ opacity: suggestionsOpacity }}>
               <ScrollView
                 horizontal
@@ -1278,7 +1389,11 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
             </TouchableOpacity>
           )}
 
-          {/* Input */}
+          {/* Input — hidden once Dilly has ended the session. The
+              "Great session" celebration card replaces it. The user
+              can hit "+ new chat" inside the celebration card to
+              get the input back. */}
+          {!sessionEnded && (
           <View style={[s.inputBar, { paddingBottom: insets.bottom + 10, borderTopColor: theme.surface.border }]}>
             <TextInput
               style={[s.input, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, color: theme.surface.t1 }]}
@@ -1296,6 +1411,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               <Ionicons name="arrow-up" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
+          )}
         </KeyboardAvoidingView>
       </Animated.View>
 

@@ -799,6 +799,26 @@ struct DillyProfileView: View {
         }
     }
 
+    @ViewBuilder
+    private var lockCircular: some View {
+        // Lock-screen circular accessory (~52x52pt). Shows the number of
+        // facts Dilly has captured. Was previously falling through to
+        // `homeMedium` which is sized for ~160pt and got cropped on the
+        // left of the lock-screen slot. Now renders centered, glanceable.
+        ZStack {
+            AccessoryWidgetBackground()
+            VStack(spacing: -2) {
+                Text("\(entry.data.profileFactCount ?? 0)")
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .minimumScaleFactor(0.6)
+                Text("FACTS")
+                    .font(.system(size: 8, weight: .heavy))
+                    .tracking(0.8)
+            }
+        }
+        .widgetURL(URL(string: "dilly:///(app)/my-dilly-profile"))
+    }
+
 
     private var surfacedFact: String? {
         let facts = entry.data.profileRecentFacts ?? []
@@ -817,6 +837,7 @@ struct DillyProfileView: View {
         switch family {
         case .accessoryRectangular: lockRectangular
         case .accessoryInline:      lockInline
+        case .accessoryCircular:    lockCircular
         default:                    homeMedium
         }
     }

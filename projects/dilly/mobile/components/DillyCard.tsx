@@ -15,6 +15,7 @@ import { useRef, useState } from 'react';
 import {
   View, Text, Image, StyleSheet, Dimensions, TouchableOpacity,
   TextInput, ScrollView, Share, Animated, Easing, PanResponder,
+  useColorScheme,
 } from 'react-native';
 import InlineToastView, { useInlineToast } from './InlineToast';
 import { useResolvedTheme } from '../hooks/useTheme';
@@ -59,9 +60,13 @@ interface CardData {
 
 // ── Templates ────────────────────────────────────────────────────────────────
 
-export type CardTemplate = 'photo' | 'clean' | 'dark' | 'statement' | 'navy' | 'sage' | 'coral' | 'midnight' | 'gold' | 'terracotta' | 'slate' | 'pearl';
+export type CardTemplate = 'auto' | 'photo' | 'clean' | 'dark' | 'statement' | 'navy' | 'sage' | 'coral' | 'midnight' | 'gold' | 'terracotta' | 'slate' | 'pearl';
 
 export const CARD_TEMPLATES: { id: CardTemplate; label: string }[] = [
+  // 'auto' resolves to 'photo' (light) or 'dark' depending on the user's
+  // current system color scheme. When the user toggles iOS dark mode the
+  // card flips with the rest of the app.
+  { id: 'auto', label: 'Auto' },
   { id: 'photo', label: 'Default' },
   { id: 'clean', label: 'Clean' },
   { id: 'dark', label: 'Dark' },
@@ -75,6 +80,13 @@ export const CARD_TEMPLATES: { id: CardTemplate; label: string }[] = [
   { id: 'slate', label: 'Slate' },
   { id: 'pearl', label: 'Pearl' },
 ];
+
+/** Resolve 'auto' to a concrete light/dark template based on current
+ *  system color scheme. All other templates pass through unchanged. */
+export function resolveCardTemplate(t: CardTemplate, systemIsDark: boolean): CardTemplate {
+  if (t === 'auto') return systemIsDark ? 'dark' : 'photo';
+  return t;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -134,6 +146,12 @@ function QrBadge({ data, color, size = 44 }: { data: CardData; color: string; si
 // ── Card Front ───────────────────────────────────────────────────────────────
 
 function CardFront({ data, template = 'photo', showQr = false }: { data: CardData; template?: CardTemplate; showQr?: boolean }) {
+  // 'auto' template tracks the phone's current dark/light setting so
+  // toggling iOS Display & Brightness flips the card with the app.
+  // useColorScheme re-renders the component when the system value
+  // changes — no extra wiring needed.
+  const sysScheme = useColorScheme();
+  template = resolveCardTemplate(template, sysScheme === 'dark');
   const initial = data.name ? data.name[0].toUpperCase() : '?';
   const photoWithCache = data.photoUri ? `${data.photoUri}${data.photoUri.includes('?') ? '&' : '?'}_t=${Date.now()}` : null;
 
@@ -495,6 +513,8 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
 // ── Card Back ────────────────────────────────────────────────────────────────
 
 function CardBack({ template = 'photo', username, showQr = false }: { template?: CardTemplate; username?: string; showQr?: boolean }) {
+  const sysScheme = useColorScheme();
+  template = resolveCardTemplate(template, sysScheme === 'dark');
   const isDark = template === 'dark' || template === 'navy' || template === 'midnight' || template === 'slate';
   const bg = isDark
     ? (template === 'navy' ? '#1B2838' : template === 'midnight' ? '#0F1724' : template === 'slate' ? '#1F2933' : '#111111')
@@ -621,12 +641,11 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   const [showBack, setShowBack] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const theme = useResolvedTheme();
-  // Default to the dark card when the user is in a dark surface so we
-  // do not blast a bright white card against a dark background. Other
-  // surfaces start on the photo (Default) variant. The user can still
-  // swipe to any of the 12 templates from there.
-  const _isDarkSurface = (theme.surface?.bg ?? '#FFFFFF').toLowerCase() < '#404040';
-  const [template, setTemplate] = useState<CardTemplate>(_isDarkSurface ? 'dark' : 'photo');
+  // Default to the 'auto' template — it tracks the phone's system
+  // dark/light setting at render time. Toggle iOS Display & Brightness
+  // and the card flips with the rest of the app. User can still swipe
+  // to any of the 13 templates to lock to a specific look.
+  const [template, setTemplate] = useState<CardTemplate>('auto');
   const [showQr, setShowQr] = useState(true);
   const frontRef = useRef<any>(null);
   const backRef = useRef<any>(null);
