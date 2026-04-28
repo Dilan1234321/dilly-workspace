@@ -2125,62 +2125,37 @@ function SeekerProfileScreen() {
           <PulseTimelineSection theme={theme} />
         </FadeInView>
 
-        {/* ── 7. My Resumes ────────────────────────────────────
-            All styling overridden inline with theme.* values so this
-            section honors Customize Dilly. Previously it pulled from
-            the fixed `d.resumeCard` stylesheet (using static colors.*
-            tokens) and ignored Midnight / Cloud / Cream / Blush /
-            Slate. */}
+        {/* ── 7. My Resumes — single CTA into the gallery view, not
+            an inline list. Beautifully built /resumes screen handles
+            the full library so this surface stays compact. */}
         {resumes.length > 0 && (
           <FadeInView delay={400}>
             <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>MY RESUMES</Text>
-            {resumes.slice(0, 5).map((r) => {
-              const date = new Date(r.created_at);
-              const dateStr = `${date.toLocaleString('default', { month: 'short' })} ${date.getDate()}`;
-              return (
-                <AnimatedPressable
-                  key={r.id}
-                  style={[
-                    d.resumeCard,
-                    {
-                      backgroundColor: theme.surface.s1,
-                      borderColor: theme.surface.border,
-                    },
-                  ]}
-                  onPress={() => {
-                    // expo-router Tabs is finicky about hidden-screen
-                    // navigation. After previous attempts (object form
-                    // with /(app)/ prefix, URL string with query param,
-                    // router.navigate) all bounced back to home, the
-                    // workaround that consistently lands on the right
-                    // screen is: use Linking with the dilly:// deep
-                    // link scheme. The app's URL handler resolves it
-                    // through the same router but bypasses the Tabs
-                    // sibling-navigation quirk.
-                    const Linking = require('expo-linking');
-                    Linking.openURL(`dilly:///(app)/resume-generate?viewId=${encodeURIComponent(r.id)}`);
-                  }}
-                  scaleDown={0.98}
-                >
-                  <Ionicons name="document-text-outline" size={18} color={theme.accent} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>{r.job_title}</Text>
-                    <Text style={[d.resumeSub, { color: theme.surface.t3 }]}>{r.company} · {dateStr}</Text>
-                  </View>
-                  <TouchableOpacity
-                    hitSlop={10}
-                    onPress={(e) => {
-                      e.stopPropagation?.();
-                      handleShareResume(r);
-                    }}
-                    style={[d.resumeShareBtn, { backgroundColor: theme.accentSoft }]}
-                  >
-                    <Ionicons name="share-outline" size={16} color={theme.accent} />
-                  </TouchableOpacity>
-                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
-                </AnimatedPressable>
-              );
-            })}
+            <AnimatedPressable
+              style={[d.resumeCard, {
+                backgroundColor: theme.surface.s1,
+                borderColor: theme.surface.border,
+                flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14,
+              }]}
+              onPress={() => {
+                const Linking = require('expo-linking');
+                Linking.openURL('dilly:///(app)/resumes');
+              }}
+              scaleDown={0.98}
+            >
+              <View style={[d.strengthIcon, { backgroundColor: theme.accentSoft }]}>
+                <Ionicons name="documents-outline" size={18} color={theme.accent} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>
+                  See all resumes
+                </Text>
+                <Text style={[d.resumeSub, { color: theme.surface.t3 }]}>
+                  {resumes.length} tailored resume{resumes.length === 1 ? '' : 's'} in your library
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />
+            </AnimatedPressable>
           </FadeInView>
         )}
 
@@ -2330,35 +2305,9 @@ function SeekerProfileScreen() {
           </AnimatedPressable>
         </FadeInView>
 
-        {/* ── 9. Milestones ───────────────────────────────────── */}
-        <FadeInView delay={420}>
-          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR MILESTONES</Text>
-          <View style={{ gap: 6 }}>
-            {totalFacts > 0 && (
-              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
-                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{totalFacts} fact{totalFacts !== 1 ? 's' : ''} in your Dilly Profile</Text>
-              </View>
-            )}
-            {resumes.length > 0 && (
-              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
-                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{resumes.length} tailored resume{resumes.length !== 1 ? 's' : ''} generated</Text>
-              </View>
-            )}
-            {totalFacts === 0 && resumes.length === 0 && (
-              <AnimatedPressable
-                style={[d.milestoneRow, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
-                onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'I just joined Dilly. Help me get started building my profile. Ask me about my experiences, skills, and goals.' })}
-                scaleDown={0.98}
-              >
-                <Ionicons name="chatbubble" size={16} color={theme.accent} />
-                <Text style={[d.milestoneText, { color: theme.accent }]}>Start telling Dilly about yourself to unlock milestones</Text>
-                <Ionicons name="chevron-forward" size={14} color={theme.accent} />
-              </AnimatedPressable>
-            )}
-          </View>
-        </FadeInView>
+        {/* "Your Milestones" section removed per product direction —
+            it duplicated counts already shown by the DILLY KNOWS card
+            at the top + the Memory tab. */}
 
         {/* Refresh reminder */}
         <View style={{ paddingHorizontal: 20, paddingVertical: 16, alignItems: 'center' }}>

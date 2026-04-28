@@ -838,8 +838,65 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
   const { isPaid, loading: subLoading } = useSubscription();
   const showPowerDemo = !subLoading && !isPaid;
   const theme = useResolvedTheme();
+
+  // Profile readiness — pulled live from /memory so the user sees
+  // BEFORE generating whether their Truth Ledger will be strong or
+  // they should chat with Dilly first. Three states:
+  //   thin (< 5 facts) → red, "Tell Dilly more first"
+  //   building (5-19) → amber, "Truth Ledger building"
+  //   ready (20+) → green, "Truth Ledger ready"
+  const [factCount, setFactCount] = useState<number | null>(null);
+  useEffect(() => {
+    dilly.get('/memory').then((data: any) => {
+      const items = data?.items || [];
+      setFactCount(Array.isArray(items) ? items.length : 0);
+    }).catch(() => setFactCount(0));
+  }, []);
+  const readinessTier = factCount === null ? null
+    : factCount < 5 ? 'thin'
+    : factCount < 20 ? 'building'
+    : 'ready';
+  const readinessColors = {
+    thin:     { bg: '#FEE2E2', fg: '#B91C1C', icon: 'shield-outline' as const },
+    building: { bg: '#FEF3C7', fg: '#92400E', icon: 'shield-half' as const },
+    ready:    { bg: '#DCFCE7', fg: '#15803D', icon: 'shield-checkmark' as const },
+  };
+  const readinessCopy = {
+    thin:     'Truth Ledger is thin. Most bullets will be flagged unsourced.',
+    building: 'Truth Ledger is building. Some bullets may need a quick chat to ground.',
+    ready:    'Truth Ledger ready. Every bullet will trace to a real Profile fact.',
+  };
+
   return (
     <FadeInView>
+      {/* Profile Readiness — the strategic anchor for the whole flow.
+          Tells the user upfront whether Dilly can do its best work
+          for them. If thin, the CTA points to chat; if ready, the
+          form below is the path. */}
+      {readinessTier !== null && (
+        <View style={{
+          backgroundColor: readinessColors[readinessTier].bg,
+          borderRadius: 14,
+          padding: 14,
+          marginBottom: 16,
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+        }}>
+          <Ionicons
+            name={readinessColors[readinessTier].icon}
+            size={20}
+            color={readinessColors[readinessTier].fg}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: '900', letterSpacing: 0.8, color: readinessColors[readinessTier].fg, marginBottom: 2 }}>
+              PROFILE READINESS · {factCount} {factCount === 1 ? 'FACT' : 'FACTS'}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#1E293B', lineHeight: 17 }}>
+              {readinessCopy[readinessTier]}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Free-tier nudge - banner only renders for starter users. */}
       <DillyFeatureBanner
         feature="The Forge"
@@ -1205,28 +1262,98 @@ function DonePhase({
     'Role fit': roleFit,
   };
 
+  // Truth Ledger pulled out so we can lead with it as the headline
+  // (most impressive moment) instead of the generic ribbon.
+  const tl = atsInfo?.truth_ledger;
+  const hasLedger = !!(tl && tl.total_bullets > 0);
+  const fullySourced = !!tl?.fully_sourced;
+  const sourcedPct = tl?.sourced_pct ?? 0;
+  const sourcedColor = fullySourced ? '#15803D' : sourcedPct >= 80 ? '#0F766E' : '#92400E';
+  const sourcedBg = fullySourced ? '#DCFCE7' : sourcedPct >= 80 ? '#CCFBF1' : '#FEF3C7';
+
   return (
     <FadeInView>
-      {/* Forged headline - this is the moment */}
-      <View style={styles.forgedHero}>
-        <View style={[styles.forgedGlyph, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-          <Ionicons name="ribbon" size={22} color={theme.accent} />
-        </View>
-        <Text style={[styles.forgedKicker, { color: theme.accent }]}>FORGED</Text>
-        <Text style={[styles.forgedTitle, { color: theme.surface.t1 }]}>
-          for {jobTitle}
-          {'\n'}
-          <Text style={{ color: theme.accent }}>at {company}</Text>
-        </Text>
-        {saved ? (
-          <View style={[styles.savedStrip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-            <Ionicons name="bookmark" size={11} color={theme.accent} />
-            <Text style={[styles.savedStripText, { color: theme.accent }]}>Saved to your Resume Variants</Text>
+      {/* TRUTH LEDGER hero — this is THE moment. Lead with it: the
+          big sourced % is the differentiator no other resume tool
+          (Jobscan, Rezi, Teal, ChatGPT) can show. The job/company is
+          the secondary. */}
+      {hasLedger ? (
+        <View style={{
+          backgroundColor: sourcedBg,
+          borderRadius: 20,
+          padding: 22,
+          marginBottom: 16,
+          alignItems: 'center',
+          borderWidth: 1.5,
+          borderColor: fullySourced ? '#86EFAC' : sourcedPct >= 80 ? '#5EEAD4' : '#FCD34D',
+        }}>
+          <View style={{
+            width: 56, height: 56, borderRadius: 28,
+            backgroundColor: '#FFFFFF',
+            alignItems: 'center', justifyContent: 'center',
+            marginBottom: 10,
+            shadowColor: sourcedColor,
+            shadowOpacity: 0.18,
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 14,
+          }}>
+            <Ionicons
+              name={fullySourced ? 'shield-checkmark' : 'shield-half'}
+              size={30}
+              color={sourcedColor}
+            />
           </View>
-        ) : null}
-      </View>
+          <Text style={{ fontSize: 38, fontWeight: '900', color: sourcedColor, fontFamily: theme.type.display, letterSpacing: -1, lineHeight: 42 }}>
+            {sourcedPct}%
+          </Text>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: sourcedColor, letterSpacing: 1.2, marginTop: -2, marginBottom: 6 }}>
+            SOURCED FROM YOUR PROFILE
+          </Text>
+          <Text style={{ fontSize: 13, color: '#1E293B', textAlign: 'center', maxWidth: 320, lineHeight: 18 }}>
+            {fullySourced
+              ? `Every bullet on this resume traces back to a real fact in your Dilly Profile or your existing resume. Tap any bullet below to see the source.`
+              : `${tl.sourced_bullets} of ${tl.total_bullets} bullets traced to your Profile. Tap red "unsourced" chips to fix.`}
+          </Text>
+          <Text style={{ fontSize: 11, color: '#475569', marginTop: 8, fontStyle: 'italic' }}>
+            Tailored for {jobTitle} at {company}
+          </Text>
+          {saved ? (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              marginTop: 10, paddingHorizontal: 10, paddingVertical: 4,
+              borderRadius: 10, backgroundColor: '#FFFFFF80',
+            }}>
+              <Ionicons name="bookmark" size={10} color={sourcedColor} />
+              <Text style={{ fontSize: 10, fontWeight: '800', color: sourcedColor, letterSpacing: 0.4 }}>
+                SAVED TO YOUR LIBRARY
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : (
+        // Fallback for legacy resumes without truth_ledger data — show
+        // the original ribbon hero so the screen never looks empty.
+        <View style={styles.forgedHero}>
+          <View style={[styles.forgedGlyph, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+            <Ionicons name="ribbon" size={22} color={theme.accent} />
+          </View>
+          <Text style={[styles.forgedKicker, { color: theme.accent }]}>FORGED</Text>
+          <Text style={[styles.forgedTitle, { color: theme.surface.t1 }]}>
+            for {jobTitle}
+            {'\n'}
+            <Text style={{ color: theme.accent }}>at {company}</Text>
+          </Text>
+          {saved ? (
+            <View style={[styles.savedStrip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+              <Ionicons name="bookmark" size={11} color={theme.accent} />
+              <Text style={[styles.savedStripText, { color: theme.accent }]}>Saved to your Resume Variants</Text>
+            </View>
+          ) : null}
+        </View>
+      )}
 
-      {/* Scorecard - reads like a hiring rubric */}
+      {/* Scorecard now SECONDARY, smaller. ATS still matters but the
+          Truth Ledger above is the hero. */}
       <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>ATS READINESS</Text>
       <View style={[styles.scorecardCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         {Object.entries(scorecard).map(([label, value]) => (
@@ -1234,29 +1361,25 @@ function DonePhase({
         ))}
       </View>
 
-      {/* TRUTH LEDGER trust badge — every bullet on this resume traces
-          back to a captured Dilly Profile fact or your existing resume.
-          The single biggest reason students don't trust AI-written
-          resumes is "did the model invent something?" — this badge
-          tells them no, and they can tap each bullet to see where it
-          came from. */}
-      {atsInfo?.truth_ledger && atsInfo.truth_ledger.total_bullets > 0 && (
+      {/* Detailed Truth Ledger callout — only when bullets are unsourced.
+          When fully sourced the hero already says it; no need to repeat. */}
+      {hasLedger && !fullySourced && (
         <View style={[
           styles.scorecardCard,
           {
             backgroundColor: theme.surface.s1,
-            borderColor: atsInfo.truth_ledger.fully_sourced ? '#86EFAC' : theme.surface.border,
+            borderColor: theme.surface.border,
             marginTop: 12,
           },
         ]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons
-              name={atsInfo.truth_ledger.fully_sourced ? 'shield-checkmark' : 'shield-half'}
+              name="shield-half"
               size={18}
-              color={atsInfo.truth_ledger.fully_sourced ? '#15803D' : theme.surface.t2}
+              color={theme.surface.t2}
             />
             <Text style={{ fontSize: 13, fontWeight: '800', color: theme.surface.t1, letterSpacing: 0.2, flex: 1 }}>
-              {atsInfo.truth_ledger.fully_sourced
+              {tl.fully_sourced
                 ? '100% sourced from your profile'
                 : `${atsInfo.truth_ledger.sourced_pct}% of bullets sourced`}
             </Text>

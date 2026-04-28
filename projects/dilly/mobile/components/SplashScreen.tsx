@@ -261,12 +261,16 @@ export default function SplashScreen({ onDismiss }: Props) {
       <Animated.View style={[ss.orbWrap, { transform: [{ scale: orbScale }] }]}>
         <RippleRing delay={0} borderColor={theme.accent} />
         <RippleRing delay={1000} borderColor={theme.accent} />
-        {/* Pencil-variant DillyFace from the website. The pencil
-            accessory auto-applies the circular hero treatment with
-            soft drop shadow + bigger website-matched eyes, so we
-            drop the old orbOuter/orbInner wrappers. The ripple rings
-            still pulse out behind it. */}
-        <DillyFace size={156} mood="writing" accessory="pencil" />
+        {/* Website-style DillyFace — bigger eyes (eyeBoost=1.4 to
+            match the pencil hero variant) but no pencil accessory
+            and no circular treatment. Just the face on its own,
+            sized for the splash. The ripple rings still pulse
+            behind it for life. */}
+        <View style={[ss.orbOuter, { borderColor: theme.accentBorder }]}>
+          <View style={[ss.orbInner, { backgroundColor: theme.surface.bg, borderColor: theme.accent }]}>
+            <DillyFace size={156} eyeBoost={1.4} ring={false} />
+          </View>
+        </View>
       </Animated.View>
 
       <Animated.View style={[ss.contentBlock, { opacity: contentOpacity }]}>

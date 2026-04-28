@@ -118,7 +118,7 @@ function shapeFor(mood: DillyMood): MoodShape {
 /* DillyFace                                                       */
 /* ─────────────────────────────────────────────────────────────── */
 
-export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true, circular: circularProp }: DillyFaceProps) {
+export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true, circular: circularProp, eyeBoost: eyeBoostProp }: DillyFaceProps & { eyeBoost?: number }) {
   // ALL accessory variants now use the same "pencil-style" base:
   // circular hero treatment (lavender bg, soft border, drop shadow)
   // and the bigger eyes that match the website pencil DillyFace.
@@ -128,10 +128,14 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   // same character, not a different illustration. Pass
   // circular={false} explicitly to opt out (used by inline-text
   // mini-faces like the "log a win" pill).
+  // eyeBoost can be passed independently — used by the splash screen
+  // to render the website-style bigger eyes WITHOUT the pencil
+  // accessory or circular treatment.
   const hasAccessory = accessory && accessory !== 'none';
   const circular = circularProp !== undefined
     ? circularProp
     : hasAccessory;
+  const resolvedEyeBoost = eyeBoostProp !== undefined ? eyeBoostProp : (hasAccessory ? 1.4 : 1);
   const TRAVEL = size * 0.15
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
@@ -407,7 +411,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
               smilePath={smilePath}
               archEyes={shape.archEyes}
               ink={faceInk}
-              eyeBoost={hasAccessory ? 1.4 : 1}
+              eyeBoost={resolvedEyeBoost}
             />
             {/* Non-pencil accessories (magnifier, paintbrush) still
                 render inside the animated layer so they track with
