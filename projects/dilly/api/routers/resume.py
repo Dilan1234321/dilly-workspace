@@ -2958,6 +2958,46 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
     readiness = 'ready'  # ready | gaps | not_ready
     gaps_detail = ''
     check_data = {}
+
+    # Hard pre-gate: if the user has essentially nothing in their
+    # Profile AND no existing resume bullets, no LLM call can fix it —
+    # there's nothing to source from. Skip Haiku and return not_ready
+    # immediately with concrete first-step prompts. This saves an LLM
+    # call AND gets the user into the "tell Dilly more" flow faster.
+    # Thresholds: < 5 profile facts AND < 5 original bullets in the
+    # tagged base_sections (we set _cite_id on every bullet above, so
+    # bullet_id_map's size is the real bullet count).
+    _facts_count = len(selected_facts) if selected_facts else 0
+    _bullets_count = len(bullet_id_map)
+    if _facts_count < 5 and _bullets_count < 5:
+        return JSONResponse({
+            "not_ready": True,
+            "summary": (
+                "Dilly doesn't know enough about you yet to build a real "
+                "resume for this role. Right now there are "
+                f"{_facts_count} fact{'s' if _facts_count != 1 else ''} "
+                f"in your Dilly Profile and {_bullets_count} bullet"
+                f"{'s' if _bullets_count != 1 else ''} on your existing "
+                "resume. Talk to Dilly for a few minutes about your "
+                "experience, projects, and skills, then come back."
+            ),
+            "gaps": [
+                "Your work or internship experience and what you actually did",
+                "Projects you've built (technical or otherwise) with details",
+                "Skills, tools, languages you're proficient with",
+                f"Anything specific to {job_title} roles you've touched",
+            ],
+            "ats": job_ats,
+            "tell_dilly_prompts": [
+                "Help me get my Dilly Profile started — ask me about my background.",
+                f"Ask me about projects I've built that would matter for a {job_title} role.",
+                f"Ask me about skills I have that fit {job_company}.",
+                "Ask me about my most impressive accomplishment so we can put it on my resume.",
+            ],
+            "facts_available": _facts_count,
+            "profile_too_thin": True,  # mobile can render a stronger empty state
+        })
+
     try:
         import anthropic
         client_check = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
