@@ -837,34 +837,48 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              {/* Locked rows. Each shows a real feature + its Starter
-                  constraint, dimmed so it reads as 'you almost have
-                  this.' Triggers the click: 'I already want that, I
-                  just don't have it.' */}
+              {/* Two-tier comparison. Dilly ($9.99) and Dilly Pro
+                  ($14.99) sit side by side. Pro is identical to Dilly
+                  in every feature column EXCEPT unlimited AI usage —
+                  framed as the single, sharp upgrade reason. No
+                  feature-list differentiation games. */}
               <View style={{ gap: 10, marginTop: 18 }}>
-                {[
-                  { label: 'Fit reads on every job', limit: 'Locked on Starter' },
-                  { label: 'Resumes tailored per role', limit: '1 / month on Starter' },
-                  { label: 'A coach that remembers you', limit: 'Basic memory on Starter' },
-                ].map((row, i) => (
-                  <View key={i} style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 10,
-                    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10,
-                    backgroundColor: theme.surface.s1,
-                    borderWidth: 1, borderColor: theme.surface.border,
-                  }}>
-                    <Ionicons name="lock-closed" size={13} color={theme.surface.t3} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>{row.label}</Text>
-                      <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 1 }}>{row.limit}</Text>
-                    </View>
+                <View style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
+                  backgroundColor: theme.surface.s1,
+                  borderWidth: 1, borderColor: theme.surface.border,
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: theme.surface.t1, letterSpacing: 0.1 }}>Dilly</Text>
+                    <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 2, lineHeight: 15 }}>
+                      Fit reads, tailored resumes, the full coach. Daily AI usage cap.
+                    </Text>
                   </View>
-                ))}
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: theme.surface.t1 }}>$9.99<Text style={{ fontSize: 10, fontWeight: '700', color: theme.surface.t3 }}>/mo</Text></Text>
+                </View>
+                <View style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
+                  backgroundColor: theme.accentSoft,
+                  borderWidth: 2, borderColor: theme.accent,
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: theme.surface.t1, letterSpacing: 0.1 }}>Dilly Pro</Text>
+                      <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: theme.accent }}>
+                        <Text style={{ fontSize: 8, fontWeight: '900', color: '#fff', letterSpacing: 0.6 }}>UNLIMITED AI</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, color: theme.surface.t2, marginTop: 2, lineHeight: 15 }}>
+                      Everything in Dilly + no AI usage caps. The only difference.
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: theme.accent }}>$14.99<Text style={{ fontSize: 10, fontWeight: '700', color: theme.surface.t3 }}>/mo</Text></Text>
+                </View>
               </View>
 
-              {/* CTA. Unambiguous verb, accent bg, arrow to signal
-                  forward motion. The price line underneath is small
-                  enough to look like a note, not a price tag. */}
+              {/* CTA. Routes to pricing page where they pick the tier. */}
               <AnimatedPressable
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -877,12 +891,12 @@ export default function SettingsScreen() {
                 scaleDown={0.97}
               >
                 <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.2 }}>
-                  Upgrade to Dilly
+                  Pick a Dilly plan
                 </Text>
                 <Ionicons name="arrow-forward" size={16} color="#fff" />
               </AnimatedPressable>
               <Text style={{ fontSize: 11, color: theme.surface.t3, textAlign: 'center', marginTop: 8 }}>
-                $9.99/mo. Cancel anytime.
+                Cancel anytime.
               </Text>
 
               {/* Promo code row - keeps the 'Have a promo code?' affordance

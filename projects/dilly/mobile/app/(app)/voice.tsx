@@ -76,7 +76,7 @@ export default function VoiceScreen() {
         activeOpacity={0.75}
       >
         <View style={s.faceRing}>
-          <DillyFace size={96} mood="attentive" accessory="headphones" />
+          <DillyFace size={120} mood="attentive" accessory="headphones" circular />
         </View>
         <Text style={[s.tapLabel, { color: theme.surface.t1 }]}>Tap to talk to Dilly</Text>
         <Text style={[s.tapSub, { color: theme.surface.t3 }]}>AI coaching, interview prep, career advice</Text>

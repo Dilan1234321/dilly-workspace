@@ -448,8 +448,14 @@ function ThemedAppStack({ pathname }: { pathname: string }) {
       <Stack screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: theme.surface.bg },
-        animation: 'fade',
-        animationDuration: 250,
+        // Premium iOS-style horizontal slide instead of plain fade —
+        // gives the app a more deliberate, native feel on every push.
+        // 320ms + ease-out feels polished without dragging.
+        animation: 'slide_from_right',
+        animationDuration: 320,
+        animationTypeForReplace: 'push',
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
       }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />

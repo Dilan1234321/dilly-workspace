@@ -165,7 +165,7 @@ const OPTIONS: Situation[] = [
       'Unwritten rules made explicit (networking, thank-yous, what business casual actually means)',
       'Work-during-school hours treated as real resume material',
     ],
-    needsEdu: true,
+    needsEdu: false,
   },
   {
     id: 'parent_returning',

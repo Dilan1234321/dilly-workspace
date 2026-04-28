@@ -334,16 +334,30 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   // with a margin. Here we keep the face coords unchanged so it
   // looks right.
 
+  // Circular hero treatment matches the website's AI coach surface:
+  // larger soft cool-lavender bg, thin navy border, elevated shadow.
+  // Trumps the regular `ring` prop when set — they don't compose.
+  const circularBorder = circular ? Math.max(1.5, Math.round(size * 0.012)) : 0
   return (
-    <View style={{ width: outerW, height: outerH }}>
+    <View style={{
+      width: outerW,
+      height: outerH,
+      ...(circular ? {
+        shadowColor: '#001b44',
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 8 },
+        shadowRadius: 22,
+        elevation: 12,
+      } : null),
+    }}>
       <View
         style={{
           width: size,
           height: size,
           borderRadius: size / 2,
-          borderWidth: ring ? ringBorder : 0,
-          borderColor: ring ? theme.accent : 'transparent',
-          backgroundColor: ring ? theme.accentSoft : 'transparent',
+          borderWidth: circular ? circularBorder : (ring ? ringBorder : 0),
+          borderColor: circular ? 'rgba(43,58,142,0.12)' : (ring ? theme.accent : 'transparent'),
+          backgroundColor: circular ? '#F5F6FF' : (ring ? theme.accentSoft : 'transparent'),
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
@@ -385,6 +399,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
                 color={accessoryColor || faceInk}
                 scribbleAnim={mood === 'writing' ? scribbleAnim : null}
                 pulseAnim={pulseAnim}
+                mood={mood}
               />
             )}
           </Svg>
@@ -549,18 +564,54 @@ interface AccessoryProps {
   isDark?: boolean
 }
 
-function Accessory({ kind, cx, cy, s, color, scribbleAnim, pulseAnim, isDark }: AccessoryProps) {
+function Accessory({ kind, cx, cy, s, color, scribbleAnim, pulseAnim, isDark, mood }: AccessoryProps & { mood?: DillyMood }) {
   switch (kind) {
     case 'pencil':     return <PencilAccessory cx={cx} cy={cy} s={s} color={color} scribbleAnim={scribbleAnim} isDark={isDark} />
     case 'magnifier':  return <MagnifierAccessory cx={cx} cy={cy} s={s} color={color} />
     case 'paintbrush': return <PaintbrushAccessory cx={cx} cy={cy} s={s} color={color} />
     case 'crown':      return <CrownAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
-    case 'briefcase':  return <BriefcaseAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
+    case 'briefcase':  return <BriefcaseAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} mood={mood} />
     case 'headphones': return <HeadphonesAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
     case 'glasses':    return <GlassesAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
-    case 'trophy':     return <TrophyAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
+    case 'trophy':     return <TrophyAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} mood={mood} />
     case 'compass':    return <CompassAccessory cx={cx} cy={cy} s={s} color={color} pulseAnim={pulseAnim} />
     default:           return null
+  }
+}
+
+// Mood → trophy palette + tilt. Reads at a glance: gold celebrating
+// trophy reads "win," dimmed silver one reads "thinking about a win,"
+// concerned tilts the trophy downward like it's slipping.
+function trophyMoodStyle(mood?: DillyMood): { gold: string; goldDark: string; rotate: number; scale: number } {
+  switch (mood) {
+    case 'celebrating': return { gold: '#FFD24A', goldDark: '#C68A1A', rotate: -8,  scale: 1.08 }
+    case 'proud':       return { gold: '#F2C84B', goldDark: '#B88A1F', rotate: -3,  scale: 1.04 }
+    case 'happy':
+    case 'warm':        return { gold: '#E5B143', goldDark: '#B88A1F', rotate: -2,  scale: 1.02 }
+    case 'thinking':
+    case 'thoughtful':  return { gold: '#C9C2B5', goldDark: '#7E7768', rotate:  4,  scale: 0.96 }
+    case 'concerned':   return { gold: '#A89A75', goldDark: '#6B5F45', rotate:  10, scale: 0.92 }
+    default:            return { gold: '#E5B143', goldDark: '#B88A1F', rotate:  0,  scale: 1.00 }
+  }
+}
+
+// Mood → briefcase palette + tilt. Confident sits upright in rich
+// leather; attentive leans forward like Dilly is presenting it;
+// thoughtful tilts back like Dilly is reading from it; concerned
+// dips the case as if heavy.
+function briefcaseMoodStyle(mood?: DillyMood): { leather: string; leatherDark: string; rotate: number } {
+  switch (mood) {
+    case 'confident':
+    case 'direct':
+    case 'proud':       return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate: -3 }
+    case 'attentive':
+    case 'focused':     return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  5 }
+    case 'curious':
+    case 'open':        return { leather: '#4A3823', leatherDark: '#2F2415', rotate: -6 }
+    case 'thinking':
+    case 'thoughtful':  return { leather: '#5A4938', leatherDark: '#3A2D22', rotate:  0 }
+    case 'concerned':   return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  8 }
+    default:            return { leather: '#3F2E1B', leatherDark: '#2A1F12', rotate:  0 }
   }
 }
 
@@ -599,9 +650,10 @@ function CrownAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scr
 /** Briefcase for Jobs / Internship Tracker surfaces. Sits in the
  *  bottom-right hand zone like the pencil. Leather-brown body with a
  *  brass clasp + arched handle. */
-function BriefcaseAccessory({ cx, cy, s }: Omit<AccessoryProps, 'kind' | 'scribbleAnim' | 'color'> & { color?: string }) {
-  const LEATHER = '#3F2E1B'
-  const LEATHER_DARK = '#2A1F12'
+function BriefcaseAccessory({ cx, cy, s, mood }: Omit<AccessoryProps, 'kind' | 'scribbleAnim' | 'color'> & { color?: string; mood?: DillyMood }) {
+  const m = briefcaseMoodStyle(mood)
+  const LEATHER = m.leather
+  const LEATHER_DARK = m.leatherDark
   const BRASS = '#B88A1F'
   const HIGHLIGHT = '#5C4626'
   // Sized + placed to occupy the pencil's hand zone (cx+11..cx+22,
@@ -620,13 +672,17 @@ function BriefcaseAccessory({ cx, cy, s }: Omit<AccessoryProps, 'kind' | 'scribb
   const claspW = 2.4 * s
   const claspH = 1.2 * s
   const stitchY = bodyY + bodyH * 0.45
+  // Pivot rotation around the briefcase's own center so the tilt
+  // looks intentional rather than spinning off the face center.
+  const pivotX = bodyX + bodyW / 2
+  const pivotY = bodyY + bodyH / 2
   return (
-    <>
+    <G transform={`rotate(${m.rotate} ${pivotX} ${pivotY})`}>
       <Rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={cornerR} ry={cornerR} fill={LEATHER} stroke={LEATHER_DARK} strokeWidth={0.5 * s} />
       <Path d={handlePath} stroke={LEATHER_DARK} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
       <Line x1={bodyX + 0.5 * s} y1={stitchY} x2={bodyX + bodyW - 0.5 * s} y2={stitchY} stroke={HIGHLIGHT} strokeWidth={0.3 * s} />
       <Rect x={claspX} y={claspY} width={claspW} height={claspH} rx={0.2 * s} ry={0.2 * s} fill={BRASS} />
-    </>
+    </G>
   )
 }
 
@@ -690,9 +746,10 @@ function GlassesAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, 
 
 /** Gold trophy held up in the bottom-right hand zone. Tapered cup with
  *  side handles, stem, and base. Same gold family as the crown. */
-function TrophyAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
-  const GOLD = '#E5B143'
-  const GOLD_DARK = '#B88A1F'
+function TrophyAccessory({ cx, cy, s, color, pulseAnim, mood }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'> & { mood?: DillyMood }) {
+  const m = trophyMoodStyle(mood)
+  const GOLD = m.gold
+  const GOLD_DARK = m.goldDark
   // Sized + placed to occupy the pencil's hand zone. Cup spans
   // cx+11..cx+22 horizontally, cy+5..cy+16 vertically.
   const cupTopY = cy + 5 * s
@@ -712,8 +769,13 @@ function TrophyAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, '
   const cupPath = `M ${cupTopL} ${cupTopY} L ${cupTopR} ${cupTopY} L ${cupBotR} ${cupBottomY} L ${cupBotL} ${cupBottomY} Z`
   const handleLPath = `M ${cupTopL} ${cupTopY + 0.5 * s} Q ${cupTopL - 1.8 * s} ${(cupTopY + cupMidY) / 2} ${cupTopL + 0.4 * s} ${cupMidY}`
   const handleRPath = `M ${cupTopR} ${cupTopY + 0.5 * s} Q ${cupTopR + 1.8 * s} ${(cupTopY + cupMidY) / 2} ${cupTopR - 0.4 * s} ${cupMidY}`
+  // Pivot rotation around the trophy's center so happy moods give a
+  // subtle "raise the trophy" tilt + pop, while thoughtful/concerned
+  // moods dim it and tilt it down.
+  const pivotX = (cupTopL + cupTopR) / 2
+  const pivotY = (cupTopY + baseBottomY) / 2
   return (
-    <>
+    <G transform={`translate(${pivotX} ${pivotY}) scale(${m.scale}) rotate(${m.rotate}) translate(${-pivotX} ${-pivotY})`}>
       <Path d={handleLPath} stroke={GOLD} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
       <Path d={handleRPath} stroke={GOLD} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
       <Path d={cupPath} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.4 * s} strokeLinejoin="round" />
@@ -732,7 +794,7 @@ function TrophyAccessory({ cx, cy, s, color, pulseAnim }: Omit<AccessoryProps, '
             opacity={pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 1, 0.2] }) as any} />
         </>
       )}
-    </>
+    </G>
   )
 }
 
