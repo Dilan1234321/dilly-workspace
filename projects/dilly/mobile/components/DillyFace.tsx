@@ -676,13 +676,26 @@ function BriefcaseAccessory({ cx, cy, s, mood }: Omit<AccessoryProps, 'kind' | '
   // looks intentional rather than spinning off the face center.
   const pivotX = bodyX + bodyW / 2
   const pivotY = bodyY + bodyH / 2
+  // Live swing animation: pulseAnim drives an extra ±4° wobble on
+  // top of the mood-base rotation. Reads as Dilly walking with the
+  // case — gentle and continuous, not jittery.
+  const swingTransform = pulseAnim
+    ? (pulseAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [
+          `rotate(${m.rotate - 4} ${pivotX} ${pivotY})`,
+          `rotate(${m.rotate + 4} ${pivotX} ${pivotY})`,
+          `rotate(${m.rotate - 4} ${pivotX} ${pivotY})`,
+        ],
+      }) as any)
+    : `rotate(${m.rotate} ${pivotX} ${pivotY})`
   return (
-    <G transform={`rotate(${m.rotate} ${pivotX} ${pivotY})`}>
+    <AnimatedG transform={swingTransform}>
       <Rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={cornerR} ry={cornerR} fill={LEATHER} stroke={LEATHER_DARK} strokeWidth={0.5 * s} />
       <Path d={handlePath} stroke={LEATHER_DARK} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
       <Line x1={bodyX + 0.5 * s} y1={stitchY} x2={bodyX + bodyW - 0.5 * s} y2={stitchY} stroke={HIGHLIGHT} strokeWidth={0.3 * s} />
       <Rect x={claspX} y={claspY} width={claspW} height={claspH} rx={0.2 * s} ry={0.2 * s} fill={BRASS} />
-    </G>
+    </AnimatedG>
   )
 }
 
@@ -774,8 +787,21 @@ function TrophyAccessory({ cx, cy, s, color, pulseAnim, mood }: Omit<AccessoryPr
   // moods dim it and tilt it down.
   const pivotX = (cupTopL + cupTopR) / 2
   const pivotY = (cupTopY + baseBottomY) / 2
+  // Live bounce animation: pulseAnim drives a small Y translation +
+  // scale wobble on top of the mood-base transform. Reads as a real
+  // celebratory bounce, not a static decal.
+  const bounceTransform = pulseAnim
+    ? (pulseAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [
+          `translate(${pivotX} ${pivotY + 0.8 * s}) scale(${m.scale * 0.97}) rotate(${m.rotate}) translate(${-pivotX} ${-pivotY})`,
+          `translate(${pivotX} ${pivotY - 1.2 * s}) scale(${m.scale * 1.03}) rotate(${m.rotate - 2}) translate(${-pivotX} ${-pivotY})`,
+          `translate(${pivotX} ${pivotY + 0.8 * s}) scale(${m.scale * 0.97}) rotate(${m.rotate}) translate(${-pivotX} ${-pivotY})`,
+        ],
+      }) as any)
+    : `translate(${pivotX} ${pivotY}) scale(${m.scale}) rotate(${m.rotate}) translate(${-pivotX} ${-pivotY})`
   return (
-    <G transform={`translate(${pivotX} ${pivotY}) scale(${m.scale}) rotate(${m.rotate}) translate(${-pivotX} ${-pivotY})`}>
+    <AnimatedG transform={bounceTransform}>
       <Path d={handleLPath} stroke={GOLD} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
       <Path d={handleRPath} stroke={GOLD} strokeWidth={0.9 * s} fill="none" strokeLinecap="round" />
       <Path d={cupPath} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.4 * s} strokeLinejoin="round" />
@@ -794,7 +820,7 @@ function TrophyAccessory({ cx, cy, s, color, pulseAnim, mood }: Omit<AccessoryPr
             opacity={pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 1, 0.2] }) as any} />
         </>
       )}
-    </G>
+    </AnimatedG>
   )
 }
 

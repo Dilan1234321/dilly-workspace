@@ -261,22 +261,36 @@ function FeedLanding() {
       const { donateActivity, ACTIVITY_SKILLS } = require('../../../lib/siriDonations');
       donateActivity?.(ACTIVITY_SKILLS);
     } catch {}
+    // Minimum 3.5s loading dwell so the DillyFace + "Picking what to
+    // learn next" copy actually registers. Real fetches usually
+    // complete in <500ms, which made the loading state flash through
+    // and feel like nothing was thinking.
+    const minLoadingMs = 3500;
+    const startedAt = Date.now();
     (dilly as any).get('/skill-lab/feed')
       .then((data: FeedData) => {
-        setFeed(data);
-        // Index the user's queue + hero into Spotlight so a search
-        // for "Python" or "SQL" surfaces the actual videos Dilly is
-        // surfacing for them, not just the generic Skills section.
-        try {
-          const { indexSkills } = require('../../../lib/spotlight');
-          const items: any[] = [];
-          if (data?.hero) items.push({ id: String(data.hero.id), title: data.hero.title || 'Skill' });
-          (data?.queue || []).forEach((v: any) => items.push({ id: String(v.id), title: v.title || 'Skill' }));
-          if (items.length) indexSkills?.(items);
-        } catch {}
+        const elapsed = Date.now() - startedAt;
+        const wait = Math.max(0, minLoadingMs - elapsed);
+        setTimeout(() => {
+          setFeed(data);
+          try {
+            const { indexSkills } = require('../../../lib/spotlight');
+            const items: any[] = [];
+            if (data?.hero) items.push({ id: String(data.hero.id), title: data.hero.title || 'Skill' });
+            (data?.queue || []).forEach((v: any) => items.push({ id: String(v.id), title: v.title || 'Skill' }));
+            if (items.length) indexSkills?.(items);
+          } catch {}
+          setLoading(false);
+        }, wait);
       })
-      .catch(() => setFeed({ hero: null, queue: [], cohort_slug: null, user_cohort: null, cohort_preview: [] }))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        const elapsed = Date.now() - startedAt;
+        const wait = Math.max(0, minLoadingMs - elapsed);
+        setTimeout(() => {
+          setFeed({ hero: null, queue: [], cohort_slug: null, user_cohort: null, cohort_preview: [] });
+          setLoading(false);
+        }, wait);
+      });
 
     (dilly as any).get('/profile')
       .then((profile: any) => setAppMode(getAppMode(profile)))

@@ -16,7 +16,7 @@
       "supportsTablet": false,
       "appleTeamId": "F46NQK75DK",
       "bundleIdentifier": "com.dilly.app",
-      "buildNumber": "451",
+      "buildNumber": "452",
       "deploymentTarget": "16.0",
       "infoPlist": {
         "NSAppTransportSecurity": {

@@ -2068,17 +2068,17 @@ function SeekerProfileScreen() {
                     },
                   ]}
                   onPress={() => {
-                    // The object-form router.push to a hidden Tabs.Screen
-                    // was bouncing back to the home tab. Switching to the
-                    // URL-string form (with query param baked in) lands
-                    // on resume-generate consistently. router.navigate is
-                    // also more permissive than push for sibling Tabs.
-                    const url = `/(app)/resume-generate?viewId=${encodeURIComponent(r.id)}`;
-                    try {
-                      (router as any).navigate(url);
-                    } catch {
-                      router.push(url as any);
-                    }
+                    // expo-router Tabs is finicky about hidden-screen
+                    // navigation. After previous attempts (object form
+                    // with /(app)/ prefix, URL string with query param,
+                    // router.navigate) all bounced back to home, the
+                    // workaround that consistently lands on the right
+                    // screen is: use Linking with the dilly:// deep
+                    // link scheme. The app's URL handler resolves it
+                    // through the same router but bypasses the Tabs
+                    // sibling-navigation quirk.
+                    const Linking = require('expo-linking');
+                    Linking.openURL(`dilly:///(app)/resume-generate?viewId=${encodeURIComponent(r.id)}`);
                   }}
                   scaleDown={0.98}
                 >
