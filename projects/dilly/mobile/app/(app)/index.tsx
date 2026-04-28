@@ -116,30 +116,135 @@ interface JourneyStep {
   onPress: () => void;
 }
 
-function JourneyStepCard({ step }: { step: JourneyStep }) {
-  const theme = useResolvedTheme();
+/** ProgressRing — SVG-free ring built from two layered circles using
+ *  borderColor masking. Cheap, themeable, animates by component re-render
+ *  when `pct` changes. Shows the count "n / total" centered. */
+function ProgressRing({ done, total, color, soft, faceInk, size = 78 }: {
+  done: number; total: number; color: string; soft: string; faceInk: string; size?: number;
+}) {
+  const stroke = 6;
+  const inner = size - stroke * 2;
+  const pct = total > 0 ? done / total : 0;
+  // Conic-style fill via N stacked sectors. Cheap approximation: rotate
+  // a half-circle-of-color clip so the progress wedge expands as pct goes
+  // from 0 -> 1. Done with two stacked rotated views — no extra deps.
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Track */}
+      <View style={{
+        position: 'absolute',
+        width: size, height: size, borderRadius: size / 2,
+        borderWidth: stroke, borderColor: soft,
+      }} />
+      {/* Progress arc — cheap visual approximation: a colored ring whose
+          opacity scales with completion. Not a true conic gradient, but
+          reads cleanly in product and avoids the Skia/Reanimated path
+          dependency just for one ring. */}
+      <View style={{
+        position: 'absolute',
+        width: size, height: size, borderRadius: size / 2,
+        borderWidth: stroke,
+        borderColor: 'transparent',
+        borderTopColor: pct > 0 ? color : 'transparent',
+        borderRightColor: pct > 0.25 ? color : 'transparent',
+        borderBottomColor: pct > 0.5 ? color : 'transparent',
+        borderLeftColor: pct > 0.75 ? color : 'transparent',
+        transform: [{ rotate: '-45deg' }],
+      }} />
+      <Text style={{
+        fontSize: 22, fontWeight: '900', color: faceInk,
+        letterSpacing: -0.5, lineHeight: 24,
+      }}>{done}<Text style={{ fontSize: 12, color: faceInk, fontWeight: '700', opacity: 0.5 }}>/{total}</Text></Text>
+    </View>
+  );
+}
+
+/** Featured next-up card — the single biggest action surface. Bold accent
+ *  background, big icon, headline + sub + CTA chevron. Tap = navigate. */
+function NextUpCard({ step, accent, accentSoft, onSurface }: {
+  step: JourneyStep; accent: string; accentSoft: string; onSurface: string;
+}) {
   return (
     <AnimatedPressable
-      style={[
-        s.journeyCard,
-        { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
-        step.completed && s.journeyCardDone,
-      ]}
       onPress={step.onPress}
-      scaleDown={0.98}
+      scaleDown={0.97}
+      style={{
+        marginTop: 12,
+        padding: 16,
+        borderRadius: 18,
+        backgroundColor: accentSoft,
+        borderWidth: 1,
+        borderColor: accent + '33',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+      }}
     >
-      <View style={[s.journeyIcon, { backgroundColor: step.completed ? colors.green + '15' : step.color + '12' }]}>
-        {step.completed ? (
-          <Ionicons name="checkmark-circle" size={20} color={colors.green} />
-        ) : (
-          <Ionicons name={step.icon as any} size={18} color={step.color} />
-        )}
+      <View style={{
+        width: 52, height: 52, borderRadius: 16,
+        backgroundColor: accent,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name={step.icon as any} size={24} color={'#FFFFFF'} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[s.journeyTitle, { color: theme.surface.t1 }, step.completed && { color: theme.surface.t3 }]}>{step.title}</Text>
-        <Text style={[s.journeySub, { color: theme.surface.t2 }]}>{step.subtitle}</Text>
+        <Text style={{ fontSize: 9, fontWeight: '900', letterSpacing: 1.4, color: accent, marginBottom: 2 }}>
+          NEXT UP
+        </Text>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: onSurface, letterSpacing: -0.2 }}>
+          {step.title}
+        </Text>
+        <Text style={{ fontSize: 12, color: onSurface, opacity: 0.7, marginTop: 2, lineHeight: 16 }}>
+          {step.subtitle}
+        </Text>
       </View>
-      <Ionicons name="chevron-forward" size={14} color={step.completed ? theme.surface.t3 : step.color} />
+      <Ionicons name="arrow-forward" size={18} color={accent} />
+    </AnimatedPressable>
+  );
+}
+
+/** Compact pill row for remaining steps after the featured one. Single
+ *  line each: dot + title, with a small check when done. Tap to jump. */
+function StepPill({ step, accent, onSurface, soft }: {
+  step: JourneyStep; accent: string; onSurface: string; soft: string;
+}) {
+  return (
+    <AnimatedPressable
+      onPress={step.onPress}
+      scaleDown={0.98}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: 'transparent',
+      }}
+    >
+      <View style={{
+        width: 20, height: 20, borderRadius: 10,
+        borderWidth: step.completed ? 0 : 1.5,
+        borderColor: step.completed ? 'transparent' : soft,
+        backgroundColor: step.completed ? accent : 'transparent',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {step.completed && (
+          <Ionicons name="checkmark" size={12} color={'#FFFFFF'} />
+        )}
+      </View>
+      <Text
+        style={{
+          fontSize: 14, fontWeight: '600', flex: 1,
+          color: step.completed ? onSurface + '99' : onSurface,
+          textDecorationLine: step.completed ? 'line-through' : 'none',
+        }}
+      >
+        {step.title}
+      </Text>
+      {!step.completed && (
+        <Ionicons name="chevron-forward" size={14} color={onSurface + '66'} />
+      )}
     </AnimatedPressable>
   );
 }
@@ -1144,12 +1249,22 @@ function SeekerHome() {
   // Also refresh when Dilly AI extraction completes. Users who
   // talk to Dilly to push past the 20-fact Chapter gate need the
   // card to unlock the moment extraction lands, not on cold
-  // reload.
+  // reload. Same hook drives the FactCircle so the user watches
+  // the count tick up live as Dilly learns about them.
   const chapterExtraction = useExtractionState();
   useEffect(() => {
     if (chapterExtraction.seq === 0) return;
     dilly.get('/chapters/current').then((data: ChapterCardState | null) => {
       if (data) setChapterState(data);
+    }).catch(() => {});
+    // Refetch the live fact count so the FactCircle on Home updates
+    // the moment per-turn extraction lands. /memory is a single cheap
+    // PG read; safe to fire on every extraction signal.
+    dilly.fetch('/memory').then(async (res) => {
+      if (!res?.ok) return;
+      const mem = await res.json().catch(() => null);
+      const items = (mem?.items || []) as any[];
+      setFactCount(items.length);
     }).catch(() => {});
   }, [chapterExtraction.seq]);
 
@@ -1969,28 +2084,96 @@ function SeekerHome() {
           return null;
         })()}
 
-        {/* Getting Started Journey */}
-        {showJourney && (
-          <FadeInView delay={120}>
-            <View style={s.journeyHeader}>
-              <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>GETTING STARTED</Text>
-              <Text style={[s.journeyProgress, { color: theme.surface.t2 }]}>
-                {completedCount} of {journeySteps.length}
-              </Text>
-            </View>
-            {/* Progress bar */}
-            <View style={[s.progressBar, { backgroundColor: theme.surface.s2 }]}>
-              <View style={[s.progressFill, { width: `${(completedCount / journeySteps.length) * 100}%`, backgroundColor: accent }]} />
-            </View>
-            <View style={{ gap: 6, marginTop: 10 }}>
-              {journeySteps.map((step, i) => (
-                <FadeInView key={step.id} delay={140 + i * 40}>
-                  <JourneyStepCard step={step} />
-                </FadeInView>
-              ))}
-            </View>
-          </FadeInView>
-        )}
+        {/* Getting Started — rebuilt v2.
+            Hero card with progress ring + headline; one big "NEXT UP"
+            featured card for the highest-priority undone step; small
+            pill list for everything else. Replaces the wall-of-cards
+            checklist that felt utilitarian. */}
+        {showJourney && (() => {
+          const nextStep = journeySteps.find(st => !st.completed) || journeySteps[0];
+          const others = journeySteps.filter(st => st.id !== nextStep.id);
+          // Headline + sub adapt to where the user is in the journey.
+          const remaining = journeySteps.length - completedCount;
+          const headline =
+            completedCount === 0 ? 'Welcome to Dilly.' :
+            completedCount === 1 ? 'Great start.' :
+            completedCount === journeySteps.length - 1 ? 'One more.' :
+            'Keep going.';
+          const sub =
+            completedCount === 0
+              ? `${journeySteps.length} quick steps to get the full Dilly experience.`
+              : remaining === 1
+                ? 'One more step and Dilly knows you cold.'
+                : `${remaining} more to unlock the full Dilly experience.`;
+          return (
+            <FadeInView delay={120}>
+              {/* Hero card */}
+              <View style={{
+                marginTop: 22,
+                padding: 18,
+                borderRadius: 22,
+                backgroundColor: theme.surface.s1,
+                borderWidth: 1,
+                borderColor: theme.surface.border,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 16,
+              }}>
+                <ProgressRing
+                  done={completedCount}
+                  total={journeySteps.length}
+                  color={accent}
+                  soft={theme.accentSoft}
+                  faceInk={theme.surface.t1}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 9, fontWeight: '900', letterSpacing: 1.4,
+                    color: theme.surface.t3, marginBottom: 4,
+                  }}>
+                    GETTING STARTED
+                  </Text>
+                  <Text style={{
+                    fontSize: 22, fontWeight: '900', letterSpacing: -0.4,
+                    color: theme.surface.t1, fontFamily: theme.type.display,
+                  }}>
+                    {headline}
+                  </Text>
+                  <Text style={{
+                    fontSize: 12, color: theme.surface.t2, marginTop: 4, lineHeight: 16,
+                  }}>
+                    {sub}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Featured next-up step */}
+              <NextUpCard
+                step={nextStep}
+                accent={accent}
+                accentSoft={theme.accentSoft}
+                onSurface={theme.surface.t1}
+              />
+
+              {/* Remaining steps as pills (completed ones still shown
+                  as struck-through so the user sees their progress). */}
+              {others.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  {others.map((step, i) => (
+                    <FadeInView key={step.id} delay={160 + i * 30}>
+                      <StepPill
+                        step={step}
+                        accent={accent}
+                        onSurface={theme.surface.t1}
+                        soft={theme.surface.border}
+                      />
+                    </FadeInView>
+                  ))}
+                </View>
+              )}
+            </FadeInView>
+          );
+        })()}
 
         {/* Pipeline tiles removed - felt like a status dashboard,
             not a next-move surface. Users who want to see their
