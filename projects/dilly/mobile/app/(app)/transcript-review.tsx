@@ -1,7 +1,19 @@
+/**
+ * Transcript review — READ-ONLY.
+ *
+ * Product rule: nobody hand-edits a transcript. Lying about your GPA
+ * by typing into a field is way too easy, and the whole point of
+ * "Dilly verified your transcript" falls apart if anyone can change
+ * the numbers. The ONLY way to update what's shown here is to
+ * re-upload the underlying PDF.
+ *
+ * Everything below is a Text view. No TextInput, no Add/Delete
+ * buttons. Re-upload is the single mutation path.
+ */
 import { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TextInput, StyleSheet,
-  Alert, KeyboardAvoidingView, Platform, TouchableOpacity,
+  View, Text, ScrollView, StyleSheet,
+  KeyboardAvoidingView, Platform, TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +23,6 @@ import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { showToast } from '../../lib/globalToast';
-import { safeBack } from '../../lib/navigation';
 
 interface Course {
   code?: string | null;
@@ -29,9 +40,10 @@ interface TranscriptData {
   honors?: string[];
   major?: string | null;
   minor?: string | null;
+  majors?: string[];
+  minors?: string[];
+  school?: string | null;
   warnings?: string[];
-  manually_edited?: Record<string, boolean>;
-  last_edited_at?: string | null;
 }
 
 export default function TranscriptReviewScreen() {
@@ -39,16 +51,8 @@ export default function TranscriptReviewScreen() {
   const theme = useResolvedTheme();
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-
-  const [major, setMajor] = useState('');
-  const [minor, setMinor] = useState('');
-  const [gpa, setGpa] = useState('');
-  const [bcpmGpa, setBcpmGpa] = useState('');
-  const [honors, setHonors] = useState('');
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [manuallyEdited, setManuallyEdited] = useState<Record<string, boolean>>({});
+  const [data, setData] = useState<TranscriptData | null>(null);
 
   useEffect(() => { loadTranscript(); }, []);
 
@@ -56,16 +60,7 @@ export default function TranscriptReviewScreen() {
     setLoading(true);
     try {
       const res = await dilly.get('/profile/transcript');
-      if (res?.transcript) {
-        const t: TranscriptData = res.transcript;
-        setMajor(t.major ?? '');
-        setMinor(t.minor ?? '');
-        setGpa(t.gpa != null ? String(t.gpa) : '');
-        setBcpmGpa(t.bcpm_gpa != null ? String(t.bcpm_gpa) : '');
-        setHonors((t.honors ?? []).join(', '));
-        setCourses(t.courses ?? []);
-        setManuallyEdited(t.manually_edited ?? {});
-      }
+      setData(res?.transcript ?? null);
     } catch {
       showToast({ message: 'Could not load transcript data.', type: 'error' });
     } finally {
@@ -73,47 +68,7 @@ export default function TranscriptReviewScreen() {
     }
   }
 
-  async function saveField(field: string, value: unknown) {
-    setSaving(true);
-    try {
-      await dilly.fetch('/profile/transcript', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: value, manually_edited_fields: [field] }),
-      });
-      setManuallyEdited(prev => ({ ...prev, [field]: true }));
-    } catch {
-      // Silent - will retry on next blur
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function updateCourse(idx: number, field: keyof Course, value: string) {
-    setCourses(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: field === 'credits' ? (parseFloat(value) || undefined) : value };
-      return next;
-    });
-  }
-
   async function handleReUpload() {
-    const hasEdits = Object.values(manuallyEdited).some(Boolean);
-    if (hasEdits) {
-      Alert.alert(
-        'Replace transcript?',
-        "You've made manual edits - replacing your transcript will reset them. Continue?",
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Replace', style: 'destructive', onPress: doUpload },
-        ]
-      );
-    } else {
-      doUpload();
-    }
-  }
-
-  async function doUpload() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
@@ -129,7 +84,7 @@ export default function TranscriptReviewScreen() {
         const body = await res.json();
         if (body.low_confidence) {
           showToast({
-            message: body.low_confidence_message ?? "Parsed your transcript - check the fields below for anything missing.",
+            message: body.low_confidence_message ?? 'Transcript uploaded — some fields may be partial. Re-upload a clearer PDF if needed.',
             type: 'info',
           });
         } else {
@@ -137,21 +92,13 @@ export default function TranscriptReviewScreen() {
         }
         await loadTranscript();
       } else {
-        // Surface the API's actual reason instead of a generic line.
-        // FastAPI sometimes returns {detail: {message, code}} (object,
-        // not string), so unwrapping with .toString() produced
-        // "[object Object]". This walks the common shapes and falls
-        // back to a friendly message.
         let detail = '';
         try {
           const body = await res.json();
           const raw = body?.detail ?? body?.error ?? body?.message;
-          if (typeof raw === 'string') {
-            detail = raw.trim();
-          } else if (raw && typeof raw === 'object') {
-            detail = String(raw.message || raw.detail || raw.error || '').trim();
-          }
-        } catch { /* non-JSON response */ }
+          if (typeof raw === 'string') detail = raw.trim();
+          else if (raw && typeof raw === 'object') detail = String(raw.message || raw.detail || raw.error || '').trim();
+        } catch {}
         showToast({
           message: detail || `Upload failed (${res.status}). Make sure it's a PDF with selectable text.`,
           type: 'error',
@@ -159,23 +106,17 @@ export default function TranscriptReviewScreen() {
         });
       }
     } catch (e: any) {
-      showToast({
-        message: e?.message ? `Could not read the file: ${e.message}` : 'Could not read the file.',
-        type: 'error',
-      });
+      showToast({ message: e?.message ? `Could not read the file: ${e.message}` : 'Could not read the file.', type: 'error' });
     } finally {
       setUploading(false);
     }
   }
 
-  const editedBorder = (field: string) =>
-    manuallyEdited[field] ? theme.accent : theme.surface.border;
-
   if (loading) {
     return (
       <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
         <View style={s.topBar}>
-          <TouchableOpacity onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity onPress={() => router.replace('/(app)/my-dilly-profile')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
           </TouchableOpacity>
           <Text style={[s.navTitle, { color: theme.surface.t1 }]}>Transcript</Text>
@@ -188,6 +129,14 @@ export default function TranscriptReviewScreen() {
     );
   }
 
+  const majors = data?.majors && data.majors.length ? data.majors : (data?.major ? [data.major] : []);
+  const minors = data?.minors && data.minors.length ? data.minors : (data?.minor ? [data.minor] : []);
+  const honors = data?.honors ?? [];
+  const courses = data?.courses ?? [];
+  const hasAny =
+    majors.length || minors.length || honors.length || courses.length ||
+    data?.gpa != null || data?.bcpm_gpa != null || !!data?.school;
+
   return (
     <KeyboardAvoidingView
       style={[s.container, { backgroundColor: theme.surface.bg }]}
@@ -198,174 +147,72 @@ export default function TranscriptReviewScreen() {
           <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
         </TouchableOpacity>
         <Text style={[s.navTitle, { color: theme.surface.t1 }]}>Transcript</Text>
-        {saving
-          ? <Text style={{ fontSize: 11, color: theme.surface.t3 }}>Saving…</Text>
-          : <View style={{ width: 44 }} />}
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         <View style={[s.disclaimer, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-          <Ionicons name="information-circle-outline" size={16} color={theme.accent} style={{ marginTop: 1 }} />
+          <Ionicons name="lock-closed" size={14} color={theme.accent} style={{ marginTop: 2 }} />
           <Text style={[s.disclaimerText, { color: theme.accent }]}>
-            Dilly parsed your transcript automatically. Double-check the details below - changes save when you leave a field.
+            Your transcript is read-only. The only way to change what's shown here is to re-upload the PDF from your school.
           </Text>
         </View>
 
-        <Text style={[s.label, { color: theme.surface.t3 }]}>MAJOR</Text>
-        <View style={[s.fieldRow, { borderColor: editedBorder('transcript_major'), backgroundColor: theme.surface.s1 }]}>
-          <TextInput
-            style={[s.input, { color: theme.surface.t1 }]}
-            value={major}
-            onChangeText={setMajor}
-            onBlur={() => saveField('transcript_major', major.trim())}
-            placeholder="e.g. Biology"
-            placeholderTextColor={theme.surface.t3}
-            returnKeyType="done"
-          />
-          {manuallyEdited['transcript_major'] && <View style={[s.editedDot, { backgroundColor: theme.accent }]} />}
-        </View>
-
-        <Text style={[s.label, { color: theme.surface.t3 }]}>MINOR</Text>
-        <View style={[s.fieldRow, { borderColor: editedBorder('transcript_minor'), backgroundColor: theme.surface.s1 }]}>
-          <TextInput
-            style={[s.input, { color: theme.surface.t1 }]}
-            value={minor}
-            onChangeText={setMinor}
-            onBlur={() => saveField('transcript_minor', minor.trim())}
-            placeholder="e.g. Chemistry"
-            placeholderTextColor={theme.surface.t3}
-            returnKeyType="done"
-          />
-          {manuallyEdited['transcript_minor'] && <View style={[s.editedDot, { backgroundColor: theme.accent }]} />}
-        </View>
-
-        <Text style={[s.label, { color: theme.surface.t3 }]}>GPA</Text>
-        <View style={[s.fieldRow, { borderColor: editedBorder('transcript_gpa'), backgroundColor: theme.surface.s1 }]}>
-          <TextInput
-            style={[s.input, { color: theme.surface.t1 }]}
-            value={gpa}
-            onChangeText={setGpa}
-            onBlur={() => { const v = parseFloat(gpa); if (!isNaN(v)) saveField('transcript_gpa', v); }}
-            placeholder="e.g. 3.85"
-            placeholderTextColor={theme.surface.t3}
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-          />
-          {manuallyEdited['transcript_gpa'] && <View style={[s.editedDot, { backgroundColor: theme.accent }]} />}
-        </View>
-
-        <Text style={[s.label, { color: theme.surface.t3 }]}>BCPM GPA</Text>
-        <View style={[s.fieldRow, { borderColor: editedBorder('transcript_bcpm_gpa'), backgroundColor: theme.surface.s1 }]}>
-          <TextInput
-            style={[s.input, { color: theme.surface.t1 }]}
-            value={bcpmGpa}
-            onChangeText={setBcpmGpa}
-            onBlur={() => { const v = parseFloat(bcpmGpa); if (!isNaN(v)) saveField('transcript_bcpm_gpa', v); }}
-            placeholder="Biology, Chem, Physics, Math GPA"
-            placeholderTextColor={theme.surface.t3}
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-          />
-          {manuallyEdited['transcript_bcpm_gpa'] && <View style={[s.editedDot, { backgroundColor: theme.accent }]} />}
-        </View>
-
-        <Text style={[s.label, { color: theme.surface.t3 }]}>HONORS & DISTINCTIONS</Text>
-        <View style={[s.fieldRow, { borderColor: editedBorder('transcript_honors'), backgroundColor: theme.surface.s1 }]}>
-          <TextInput
-            style={[s.input, { color: theme.surface.t1 }]}
-            value={honors}
-            onChangeText={setHonors}
-            onBlur={() => saveField('transcript_honors', honors.split(',').map(h => h.trim()).filter(Boolean))}
-            placeholder="Comma-separated, e.g. Dean's List"
-            placeholderTextColor={theme.surface.t3}
-            returnKeyType="done"
-          />
-          {manuallyEdited['transcript_honors'] && <View style={[s.editedDot, { backgroundColor: theme.accent }]} />}
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 8 }}>
-          <Text style={[s.label, { color: theme.surface.t3, marginTop: 0 }]}>COURSES ({courses.length})</Text>
-          {manuallyEdited['transcript_courses'] && <View style={[s.editedDot, { backgroundColor: theme.accent }]} />}
-        </View>
-
-        {courses.map((c, i) => (
-          <View key={i} style={[s.courseCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-            <View style={s.courseRow}>
-              <TextInput
-                style={[s.courseInput, { color: theme.surface.t1, borderColor: theme.surface.border, flex: 1 }]}
-                value={c.code ?? ''}
-                onChangeText={v => updateCourse(i, 'code', v)}
-                onBlur={() => saveField('transcript_courses', courses)}
-                placeholder="Code"
-                placeholderTextColor={theme.surface.t3}
-              />
-              <TextInput
-                style={[s.courseInput, { color: theme.surface.t1, borderColor: theme.surface.border, flex: 2 }]}
-                value={c.name ?? ''}
-                onChangeText={v => updateCourse(i, 'name', v)}
-                onBlur={() => saveField('transcript_courses', courses)}
-                placeholder="Course name"
-                placeholderTextColor={theme.surface.t3}
-              />
-            </View>
-            <View style={s.courseRow}>
-              <TextInput
-                style={[s.courseInput, { color: theme.surface.t1, borderColor: theme.surface.border, flex: 1 }]}
-                value={c.term ?? ''}
-                onChangeText={v => updateCourse(i, 'term', v)}
-                onBlur={() => saveField('transcript_courses', courses)}
-                placeholder="Term"
-                placeholderTextColor={theme.surface.t3}
-              />
-              <TextInput
-                style={[s.courseInput, { color: theme.surface.t1, borderColor: theme.surface.border, flex: 1 }]}
-                value={c.grade ?? ''}
-                onChangeText={v => updateCourse(i, 'grade', v)}
-                onBlur={() => saveField('transcript_courses', courses)}
-                placeholder="Grade"
-                placeholderTextColor={theme.surface.t3}
-              />
-              <TextInput
-                style={[s.courseInput, { color: theme.surface.t1, borderColor: theme.surface.border, flex: 1 }]}
-                value={c.credits != null ? String(c.credits) : ''}
-                onChangeText={v => updateCourse(i, 'credits', v)}
-                onBlur={() => saveField('transcript_courses', courses)}
-                placeholder="Cr"
-                placeholderTextColor={theme.surface.t3}
-                keyboardType="decimal-pad"
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  const next = courses.filter((_, idx) => idx !== i);
-                  setCourses(next);
-                  saveField('transcript_courses', next);
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{ justifyContent: 'center', paddingHorizontal: 4 }}
-              >
-                <Ionicons name="trash-outline" size={16} color={theme.surface.t3} />
-              </TouchableOpacity>
-            </View>
+        {!hasAny ? (
+          <View style={[s.empty, { borderColor: theme.surface.border, backgroundColor: theme.surface.s1 }]}>
+            <Ionicons name="document-outline" size={28} color={theme.surface.t3} />
+            <Text style={{ color: theme.surface.t1, fontSize: 14, fontWeight: '700', marginTop: 8 }}>
+              No transcript on file
+            </Text>
+            <Text style={{ color: theme.surface.t3, fontSize: 12, marginTop: 4, textAlign: 'center', maxWidth: 280, lineHeight: 17 }}>
+              Upload your transcript PDF to fill in your school, GPA, majors, minors, honors, and courses.
+            </Text>
           </View>
-        ))}
+        ) : (
+          <>
+            {data?.school ? <ReadOnlyRow theme={theme} label="SCHOOL" value={data.school} /> : null}
+            {majors.length ? <ReadOnlyList theme={theme} label="MAJORS" items={majors} /> : null}
+            {minors.length ? <ReadOnlyList theme={theme} label="MINORS" items={minors} /> : null}
+            {data?.gpa != null ? <ReadOnlyRow theme={theme} label="GPA" value={String(data.gpa)} /> : null}
+            {data?.bcpm_gpa != null ? <ReadOnlyRow theme={theme} label="BCPM GPA" value={String(data.bcpm_gpa)} /> : null}
+            {honors.length ? <ReadOnlyList theme={theme} label="HONORS & DISTINCTIONS" items={honors} /> : null}
 
-        <AnimatedPressable
-          style={[s.addBtn, { borderColor: theme.surface.border }]}
-          onPress={() => setCourses(prev => [...prev, { code: '', name: '', term: '', grade: '' }])}
-          scaleDown={0.97}
-        >
-          <Ionicons name="add" size={16} color={theme.surface.t2} />
-          <Text style={{ color: theme.surface.t2, fontSize: 14, marginLeft: 4 }}>Add course</Text>
-        </AnimatedPressable>
+            {courses.length ? (
+              <>
+                <Text style={[s.label, { color: theme.surface.t3 }]}>COURSES ({courses.length})</Text>
+                {courses.map((c, i) => (
+                  <View key={i} style={[s.courseCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                    <View style={s.courseRow}>
+                      <Text style={[s.courseCode, { color: theme.surface.t1 }]}>{c.code || '—'}</Text>
+                      <View style={{ flex: 1 }} />
+                      {c.grade ? (
+                        <View style={[s.gradePill, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                          <Text style={{ fontSize: 11, fontWeight: '900', color: theme.accent, letterSpacing: 0.4 }}>{c.grade}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {c.name ? <Text style={[s.courseName, { color: theme.surface.t2 }]} numberOfLines={2}>{c.name}</Text> : null}
+                    <View style={s.courseMeta}>
+                      {c.term ? <Text style={[s.courseMetaText, { color: theme.surface.t3 }]}>{c.term}</Text> : null}
+                      {c.term && c.credits != null ? <Text style={[s.courseMetaText, { color: theme.surface.t3 }]}> · </Text> : null}
+                      {c.credits != null ? <Text style={[s.courseMetaText, { color: theme.surface.t3 }]}>{c.credits} cr</Text> : null}
+                    </View>
+                  </View>
+                ))}
+              </>
+            ) : null}
+          </>
+        )}
 
         <View style={[s.reuploadSection, { borderColor: theme.surface.border }]}>
           <Text style={[s.reuploadHint, { color: theme.surface.t3 }]}>
-            Upload the PDF from your school portal. Any official or unofficial transcript PDF with selectable text will work.
+            {hasAny
+              ? 'Need to update? Upload your latest transcript PDF and Dilly re-parses everything from scratch.'
+              : 'Upload the PDF from your school portal. Any official or unofficial transcript PDF with selectable text will work.'}
           </Text>
           <AnimatedPressable
             style={[s.reuploadBtn, { borderColor: theme.surface.border, backgroundColor: theme.surface.s1 }]}
@@ -375,12 +222,38 @@ export default function TranscriptReviewScreen() {
           >
             <Ionicons name="cloud-upload-outline" size={16} color={theme.surface.t2} />
             <Text style={{ color: theme.surface.t2, fontSize: 14, marginLeft: 6 }}>
-              {uploading ? 'Uploading…' : 'Re-upload transcript'}
+              {uploading ? 'Uploading…' : (hasAny ? 'Re-upload transcript' : 'Upload transcript')}
             </Text>
           </AnimatedPressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function ReadOnlyRow({ theme, label, value }: { theme: any; label: string; value: string }) {
+  return (
+    <>
+      <Text style={[s.label, { color: theme.surface.t3 }]}>{label}</Text>
+      <View style={[s.fieldRow, { borderColor: theme.surface.border, backgroundColor: theme.surface.s1 }]}>
+        <Text style={[s.readOnlyValue, { color: theme.surface.t1 }]}>{value}</Text>
+      </View>
+    </>
+  );
+}
+
+function ReadOnlyList({ theme, label, items }: { theme: any; label: string; items: string[] }) {
+  return (
+    <>
+      <Text style={[s.label, { color: theme.surface.t3 }]}>{label}</Text>
+      <View style={{ gap: 6, marginBottom: 4 }}>
+        {items.map((item, i) => (
+          <View key={`${i}-${item}`} style={[s.fieldRow, { borderColor: theme.surface.border, backgroundColor: theme.surface.s1 }]}>
+            <Text style={[s.readOnlyValue, { color: theme.surface.t1 }]}>{item}</Text>
+          </View>
+        ))}
+      </View>
+    </>
   );
 }
 
@@ -402,49 +275,50 @@ const s = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 20,
   },
-  disclaimerText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  label: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, marginBottom: 6, marginTop: 16 },
+  disclaimerText: { flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 6, marginTop: 16 },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     minHeight: 44,
   },
-  input: { flex: 1, fontSize: 15, paddingVertical: 8 },
-  editedDot: { width: 6, height: 6, borderRadius: 3, marginLeft: 8 },
-  courseCard: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
-    gap: 6,
-  },
-  courseRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  courseInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    fontSize: 13,
-  },
-  addBtn: {
-    flexDirection: 'row',
+  readOnlyValue: { flex: 1, fontSize: 15, fontWeight: '600' },
+  empty: {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  courseCard: {
+    borderWidth: 1,
     borderRadius: 10,
-    borderStyle: 'dashed',
-    paddingVertical: 10,
-    marginTop: 4,
-    marginBottom: 28,
+    padding: 12,
+    marginBottom: 8,
+    gap: 4,
+  },
+  courseRow: { flexDirection: 'row', alignItems: 'center' },
+  courseCode: { fontSize: 13, fontWeight: '900', letterSpacing: 0.4 },
+  courseName: { fontSize: 14, fontWeight: '600', marginTop: 2 },
+  courseMeta: { flexDirection: 'row', marginTop: 4 },
+  courseMetaText: { fontSize: 11, fontWeight: '600' },
+  gradePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   reuploadSection: {
     borderTopWidth: 1,
     paddingTop: 20,
     gap: 12,
+    marginTop: 28,
   },
   reuploadHint: { fontSize: 13, lineHeight: 19 },
   reuploadBtn: {
