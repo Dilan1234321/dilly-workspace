@@ -21,6 +21,7 @@ if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
 from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 
@@ -1876,13 +1877,11 @@ async def ai_chat(request: Request, body: ChatRequest):
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model=_chat_model,
-            # Output cap by tier. Stable block demonstrates 3-sentence
-            # responses (~80 tokens typical, ~180 tokens with a URL and
-            # a follow-up question). 220 gives clean headroom without
-            # room for the model to wander into filler. Starter stays
-            # at 180 — they get slightly terser responses. Cuts output
-            # billing 21% vs the previous 280/200 caps.
-            max_tokens=(180 if _plan in ("starter", "building") else 220),
+            # Output cap. Real chat replies average ~80–120 tokens.
+            # Cap at 160 so the worst case can't run away. Was 220 —
+            # output is the dominant cost on Haiku ($4/M vs $0.80/M
+            # input) so trimming the cap is a direct cost cut.
+            max_tokens=(140 if _plan in ("starter", "building") else 160),
             system=system_param,
             messages=messages,
             tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,
@@ -1995,22 +1994,28 @@ async def ai_chat(request: Request, body: ChatRequest):
             try:
                 from projects.dilly.api.memory_extraction import run_extraction
 
-                # skip_llm_trivial_gate now FALSE — trivial user turns
-                # ("yes", "tell me more", "thanks", "ok") have no new
-                # facts to extract, so burning a Haiku call on them is
-                # wasted spend. The regex pass still runs unconditionally
-                # for literal facts ("I know Python") so the
-                # short-message-extraction concern that drove the True
-                # default is already covered. This is the single biggest
-                # remaining cost on a 6-msg conversation: 6 forced LLM
-                # calls vs ~2 actually-warranted ones.
+                # Mid-session extraction throttled to every 5th user msg.
+                # Why: /ai/chat/flush already runs full extraction when
+                # the overlay closes, so per-turn extraction is just a
+                # safety net for force-quits. Running it every turn was
+                # the dominant cost on every conversation — a 6-msg chat
+                # paid for 6 separate Haiku extraction calls when 1
+                # at-flush call captures the same facts.
+                # The regex pass still runs unconditionally inside
+                # run_extraction (use_llm=False here) so literal facts
+                # ("I know Python") still get caught for free on every
+                # turn. Only the Haiku-inferred facts wait for flush.
+                _user_msg_n = sum(
+                    1 for _m in raw_messages if (_m.get("role") or "") == "user"
+                )
+                _do_llm_extract = (_user_msg_n > 0 and _user_msg_n % 5 == 0)
                 result = await asyncio.to_thread(
                     run_extraction,
                     email,
                     conv_id_resolved,
                     full_messages[-12:],
-                    True,    # use_llm
-                    False,   # skip_llm_trivial_gate
+                    _do_llm_extract,    # use_llm — only every 5th user msg
+                    False,              # skip_llm_trivial_gate
                 )
                 new_ids = set(result.get("item_ids") or [])
                 after = get_memory_surface(email) or {}
@@ -2089,14 +2094,34 @@ async def ai_chat(request: Request, body: ChatRequest):
         except Exception as _e:
             conv_cost_debug["error"] = str(_e)[:200]
 
-        return ChatResponse(
-            content=content.strip(),
-            visual=visual,
-            memory=memory_payload,
-            conv_cost_usd=conv_cost_usd,
-            conv_cost_breakdown=conv_cost_breakdown,
-            conv_cost_debug=conv_cost_debug,
-        )
+        # Server-side log so we can read Railway logs to verify the
+        # cost block populated. If the user reports "0c" but this log
+        # shows real numbers, the bug is in the response serialization
+        # or mobile rendering, not the lookup.
+        try:
+            print(
+                f"[AI_CHAT_COST] email={(email.split('@')[0][:4] if email else 'anon')}*** "
+                f"conv={(_lookup_conv or 'NONE')[:12]} usd={conv_cost_usd:.6f} "
+                f"breakdown_count={len(conv_cost_breakdown)} debug={conv_cost_debug}",
+                flush=True,
+            )
+        except Exception:
+            pass
+
+        # Return as JSONResponse to bypass pydantic response_model
+        # filtering. The response_model=ChatResponse decorator was
+        # quietly omitting our cost fields in the wire payload (still
+        # not sure why — pydantic v2 should serialize None as null,
+        # not omit). Going around the model entirely guarantees the
+        # client gets all four cost-related fields exactly as set.
+        return JSONResponse(content={
+            "content": content.strip(),
+            "visual": visual,
+            "memory": memory_payload,
+            "conv_cost_usd": conv_cost_usd,
+            "conv_cost_breakdown": conv_cost_breakdown,
+            "conv_cost_debug": conv_cost_debug,
+        })
     except Exception as e:
         import traceback
         traceback.print_exc()
