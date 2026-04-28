@@ -269,7 +269,14 @@ def get_career_pass_url(request: Request):
             content={"error": "wallet_unconfigured", "message": "Wallet pass signing is not configured."},
         )
     email = (user.get("email") or "").strip().lower()
-    base = os.environ.get("WALLET_PUBLIC_BASE_URL", "https://api.dilly.app")
+    # Prefer env override but fall back to inferring from the incoming
+    # request — earlier the default was the wrong hostname (api.dilly.app
+    # instead of api.trydilly.com), causing the iOS Wallet downloader
+    # to error with DNS-not-found. Inferring from request is correct
+    # because the mobile app already hit the right host to get here.
+    base = (os.environ.get("WALLET_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    if not base:
+        base = f"{request.url.scheme}://{request.url.netloc}"
     return {
         "url": f"{base}/wallet/career-pass",
         "serial": _serial_for(email),

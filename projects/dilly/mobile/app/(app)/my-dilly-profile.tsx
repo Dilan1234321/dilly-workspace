@@ -2068,15 +2068,16 @@ function SeekerProfileScreen() {
                     },
                   ]}
                   onPress={() => {
-                    // router.push between sibling Tabs.Screen entries
-                    // sometimes lands the user on the home tab instead
-                    // of the requested route - using setParams + push
-                    // in sequence is the workaround that consistently
-                    // lands on resume-generate with the right viewId.
+                    // The object-form router.push to a hidden Tabs.Screen
+                    // was bouncing back to the home tab. Switching to the
+                    // URL-string form (with query param baked in) lands
+                    // on resume-generate consistently. router.navigate is
+                    // also more permissive than push for sibling Tabs.
+                    const url = `/(app)/resume-generate?viewId=${encodeURIComponent(r.id)}`;
                     try {
-                      router.push({ pathname: '/(app)/resume-generate' as any, params: { viewId: r.id } });
+                      (router as any).navigate(url);
                     } catch {
-                      router.replace({ pathname: '/(app)/resume-generate' as any, params: { viewId: r.id } } as any);
+                      router.push(url as any);
                     }
                   }}
                   scaleDown={0.98}
