@@ -365,6 +365,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   // verifiable instead of estimated.
   const [convCostUsd, setConvCostUsd] = useState<number | null>(null);
   const [convCostBreakdown, setConvCostBreakdown] = useState<Array<{ feature: string; calls: number; usd: number }> | null>(null);
+  const [convCostDebug, setConvCostDebug] = useState<Record<string, any> | null>(null);
   const [showCostDetail, setShowCostDetail] = useState(false);
   const suggestionsOpacity = useRef(new Animated.Value(0)).current;
   const initialMessageSent = useRef(false);
@@ -546,6 +547,9 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       }
       if (Array.isArray(data.conv_cost_breakdown)) {
         setConvCostBreakdown(data.conv_cost_breakdown);
+      }
+      if (data.conv_cost_debug && typeof data.conv_cost_debug === 'object') {
+        setConvCostDebug(data.conv_cost_debug);
       }
 
       // Synchronous memory extraction on the server: new facts are persisted
@@ -1257,13 +1261,18 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                   {showCostDetail ? 'hide' : 'breakdown'}
                 </Text>
               </View>
-              {showCostDetail && convCostBreakdown && convCostBreakdown.length > 0 && (
+              {showCostDetail && (
                 <View style={{ marginTop: 4 }}>
-                  {convCostBreakdown.map((row) => (
+                  {convCostBreakdown && convCostBreakdown.length > 0 && convCostBreakdown.map((row) => (
                     <Text key={row.feature} style={{ fontSize: 10, color: theme.surface.t3, fontFamily: theme.type.body }}>
                       {row.feature}: {(row.usd * 100).toFixed(2)}¢ ({row.calls} call{row.calls === 1 ? '' : 's'})
                     </Text>
                   ))}
+                  {convCostDebug && (
+                    <Text style={{ fontSize: 9, color: theme.surface.t3, fontFamily: theme.type.body, marginTop: 4 }}>
+                      debug: rows_5m={convCostDebug.recent_5min_rows ?? '?'} · sids={JSON.stringify(convCostDebug.recent_session_ids || [])} · feats={JSON.stringify(convCostDebug.recent_features || [])} · 5m_total={typeof convCostDebug.recent_total_usd === 'number' ? (convCostDebug.recent_total_usd * 100).toFixed(2) + '¢' : '?'}
+                    </Text>
+                  )}
                 </View>
               )}
             </TouchableOpacity>

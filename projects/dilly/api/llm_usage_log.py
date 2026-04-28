@@ -469,14 +469,20 @@ def get_user_detail(email: str, days: int = 30) -> dict:
 
 
 def get_session_cost(email: str, session_id: str) -> dict:
-    """Sum cost for a given session (e.g. a voice conversation).
+    """Sum cost for a given session (e.g. a chat conversation).
 
-    Returns: {total_usd, calls, by_feature: [{feature, calls, usd}]}
+    Returns: {total_usd, calls, by_feature: [{feature, calls, usd}],
+             debug: {recent_user_rows, recent_session_ids, ...}}
     Lets the chat UI surface the running per-conversation cost so
     cost claims are verifiable by the user instead of estimated.
+    The debug block helps diagnose "shows 0¢" — it reports recent
+    rows for the user and their session_ids so we can tell whether
+    rows are being written but with the wrong session_id, or not
+    being written at all.
     """
-    out: dict = {"total_usd": 0.0, "calls": 0, "by_feature": []}
+    out: dict = {"total_usd": 0.0, "calls": 0, "by_feature": [], "debug": {}}
     if not email or not session_id:
+        out["debug"]["reason_skipped"] = f"missing email={bool(email)} session_id={bool(session_id)}"
         return out
     try:
         with _conn() as c:
@@ -497,9 +503,34 @@ def get_session_cost(email: str, session_id: str) -> dict:
                 ]
                 out["total_usd"] = sum(x["usd"] for x in out["by_feature"])
                 out["calls"] = sum(x["calls"] for x in out["by_feature"])
+
+                # Diagnostic: what's actually in the log for this user
+                # in the last 5 minutes? If we have rows but no match,
+                # the session_id isn't being written; if zero rows, the
+                # write itself is failing.
+                cur.execute("""
+                    SELECT session_id, feature, model, cost_usd,
+                           input_tokens, output_tokens
+                    FROM llm_usage_log
+                    WHERE email = %s AND ts > now() - interval '5 minutes'
+                    ORDER BY ts DESC LIMIT 20
+                """, (email,))
+                recent = cur.fetchall() or []
+                out["debug"]["recent_5min_rows"] = len(recent)
+                out["debug"]["recent_session_ids"] = list({
+                    str(r["session_id"]) if r["session_id"] else "NULL"
+                    for r in recent
+                })
+                out["debug"]["query_session_id"] = session_id
+                out["debug"]["query_email"] = email
+                out["debug"]["recent_features"] = list({r["feature"] for r in recent})
+                out["debug"]["recent_total_usd"] = round(
+                    sum(float(r["cost_usd"] or 0) for r in recent), 6
+                )
     except Exception as e:
         import sys
         sys.stderr.write(f"[llm_usage_log] get_session_cost failed: {e}\n")
+        out["debug"]["error"] = str(e)[:200]
     return out
 
 

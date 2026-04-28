@@ -200,6 +200,10 @@ class ChatResponse(BaseModel):
     conv_cost_breakdown: Optional[List[Dict[str, Any]]] = None
     """Per-feature breakdown of conv_cost_usd: [{feature, calls, usd}]."""
 
+    conv_cost_debug: Optional[Dict[str, Any]] = None
+    """Diagnostic block from get_session_cost — recent row count,
+    session_ids seen, etc. Used to debug "shows 0¢" cases."""
+
 
 def _build_rich_context(email: str) -> dict:
     from projects.dilly.api.profile_store import get_profile, get_profile_folder_path
@@ -2047,14 +2051,16 @@ async def ai_chat(request: Request, body: ChatRequest):
         # extraction runs).
         conv_cost_usd: Optional[float] = None
         conv_cost_breakdown: Optional[List[Dict[str, Any]]] = None
+        conv_cost_debug: Optional[Dict[str, Any]] = None
         if email and body.conv_id:
             try:
                 from projects.dilly.api.llm_usage_log import get_session_cost
                 sc = get_session_cost(email, body.conv_id)
                 conv_cost_usd = round(float(sc.get("total_usd", 0.0)), 6)
                 conv_cost_breakdown = sc.get("by_feature", [])
-            except Exception:
-                pass
+                conv_cost_debug = sc.get("debug", None)
+            except Exception as _e:
+                conv_cost_debug = {"error": str(_e)[:200]}
 
         return ChatResponse(
             content=content.strip(),
@@ -2062,6 +2068,7 @@ async def ai_chat(request: Request, body: ChatRequest):
             memory=memory_payload,
             conv_cost_usd=conv_cost_usd,
             conv_cost_breakdown=conv_cost_breakdown,
+            conv_cost_debug=conv_cost_debug,
         )
     except Exception as e:
         import traceback
