@@ -118,7 +118,15 @@ function shapeFor(mood: DillyMood): MoodShape {
 /* DillyFace                                                       */
 /* ─────────────────────────────────────────────────────────────── */
 
-export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true, circular = false }: DillyFaceProps) {
+export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true, circular: circularProp }: DillyFaceProps) {
+  // When the pencil accessory is rendered, auto-apply the circular
+  // hero treatment (matches the website's AI coach surface). Pencil
+  // contexts are always "Dilly is thinking / writing" loading screens
+  // and look much more polished with the lavender bg + drop shadow.
+  // Caller can still pass `circular={false}` to opt out.
+  const circular = circularProp !== undefined
+    ? circularProp
+    : accessory === 'pencil';
   const TRAVEL = size * 0.15
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
@@ -618,9 +626,14 @@ function briefcaseMoodStyle(mood?: DillyMood): { leather: string; leatherDark: s
 /** Royal crown for the "Dilly Pro" badge surface. Three gold peaks
  *  sitting on the forehead area inside the ring, with a center jewel
  *  that themes to the user's accent. */
-function CrownAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
+function CrownAccessory({ cx, cy, s, pulseAnim }: Omit<AccessoryProps, 'kind' | 'scribbleAnim'>) {
   const GOLD = '#E5B143'
   const GOLD_DARK = '#B88A1F'
+  // Center jewel — vivid blue diamond. Royal-sapphire palette so the
+  // jewel reads luxe rather than novelty-blue. Side beads stay cream.
+  const DIAMOND_BLUE = '#3A6BD9'
+  const DIAMOND_BLUE_DARK = '#1F3F8E'
+  const DIAMOND_HIGHLIGHT = '#9BB8F2'
   const baseY = cy - 12 * s
   const peakY = cy - 18 * s
   const valleyY = cy - 14.5 * s
@@ -637,13 +650,45 @@ function CrownAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 'scr
     `L ${cx + half} ${baseY}`,
     `Z`,
   ].join(' ')
+  // Diamond (rhombus) at the center peak. Drawn as 4 lines via a
+  // path so we can stroke + fill with a highlight facet.
+  const dCx = cx
+  const dCy = peakY + 0.4 * s
+  const dW = 1.6 * s
+  const dH = 2.0 * s
+  const diamondPath = `M ${dCx} ${dCy - dH / 2} L ${dCx + dW / 2} ${dCy} L ${dCx} ${dCy + dH / 2} L ${dCx - dW / 2} ${dCy} Z`
+  // Subtle pulse on the crown — gentle Y bob + jewel twinkle. Keeps
+  // the Pro badge feeling alive without being twitchy.
+  const bobTransform = pulseAnim
+    ? (pulseAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [
+          `translate(0 0)`,
+          `translate(0 ${-0.7 * s})`,
+          `translate(0 0)`,
+        ],
+      }) as any)
+    : `translate(0 0)`
+  const twinkleOpacity = pulseAnim
+    ? (pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.5, 1, 0.5] }) as any)
+    : 1
   return (
-    <>
+    <AnimatedG transform={bobTransform}>
       <Path d={crownPath} fill={GOLD} stroke={GOLD_DARK} strokeWidth={0.6 * s} strokeLinejoin="round" />
-      <Circle cx={cx} cy={peakY + 0.5 * s} r={1.1 * s} fill={color} />
+      {/* Center jewel — blue diamond. Stroked + fill + highlight
+          facet for depth so it reads as a real cut stone. */}
+      <Path d={diamondPath} fill={DIAMOND_BLUE} stroke={DIAMOND_BLUE_DARK} strokeWidth={0.4 * s} strokeLinejoin="round" />
+      <Path
+        d={`M ${dCx} ${dCy - dH / 2} L ${dCx + dW / 2} ${dCy} L ${dCx} ${dCy}`}
+        fill={DIAMOND_HIGHLIGHT}
+        opacity={0.6}
+      />
+      {/* Tiny sparkle dot on the diamond that pulses with pulseAnim */}
+      <AnimatedCircle cx={dCx + 0.4 * s} cy={dCy - 0.4 * s} r={0.25 * s} fill="#FFFFFF" opacity={twinkleOpacity as any} />
+      {/* Side cream beads */}
       <Circle cx={cx - 5 * s} cy={peakY + 1.2 * s} r={0.7 * s} fill="#FFF6D6" />
       <Circle cx={cx + 5 * s} cy={peakY + 1.2 * s} r={0.7 * s} fill="#FFF6D6" />
-    </>
+    </AnimatedG>
   )
 }
 

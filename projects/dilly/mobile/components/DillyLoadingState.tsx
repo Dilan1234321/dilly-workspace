@@ -23,13 +23,16 @@ interface Props {
   /** Rotating pulse-fade lines. Must be non-empty; falls back to the
    *  built-in generic sequence if empty. */
   messages?: string[];
-  /** Face size. Defaults to 120 (matches My Dilly / AI Arena). */
+  /** Face size. Defaults to 88 (matches the Skills loading state). */
   size?: number;
-  /** Face mood. Defaults to 'idle'. Pass 'writing' with a pencil
-   *  accessory for surfaces that feel actively working. */
-  mood?: 'idle' | 'happy' | 'thinking' | 'writing' | 'curious' | 'proud';
-  /** Accessory to render in Dilly's hand (e.g. 'pencil'). */
-  accessory?: 'none' | 'pencil';
+  /** Face mood. Defaults to 'curious'. */
+  mood?: 'idle' | 'happy' | 'thinking' | 'writing' | 'curious' | 'proud' | 'attentive' | 'thoughtful' | 'focused';
+  /** Accessory to render in Dilly's hand (e.g. 'pencil', 'glasses'). */
+  accessory?: 'none' | 'pencil' | 'glasses' | 'briefcase' | 'compass';
+  /** Quiet supporting line below the rotating message. Static. Use
+   *  this to explain WHAT Dilly is doing for the user (Skills loading
+   *  uses "Dilly is reading your profile and matching skills…"). */
+  description?: string;
   /** Optional retry handler. When provided, a "Retry" button appears
    *  after 20s of loading - escape hatch for stuck screens. */
   onRetry?: () => void;
@@ -44,19 +47,17 @@ const DEFAULT_MESSAGES = [
 export default function DillyLoadingState({
   insetTop = 0,
   messages,
-  size = 120,
-  mood = 'idle',
+  size = 88,
+  mood = 'curious',
   accessory = 'none',
+  description,
   onRetry,
 }: Props) {
   const theme = useResolvedTheme();
   const lines = (messages && messages.length > 0) ? messages : DEFAULT_MESSAGES;
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const barAnim = useRef(new Animated.Value(0)).current;
   const [textIdx, setTextIdx] = useState(0);
-  // Retry escape hatch - surfaces after 20s of loading when the caller
-  // has passed onRetry. Stuck loading screens were the #1 "it looks
-  // broken" complaint; a visible retry button reframes the wait as
-  // recoverable.
   const [showRetry, setShowRetry] = useState(false);
 
   useEffect(() => {
@@ -66,19 +67,34 @@ export default function DillyLoadingState({
         Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
+    // Indeterminate progress bar: a small bright segment slides
+    // continuously across a dim track. Reads as "actively working"
+    // even when the underlying fetch hasn't returned yet — fixes the
+    // "the loading screen feels frozen" complaint on Jobs.
+    Animated.loop(
+      Animated.timing(barAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+    ).start();
     if (lines.length <= 1) return;
     const interval = setInterval(
       () => setTextIdx(i => (i + 1) % lines.length),
       2500,
     );
     return () => clearInterval(interval);
-  }, [pulseAnim, lines.length]);
+  }, [pulseAnim, barAnim, lines.length]);
 
   useEffect(() => {
     if (!onRetry) return;
     const id = setTimeout(() => setShowRetry(true), 20000);
     return () => clearTimeout(id);
   }, [onRetry]);
+
+  // Indeterminate-bar: bright segment slides L → R, then resets.
+  const trackW = 140;
+  const segW = 38;
+  const barTranslate = barAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-segW, trackW],
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: theme.surface.bg, paddingTop: insetTop }]}>
@@ -92,6 +108,22 @@ export default function DillyLoadingState({
         >
           {lines[textIdx]}
         </Animated.Text>
+        {description ? (
+          <Text style={[styles.description, { color: theme.surface.t3 }]}>
+            {description}
+          </Text>
+        ) : null}
+        {/* Indeterminate progress bar — visual reassurance that
+            something is actively happening. Sits below the copy
+            with subtle accent color. */}
+        <View style={[styles.barTrack, { backgroundColor: theme.surface.t3 + '22' }]}>
+          <Animated.View
+            style={[
+              styles.barSegment,
+              { backgroundColor: theme.accent, width: segW, transform: [{ translateX: barTranslate as any }] },
+            ]}
+          />
+        </View>
         {showRetry && onRetry ? (
           <TouchableOpacity
             onPress={() => { setShowRetry(false); onRetry(); }}
@@ -115,11 +147,31 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   text: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
-    marginTop: 24,
+    marginTop: 16,
+    letterSpacing: 0.3,
     textAlign: 'center',
     paddingHorizontal: 24,
+  },
+  description: {
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 16,
+    paddingHorizontal: 24,
+  },
+  barTrack: {
+    width: 140,
+    height: 3,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 18,
+  },
+  barSegment: {
+    height: 3,
+    borderRadius: 2,
   },
   retryBtn: {
     marginTop: 22,

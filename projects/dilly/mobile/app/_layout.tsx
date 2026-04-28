@@ -38,11 +38,20 @@ const GOLD = '#2B3A8E';
  *  theme the user chose. */
 function PreFontSplash() {
   const theme = useResolvedTheme();
+  // Honor the iOS system color scheme even when no user theme has
+  // hydrated yet (signed-out first launch). theme.surface.bg falls
+  // back to the default LIGHT bg pre-auth, which means an iPhone in
+  // dark mode flashes a white splash. Using useColorScheme() picks
+  // the right brand bg for whichever system mode the device is in.
+  const sysScheme = useColorScheme();
+  const bg = theme.accent
+    ? theme.surface.bg
+    : (sysScheme === 'dark' ? '#0E1430' : '#FFFFFF');
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
       <Image
         source={require('../assets/logo.png')}
-        style={{ width: 100, height: 34, tintColor: theme.accent }}
+        style={{ width: 100, height: 34, tintColor: theme.accent || (sysScheme === 'dark' ? '#FFFFFF' : '#2B3A8E') }}
         resizeMode="contain"
       />
     </View>
@@ -59,11 +68,17 @@ function PreFontSplash() {
 // doesn't visually stutter.
 function LoadingScreen({ onComplete, themed }: { onComplete: () => void; themed: boolean }) {
   const theme = useResolvedTheme();
-  const bg = themed ? theme.surface.bg : '#FFFFFF';
-  // fill tracks accent in both cases - theme.accent falls back to the
-  // default accent (indigo-violet) when no user has hydrated yet.
+  // When the user has a theme, follow it. When they don't (signed-out
+  // first launch), fall back to iOS system dark/light so the splash
+  // doesn't flash a hard white on a phone that's in dark mode.
+  const sysScheme = useColorScheme();
+  const bg = themed
+    ? theme.surface.bg
+    : (sysScheme === 'dark' ? '#0E1430' : '#FFFFFF');
   const fill = theme.accent || GOLD;
-  const taglineColor = themed ? theme.surface.t2 : colors.t2;
+  const taglineColor = themed
+    ? theme.surface.t2
+    : (sysScheme === 'dark' ? 'rgba(255,255,255,0.6)' : colors.t2);
   const wordmarkOpacity    = useRef(new Animated.Value(0)).current;
   const wordmarkTranslateY = useRef(new Animated.Value(6)).current;
   const taglineOpacity     = useRef(new Animated.Value(0)).current;

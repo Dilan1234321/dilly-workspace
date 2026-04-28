@@ -758,7 +758,7 @@ struct DillyProfileWidget: Widget {
         }
         .configurationDisplayName("Your Dilly Profile")
         .description("What Dilly remembers about you. Updates as your profile grows.")
-        .supportedFamilies([.systemMedium, .accessoryRectangular, .accessoryInline])
+        .supportedFamilies([.systemMedium, .accessoryRectangular, .accessoryInline, .accessoryCircular])
     }
 }
 
@@ -1048,19 +1048,27 @@ struct MomentOfTruthView: View {
 
             // ── ACTION ROW ────────────────────────────────────
             if entry.data.truthAnswered != true, entry.data.truthQuestion != nil {
+                // High-contrast button that survives every Home Screen
+                // theme (Light, Dark, Tinted, Dimmed). Earlier the
+                // text was a dark green on white — readable on Light
+                // but iOS Tinted desaturates the background, leaving
+                // the dark-green text washed out. Black-on-white +
+                // a heavy weight stays visible across all four modes.
                 Button(intent: AnswerTruthIntent(answer: true)) {
                     HStack(spacing: 4) {
-                        Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy))
-                        Text("Yes, today").font(.system(size: 11, weight: .heavy))
+                        Image(systemName: "checkmark").font(.system(size: 11, weight: .black)).foregroundColor(.black)
+                        Text("Yes, today").font(.system(size: 12, weight: .black)).foregroundColor(.black)
                     }
-                    .foregroundColor(Color(hex: 0x0F2E23)).padding(.horizontal, 10).padding(.vertical, 6)
-                    .background(Color.white).clipShape(Capsule())
+                    .padding(.horizontal, 11).padding(.vertical, 7)
+                    .background(.white)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.black.opacity(0.15), lineWidth: 0.6))
                 }
                 .buttonStyle(.plain)
             } else if entry.data.truthAnswered == true {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.seal.fill").font(.system(size: 10)).foregroundColor(Color.white)
-                    Text("Logged today").font(.system(size: 10, weight: .heavy)).tracking(0.6).foregroundColor(Color.white.opacity(0.85))
+                    Text("Logged today").font(.system(size: 10, weight: .heavy)).tracking(0.6).foregroundColor(Color.white)
                 }
             }
         }
