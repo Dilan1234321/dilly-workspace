@@ -359,6 +359,13 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
     }
   }, [showHistory, historyMounted, historySlide]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  // Cost transparency: backend returns the cumulative cost (USD)
+  // for this conv after every reply, read straight from
+  // llm_usage_log. Surfaced in the footer so cost claims are
+  // verifiable instead of estimated.
+  const [convCostUsd, setConvCostUsd] = useState<number | null>(null);
+  const [convCostBreakdown, setConvCostBreakdown] = useState<Array<{ feature: string; calls: number; usd: number }> | null>(null);
+  const [showCostDetail, setShowCostDetail] = useState(false);
   const suggestionsOpacity = useRef(new Animated.Value(0)).current;
   const initialMessageSent = useRef(false);
   const pendingInitialMessage = useRef<string | null>(null);
@@ -530,6 +537,17 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       }
       const data = await res.json();
 
+      // Cost transparency: backend reads llm_usage_log for this
+      // conv_id and returns the actual cumulative cost. Update the
+      // footer immediately so the user sees the real number after
+      // every turn.
+      if (typeof data.conv_cost_usd === 'number') {
+        setConvCostUsd(data.conv_cost_usd);
+      }
+      if (Array.isArray(data.conv_cost_breakdown)) {
+        setConvCostBreakdown(data.conv_cost_breakdown);
+      }
+
       // Synchronous memory extraction on the server: new facts are persisted
       // before this JSON returns. Broadcast so My Dilly + ProfileGrowthToast
       // update without waiting for overlay close /flush.
@@ -659,6 +677,9 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       pendingInitialMessage.current = studentContext?.initialMessage || null;
       setSuggestions([]);
       suggestionsOpacity.setValue(0);
+      setConvCostUsd(null);
+      setConvCostBreakdown(null);
+      setShowCostDetail(false);
 
       // Hydrate an in-progress chat if one is saved and no new
       // initialMessage seed is coming in. Incoming seed means the
@@ -937,6 +958,9 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                   AsyncStorage.removeItem(LIVE_CHAT_KEY).catch(() => {});
                   setSuggestions(getInitialSuggestions(studentContext, mode));
                   suggestionsOpacity.setValue(1);
+                  setConvCostUsd(null);
+                  setConvCostBreakdown(null);
+                  setShowCostDetail(false);
                 }}
                 hitSlop={12}
               >
@@ -1206,6 +1230,43 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 ))}
               </ScrollView>
             </Animated.View>
+          )}
+
+          {/* Cost ledger — actual cumulative cost for this conversation,
+              read straight from the server-side llm_usage_log Postgres
+              table after every reply. Tap to see the per-feature
+              breakdown (chat / extraction). Surfaces real numbers so
+              cost claims are verifiable rather than estimated. */}
+          {convCostUsd !== null && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setShowCostDetail(v => !v)}
+              style={{
+                paddingHorizontal: 16,
+                paddingTop: 6,
+                paddingBottom: 4,
+                borderTopWidth: 1,
+                borderTopColor: theme.surface.border,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 11, color: theme.surface.t3, fontFamily: theme.type.body }}>
+                  this conversation: {(convCostUsd * 100).toFixed(2)}¢
+                </Text>
+                <Text style={{ fontSize: 10, color: theme.surface.t3, fontFamily: theme.type.body }}>
+                  {showCostDetail ? 'hide' : 'breakdown'}
+                </Text>
+              </View>
+              {showCostDetail && convCostBreakdown && convCostBreakdown.length > 0 && (
+                <View style={{ marginTop: 4 }}>
+                  {convCostBreakdown.map((row) => (
+                    <Text key={row.feature} style={{ fontSize: 10, color: theme.surface.t3, fontFamily: theme.type.body }}>
+                      {row.feature}: {(row.usd * 100).toFixed(2)}¢ ({row.calls} call{row.calls === 1 ? '' : 's'})
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </TouchableOpacity>
           )}
 
           {/* Input */}

@@ -746,6 +746,7 @@ Extract new memory items now. Return JSON array only."""
         temperature=0.2,
         log_email=uid,
         log_feature="extraction",
+        log_session_id=conv_id or None,
         log_metadata={"conv_id": conv_id[:16] if conv_id else None,
                       "n_messages": len(messages)},
     )

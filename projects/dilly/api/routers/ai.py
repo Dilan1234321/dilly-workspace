@@ -193,6 +193,13 @@ class ChatResponse(BaseModel):
     """When non-null, contains `added` / `count` — new memory-surface facts persisted this turn.
     Populated synchronously so the client can refresh My Dilly without waiting for /flush."""
 
+    conv_cost_usd: Optional[float] = None
+    """Cumulative LLM cost (USD) for this conversation, summed straight from llm_usage_log.
+    Lets the client show real cost so claims about cost reductions are verifiable."""
+
+    conv_cost_breakdown: Optional[List[Dict[str, Any]]] = None
+    """Per-feature breakdown of conv_cost_usd: [{feature, calls, usd}]."""
+
 
 def _build_rich_context(email: str) -> dict:
     from projects.dilly.api.profile_store import get_profile, get_profile_folder_path
@@ -2033,10 +2040,28 @@ async def ai_chat(request: Request, body: ChatRequest):
         # ── Auto-attach visual cards based on response content ─────────
         visual = _detect_visual(content, body.student_context, body.mode, email)
 
+        # ── Cost transparency: read the actual logged cost for this
+        # conversation from llm_usage_log. Surfaces in the UI so the
+        # user can verify cost claims directly instead of trusting
+        # estimates. Costs include this turn (logged above before
+        # extraction runs).
+        conv_cost_usd: Optional[float] = None
+        conv_cost_breakdown: Optional[List[Dict[str, Any]]] = None
+        if email and body.conv_id:
+            try:
+                from projects.dilly.api.llm_usage_log import get_session_cost
+                sc = get_session_cost(email, body.conv_id)
+                conv_cost_usd = round(float(sc.get("total_usd", 0.0)), 6)
+                conv_cost_breakdown = sc.get("by_feature", [])
+            except Exception:
+                pass
+
         return ChatResponse(
             content=content.strip(),
             visual=visual,
             memory=memory_payload,
+            conv_cost_usd=conv_cost_usd,
+            conv_cost_breakdown=conv_cost_breakdown,
         )
     except Exception as e:
         import traceback

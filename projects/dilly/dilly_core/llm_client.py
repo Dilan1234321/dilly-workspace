@@ -123,6 +123,7 @@ def get_chat_completion(
     log_email: str = "",
     log_feature: str = "other",
     log_metadata: Optional[dict] = None,
+    log_session_id: Optional[str] = None,
 ) -> Optional[str]:
     """
     Send system + user to whichever backend is selected (see _provider()).
@@ -186,6 +187,7 @@ def get_chat_completion(
             log_from_anthropic_response(
                 log_email, log_feature, response,
                 metadata=log_metadata or {"route": "dilly_core/llm_client.py"},
+                session_id=log_session_id,
             )
         except Exception:
             pass

@@ -468,6 +468,41 @@ def get_user_detail(email: str, days: int = 30) -> dict:
     return out
 
 
+def get_session_cost(email: str, session_id: str) -> dict:
+    """Sum cost for a given session (e.g. a voice conversation).
+
+    Returns: {total_usd, calls, by_feature: [{feature, calls, usd}]}
+    Lets the chat UI surface the running per-conversation cost so
+    cost claims are verifiable by the user instead of estimated.
+    """
+    out: dict = {"total_usd": 0.0, "calls": 0, "by_feature": []}
+    if not email or not session_id:
+        return out
+    try:
+        with _conn() as c:
+            with c.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT feature,
+                           COUNT(*) AS calls,
+                           COALESCE(SUM(cost_usd), 0) AS usd
+                    FROM llm_usage_log
+                    WHERE email = %s AND session_id = %s
+                    GROUP BY feature ORDER BY usd DESC
+                """, (email, session_id))
+                rows = cur.fetchall() or []
+                out["by_feature"] = [
+                    {"feature": r["feature"], "calls": int(r["calls"] or 0),
+                     "usd": float(r["usd"] or 0)}
+                    for r in rows
+                ]
+                out["total_usd"] = sum(x["usd"] for x in out["by_feature"])
+                out["calls"] = sum(x["calls"] for x in out["by_feature"])
+    except Exception as e:
+        import sys
+        sys.stderr.write(f"[llm_usage_log] get_session_cost failed: {e}\n")
+    return out
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Retention — purge rows older than 90 days
 # ─────────────────────────────────────────────────────────────────────

@@ -329,6 +329,8 @@ def _compute_profile_updates(
     message: str,
     context: dict,
     history: list[dict] | None = None,
+    *,
+    conv_id: str | None = None,
 ) -> dict | None:
     """Compute and save profile updates from a user's voice message.
     Handles three modes:
@@ -405,7 +407,10 @@ def _compute_profile_updates(
                 already_captured = raw_br
         except Exception:
             pass
-        extracted = extract_beyond_resume_with_llm(message, history=history, already_captured=already_captured)
+        extracted = extract_beyond_resume_with_llm(
+            message, history=history, already_captured=already_captured,
+            log_email=email, log_session_id=conv_id,
+        )
         if extracted:
             res = _append_beyond_resume_and_save(email, extracted)
             if res and res.get("beyond_resume"):
@@ -449,6 +454,36 @@ async def voice_proactive_nudges(request: Request):
         return {"proactive_nudges": nudges, "proactive_lines": lines}
     except Exception:
         return {"proactive_nudges": {}, "proactive_lines": []}
+
+
+@router.get("/voice/conv-cost")
+async def voice_conv_cost(request: Request):
+    """Return actual measured cost (in USD) for a given voice conversation.
+
+    Pulls straight from llm_usage_log Postgres rows, no estimation. The
+    UI uses this to show real-time cost in the chat overlay so cost
+    claims are verifiable instead of taking my word for it.
+
+    Query params: conv_id (required).
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    conv_id = (request.query_params.get("conv_id") or "").strip()
+    if not conv_id:
+        return JSONResponse(content={"total_usd": 0.0, "calls": 0, "by_feature": []})
+    try:
+        from projects.dilly.api.llm_usage_log import get_session_cost
+        sc = get_session_cost(email, conv_id)
+        return JSONResponse(content={
+            "total_usd": round(float(sc.get("total_usd", 0.0)), 6),
+            "total_cents": round(float(sc.get("total_usd", 0.0)) * 100, 4),
+            "calls": int(sc.get("calls", 0)),
+            "by_feature": sc.get("by_feature", []),
+        })
+    except Exception as e:
+        return JSONResponse(content={"total_usd": 0.0, "calls": 0, "by_feature": [], "error": str(e)[:200]})
 
 
 @router.get("/voice/onboarding-state")
@@ -596,14 +631,18 @@ async def voice_chat(request: Request, body: dict = Body(...)):
     try:
         from dilly_core.llm_client import is_llm_available, get_chat_completion, get_light_model
         if is_llm_available():
-            raw = get_chat_completion(system, user_content, model=get_light_model(), temperature=0.5, max_tokens=500)
+            raw = get_chat_completion(
+                system, user_content,
+                model=get_light_model(), temperature=0.5, max_tokens=500,
+                log_email=email, log_feature="chat", log_session_id=conv_id or None,
+            )
             if raw:
                 reply, suggestions = extract_suggestions_from_reply(raw.strip())
                 reply, suggestions = sanitize_voice_reply_and_suggestions(reply, suggestions)
     except Exception:
         pass
 
-    profile_updates = _compute_profile_updates(email, message, context, history=history)
+    profile_updates = _compute_profile_updates(email, message, context, history=history, conv_id=conv_id)
     target_company_added = _maybe_capture_target_company_from_message(email, message)
     if target_company_added and "ready for them" not in reply.lower():
         reply = (reply.rstrip() + " Want me to check if you're ready for them?").strip()
@@ -640,6 +679,17 @@ async def voice_chat(request: Request, body: dict = Body(...)):
             res["deadlines_auto_saved"] = auto_saved
     if agent_results:
         res["agent_results"] = agent_results
+    # Running cost-of-this-conversation. Read straight from the
+    # llm_usage_log Postgres table so the user can verify costs
+    # themselves instead of taking my word for it.
+    if conv_id:
+        try:
+            from projects.dilly.api.llm_usage_log import get_session_cost
+            sc = get_session_cost(email, conv_id)
+            res["conv_cost_usd"] = round(float(sc.get("total_usd", 0.0)), 6)
+            res["conv_cost_breakdown"] = sc.get("by_feature", [])
+        except Exception:
+            pass
     _maybe_enqueue_memory_extract(
         email=email,
         conv_id=conv_id,

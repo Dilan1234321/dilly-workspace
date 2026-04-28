@@ -1029,6 +1029,9 @@ def extract_beyond_resume_with_llm(
     user_message: str,
     history: list[dict] | None = None,
     already_captured: list[dict] | None = None,
+    *,
+    log_email: str = "",
+    log_session_id: str | None = None,
 ) -> list[dict]:
     """
     Extract concrete facts from a user message: skills, experiences, projects, people,
@@ -1118,7 +1121,10 @@ Rules:
 Output a JSON array: [{{"type": "skill"|"experience"|"project"|"person"|"company"|"event"|"emotion"|"other", "text": "short specific phrase"}}]
 Output ONLY the JSON array. No markdown, no explanation."""
 
-    raw = get_chat_completion(system, transcript, model=get_light_model(), temperature=0.1, max_tokens=500)
+    raw = get_chat_completion(
+        system, transcript, model=get_light_model(), temperature=0.1, max_tokens=500,
+        log_email=log_email, log_feature="extraction", log_session_id=log_session_id,
+    )
     if not raw:
         return []
 
