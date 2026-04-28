@@ -87,7 +87,12 @@ export interface AccentPreset {
 }
 
 export const ACCENT_PRESETS: AccentPreset[] = [
-  { id: 'indigo',    label: 'Dilly',     color: '#2B3A8E' },
+  // Dilly's house accent. Deep indigo on light surfaces matches the
+  // brand on the website. On dark surfaces it gets too muddy, so we
+  // swap to a light blue (cornflower) — same vibe, way more readable
+  // against a dark bg. The swap fires automatically via resolveTheme
+  // when the system color scheme is dark and autoDark is on.
+  { id: 'indigo',    label: 'Dilly',     color: '#2B3A8E', darkColor: '#7EB5FF', darkLabel: 'Dilly' },
   { id: 'navy',      label: 'Navy',      color: '#0F2A6B', darkColor: '#7EB5FF', darkLabel: 'Cornflower' },
   { id: 'sky',       label: 'Sky',       color: '#0A84FF' },
   { id: 'teal',      label: 'Teal',      color: '#0D9488' },

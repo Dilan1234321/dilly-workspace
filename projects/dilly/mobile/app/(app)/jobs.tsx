@@ -809,14 +809,24 @@ export default function JobsScreen() {
   }
 
   const noticedLine = noticed[noticeIndex] || '';
+  // Tap a card → open the LinkedIn-style detail sheet. Power users can
+  // still long-press if we wire that later; default tap goes to the
+  // sheet because LinkedIn-style is the mental model users expect.
+  // We also fire the narrative fetch so by the time the sheet opens
+  // and the user scrolls, Dilly's read is loaded.
+  const openDetail = useCallback((job: Listing) => {
+    ensureNarrative(job);
+    setDetailJob(job);
+  }, [ensureNarrative]);
   const cardActions = {
-    onExpand:  toggleExpanded,
+    onExpand:  openDetail,
     onApply:   apply,
     onAsk:     askDilly,
     onTailor:  tailorResume,
   };
 
   return (
+    <>
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }}
@@ -1087,6 +1097,320 @@ export default function JobsScreen() {
         </View>
       ) : null}
     </ScrollView>
+    {/* LinkedIn-style detail sheet. Renders as a slide-up modal when
+        the user taps a job card. Pulls everything Dilly knows about
+        the job (description, fit narrative, gap video, actions). */}
+    <JobDetailSheet
+      job={detailJob}
+      onClose={() => setDetailJob(null)}
+      narrative={detailJob ? narratives[detailJob.id] : null}
+      gapVideoId={detailJob ? gapVideoByJob[detailJob.id] : null}
+      profile={profile}
+      theme={theme}
+      onApply={apply}
+      onAsk={askDilly}
+      onTailor={tailorResume}
+    />
+    </>
+  );
+}
+
+// -- LinkedIn-style Job Detail Sheet ------------------------------------------
+// Slides up from the bottom when the user taps a job card. The layout
+// mirrors the structure LinkedIn uses for job posts so the user feels
+// immediately oriented:
+//
+//   [logo] Company name        [×]
+//   Job title (big, bold)
+//   Location · work mode · posted
+//   [chips: salary / fit % / source]
+//   [primary Apply] [Save] [Share]
+//   ── About the job ──────────────────────
+//   <full description, scrollable>
+//   ── How you match (Dilly's read) ───────
+//   <fit narrative + gap video>
+//   ── More from this company ────────────
+//
+// The Dilly differentiation: the "How you match" block is grounded in
+// real Profile facts, not a generic LinkedIn match score.
+
+function JobDetailSheet({
+  job, onClose, narrative, gapVideoId, profile, theme,
+  onApply, onAsk, onTailor,
+}: {
+  job: Listing | null;
+  onClose: () => void;
+  narrative: any;
+  gapVideoId: string | null;
+  profile: Profile | null;
+  theme: ReturnType<typeof useResolvedTheme>;
+  onApply: (j: Listing) => void;
+  onAsk: (j: Listing) => void;
+  onTailor: (j: Listing) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  if (!job) return null;
+  const loc = [job.location_city, job.location_state].filter(Boolean).join(', ')
+    || (job.remote ? 'Remote' : '');
+  const workMode = job.work_mode || (job.remote ? 'Remote' : '');
+  const posted = daysAgo(job.posted_date);
+  const fullJd = (job.description || job.description_preview || '').trim();
+  const loadingNarr = narrative && (narrative as any).__loading;
+  const erroredNarr = narrative && (narrative as any).__error;
+  const data: FitNarrative | null = (narrative && !loadingNarr && !erroredNarr) ? (narrative as FitNarrative) : null;
+
+  return (
+    <Modal
+      visible={!!job}
+      onRequestClose={onClose}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
+      <View style={{ flex: 1, backgroundColor: theme.surface.bg }}>
+        {/* Top bar — small, persistent so the user can close from any
+            scroll position. Mirrors LinkedIn's compact header. */}
+        <View style={{
+          paddingTop: insets.top + 6,
+          paddingHorizontal: 16, paddingBottom: 8,
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          borderBottomWidth: 1, borderBottomColor: theme.surface.border,
+        }}>
+          <TouchableOpacity onPress={onClose} hitSlop={12}>
+            <Ionicons name="close" size={24} color={theme.surface.t1} />
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            <TouchableOpacity hitSlop={10} onPress={() => onAsk(job)}>
+              <Ionicons name="sparkles-outline" size={20} color={theme.surface.t2} />
+            </TouchableOpacity>
+            <TouchableOpacity hitSlop={10} onPress={() => onTailor(job)}>
+              <Ionicons name="document-text-outline" size={20} color={theme.surface.t2} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Hero — company + title block, LinkedIn pattern */}
+          <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <CompanyLogo job={job} size={52} theme={theme} />
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 14, fontWeight: '700', color: theme.surface.t1, fontFamily: theme.type.body,
+                }} numberOfLines={1}>
+                  {job.company}
+                </Text>
+                {job.company_website ? (
+                  <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 1 }} numberOfLines={1}>
+                    {job.company_website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
+            <Text style={{
+              fontSize: 24, fontWeight: '800', color: theme.surface.t1,
+              fontFamily: theme.type.display, lineHeight: 30, letterSpacing: -0.3,
+            }}>
+              {job.title}
+            </Text>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              <Text style={{ fontSize: 12, color: theme.surface.t2 }}>
+                {[loc, workMode, posted].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+
+            {/* Status chips: source / fit % */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+              {job.job_type ? (
+                <View style={{
+                  paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+                  backgroundColor: theme.surface.s2, borderWidth: 1, borderColor: theme.surface.border,
+                }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: theme.surface.t2, textTransform: 'capitalize' }}>
+                    {job.job_type.replace('_', ' ')}
+                  </Text>
+                </View>
+              ) : null}
+              {job.source ? (
+                <View style={{
+                  paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+                  backgroundColor: theme.surface.s2, borderWidth: 1, borderColor: theme.surface.border,
+                }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: theme.surface.t2 }}>
+                    via {job.source}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Primary action row — LinkedIn's "Easy Apply" pattern */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 18 }}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => onApply(job)}
+                style={{
+                  flex: 1,
+                  backgroundColor: theme.accent,
+                  paddingVertical: 13, borderRadius: 24,
+                  alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6,
+                }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 14, letterSpacing: 0.3 }}>
+                  Apply
+                </Text>
+                <Ionicons name="open-outline" size={14} color="#FFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  const q = encodeURIComponent(`${job.company} ${job.title}`.trim());
+                  Linking.openURL(`https://www.linkedin.com/jobs/search/?keywords=${q}`).catch(() => {});
+                }}
+                style={{
+                  paddingVertical: 13, paddingHorizontal: 16, borderRadius: 24,
+                  borderWidth: 1.5, borderColor: theme.surface.border,
+                  alignItems: 'center', justifyContent: 'center',
+                  flexDirection: 'row', gap: 6,
+                }}
+              >
+                <Ionicons name="logo-linkedin" size={16} color="#0A66C2" />
+                <Text style={{ fontWeight: '700', fontSize: 13, color: theme.surface.t1 }}>
+                  LinkedIn
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* About the job — full JD */}
+          {fullJd ? (
+            <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Ionicons name="document-text-outline" size={14} color={theme.surface.t3} />
+                <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.0, color: theme.surface.t3 }}>
+                  ABOUT THE JOB
+                </Text>
+              </View>
+              <Text style={{ fontSize: 14, color: theme.surface.t1, lineHeight: 21, fontFamily: theme.type.body }}>
+                {fullJd}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* How you match — Dilly's fit narrative grounded in Profile */}
+          <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Ionicons name="sparkles" size={14} color={theme.accent} />
+              <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.0, color: theme.accent }}>
+                HOW YOU MATCH
+              </Text>
+            </View>
+            {loadingNarr ? (
+              <View style={{ gap: 6 }}>
+                <View style={{ height: 10, backgroundColor: theme.surface.s2, borderRadius: 5, width: '92%' }} />
+                <View style={{ height: 10, backgroundColor: theme.surface.s2, borderRadius: 5, width: '78%' }} />
+                <View style={{ height: 10, backgroundColor: theme.surface.s2, borderRadius: 5, width: '85%' }} />
+              </View>
+            ) : data ? (
+              <View style={{ gap: 12 }}>
+                {data.what_you_have ? (
+                  <View>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#15803D', marginBottom: 3, letterSpacing: 0.4 }}>
+                      WHAT YOU HAVE
+                    </Text>
+                    <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>
+                      {data.what_you_have}
+                    </Text>
+                  </View>
+                ) : null}
+                {data.whats_missing ? (
+                  <View>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309', marginBottom: 3, letterSpacing: 0.4 }}>
+                      WHAT'S MISSING
+                    </Text>
+                    <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>
+                      {data.whats_missing}
+                    </Text>
+                  </View>
+                ) : null}
+                {data.what_to_do ? (
+                  <View style={{
+                    padding: 12, borderRadius: 10,
+                    backgroundColor: theme.accentSoft,
+                    borderWidth: 1, borderColor: theme.accentBorder,
+                  }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, marginBottom: 3, letterSpacing: 0.4 }}>
+                      WHAT TO DO
+                    </Text>
+                    <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>
+                      {data.what_to_do}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={{ fontSize: 12, color: theme.surface.t3, fontStyle: 'italic' }}>
+                Dilly is reading your profile against this role…
+              </Text>
+            )}
+          </View>
+
+          {/* Close-the-gap video if Dilly found one */}
+          {gapVideoId ? (
+            <View style={{ paddingHorizontal: 20, marginTop: 22 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Ionicons name="play-circle-outline" size={14} color={theme.accent} />
+                <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.0, color: theme.accent }}>
+                  CLOSE THE GAP
+                </Text>
+              </View>
+              <SkillsVideoCard videoId={gapVideoId} />
+            </View>
+          ) : null}
+
+          {/* About the company — small footer block (LinkedIn pattern) */}
+          <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Ionicons name="business-outline" size={14} color={theme.surface.t3} />
+              <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.0, color: theme.surface.t3 }}>
+                ABOUT THE COMPANY
+              </Text>
+            </View>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              padding: 12, borderRadius: 12,
+              backgroundColor: theme.surface.s1, borderWidth: 1, borderColor: theme.surface.border,
+            }}>
+              <CompanyLogo job={job} size={36} theme={theme} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>{job.company}</Text>
+                {job.company_website ? (
+                  <TouchableOpacity onPress={() => Linking.openURL(job.company_website!).catch(() => {})}>
+                    <Text style={{ fontSize: 11, color: theme.accent, marginTop: 2 }}>
+                      Visit website
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`https://www.glassdoor.com/Search/results.htm?keyword=${encodeURIComponent(job.company)}`).catch(() => {})}
+                style={{
+                  paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                  borderWidth: 1, borderColor: theme.surface.border,
+                  flexDirection: 'row', alignItems: 'center', gap: 4,
+                }}
+              >
+                <Ionicons name="document-text" size={12} color="#0CAA41" />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: theme.surface.t2 }}>Reviews</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
