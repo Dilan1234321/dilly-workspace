@@ -193,7 +193,21 @@ def get_chat_completion(
             pass
         text = response.content[0].text if response.content else None
         return (text or "").strip() or None
-    except Exception:
+    except Exception as _llm_e:
+        # Silent return previously — every Anthropic error (rate-limit,
+        # timeout, network blip) caused extraction to evaporate with
+        # no indication. Log to stderr so Railway shows the failure
+        # in real time and we can tell when an empty profile was
+        # caused by the API vs by the LLM returning [].
+        try:
+            import sys as _sys
+            _sys.stderr.write(
+                f"[get_chat_completion] anthropic error feature={log_feature} "
+                f"email={(log_email[:6] + '***') if log_email else 'anon'}: "
+                f"{type(_llm_e).__name__}: {str(_llm_e)[:200]}\n"
+            )
+        except Exception:
+            pass
         return None
 
 
