@@ -802,21 +802,39 @@ async def _generate_jd_specific_questions(
         if cohort_prior else ""
     )
 
-    system = f"""You are a senior interviewer at {company} hiring for {role}.
-Generate exactly 8 interview questions a real interviewer would ask for this specific role.
+    system = f"""You are a senior {company} interviewer hiring for {role}.
+You've run 100+ loops at {company} and you know exactly what {company}
+looks for — the signals, the bar, the question patterns. Generate
+exactly 8 interview questions a real {company} interviewer would ask
+for THIS specific role. Do NOT generate generic FAANG/consulting
+boilerplate — this should feel unmistakably like {company}.
 
 JOB DESCRIPTION:
 {job_description[:4000]}
 {cohort_prior_block}
+COMPANY-SPECIFIC STYLE (lean into this):
+{company} has its own interview personality. Think about what THAT firm
+is actually known for — case-heavy if consulting, leadership-principle
+chains if Amazon-style, system-design depth if FAANG infra, fit-and-
+firm if banking, portfolio-walkthrough if design. Match the question
+PATTERN to the firm. A user practicing for Goldman should feel like
+they're sitting with a Goldman interviewer; a user practicing for
+Stripe should feel like they're sitting with a Stripe interviewer.
+
 REQUIREMENTS:
 1. Mix of technical (3-4), behavioral (2-3), and company-fit (1-2) questions.
 2. Reference SPECIFIC skills, tools, or requirements from the JD.
-3. Questions should feel like they come from someone who works at {company}, not generic.
+3. Questions should feel unmistakably like {company}, not generic. If
+   {company} has known interview rituals (e.g., "tell me about a time"
+   chains, market sizing, paper coding, pair programming, take-home,
+   case interview, reverse interview, "why this firm"), use those.
 4. For technical questions, reference technologies or methods mentioned in the JD.
 5. For behavioral questions, relate to scenarios that would occur in this specific role.
 6. Include one "Why {company}?" question that references something specific about the company.
 7. If the domain notes above mention signals that interviewers look for (certs, portfolios,
    home labs, case frameworks, etc.), at least one question should surface those naturally.
+8. The {company} bar matters. Don't write softball questions if {company}
+   is tier-1 in this space.
 
 Return ONLY a JSON array of objects, each with:
   "question": the interview question text,

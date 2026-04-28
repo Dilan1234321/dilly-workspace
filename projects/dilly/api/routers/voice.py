@@ -1158,10 +1158,40 @@ async def mock_interview_turn(request: Request, body: dict = Body(...)):
     session_context = (body.get("session_context") or "").strip()
     total_questions = min(int(body.get("total_questions", 5)), 7)
     history = body.get("history") or []  # list of {q, a, score, feedback}
+    # Company-specific persona — when the user is interviewing for a
+    # specific firm, the mock interviewer adopts THAT firm's interview
+    # style. No competitor (BigInterview, Yoodli, Pramp) does this —
+    # they all use generic behavioral. Goldman's behavioral is faster
+    # and more numbers-driven than Google's; consulting firms case-
+    # heavy; design firms portfolio-walkthrough. Naming the company
+    # gives Haiku enough context to shift the question pattern, the
+    # rubric weights, and the follow-up style. Falls back gracefully
+    # when no company is provided (generic mock).
+    company = (body.get("company") or "").strip()
+    role_target = (body.get("role") or "").strip()
+    persona_block = ""
+    if company:
+        persona_block = (
+            f"\n\nCOMPANY-SPECIFIC PERSONA: You are role-playing a "
+            f"{company} interviewer for a {role_target or 'target'} role. "
+            f"Conduct this mock the way {company} actually interviews. "
+            f"Use {company}'s interview style — their typical question "
+            f"types, the bar they hold for this role level, and the "
+            f"specific signals their recruiters look for. If {company} "
+            f"is known for case interviews, behavioral 'tell me about a "
+            f"time' chains, system design, leadership-principle stories "
+            f"(Amazon LP-style), or technical deep-dives, lean into "
+            f"that. Reference {company} by name in your follow-up "
+            f"questions when natural ('At {company} we'd push on this — "
+            f"can you give me a number?'). End-of-session feedback "
+            f"should be calibrated to {company}'s actual hiring bar — "
+            f"a 4/5 at one firm is a 3/5 at a tier-1 firm. This is what "
+            f"makes Dilly different from generic mock-interview tools."
+        )
 
     # Build user message
     if question_index == 0 and not answer:
-        user_msg = f"Start the session. Total questions: {total_questions}.\n{session_context}\nAsk the first question."
+        user_msg = f"Start the session. Total questions: {total_questions}.\n{session_context}\nCompany: {company or '(generic — no specific firm)'}.\nRole: {role_target or '(unspecified)'}.\nAsk the first question."
     elif question_index >= total_questions:
         user_msg = f"The session is complete ({total_questions} questions answered). Give the final session summary. Set is_final=true and session_score to the average score."
     else:
@@ -1171,11 +1201,18 @@ async def mock_interview_turn(request: Request, body: dict = Body(...)):
         user_msg = f"{session_context}\n\nSession history (last {len(history[-4:])} turns):\n{history_text}Question index: {question_index} of {total_questions}.\nUser's answer to the last question: {answer}\n\nScore this answer and ask question {question_index + 1}."
 
     try:
+        # Append the company persona block to the base system prompt
+        # (does not invalidate the prompt cache because the cache is
+        # only set on >4000 char prompts via cache_control wrapping;
+        # this prompt is shorter and rebuilds per-request anyway).
+        full_system = _INTERVIEW_SYSTEM_PROMPT + persona_block
         raw = get_chat_completion(
-            _INTERVIEW_SYSTEM_PROMPT,
+            full_system,
             user_msg,
             temperature=0.4,
             max_tokens=700,
+            log_email=(user.get("email") or "").lower(),
+            log_feature="interview_feedback",
         )
         if not raw:
             return JSONResponse(content={"error": "No response from LLM."}, status_code=500)

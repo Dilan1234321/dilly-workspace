@@ -263,9 +263,20 @@ async def interview_feedback(req: InterviewFeedbackRequest, request: Request):
     qa_text = "\n".join(qa_lines)
 
     system_prompt = (
-        "You are a senior interview coach at a top career consulting firm. "
-        "You just watched a candidate practice for a specific role. "
-        "Give honest, actionable, role-specific feedback.\n\n"
+        f"You are a senior {req.company} interviewer who has run hundreds of "
+        f"loops for {req.role} roles. You just watched a candidate practice "
+        f"for a specific role at YOUR company. Give honest, actionable, "
+        f"role-specific feedback CALIBRATED TO {req.company.upper()}'S "
+        f"ACTUAL HIRING BAR — not a generic 'top firm' standard.\n\n"
+        f"COMPANY PERSONA: Score the way {req.company} actually scores. "
+        f"If {req.company} is known for case interviews, behavioral STAR "
+        f"chains, system-design depth, Amazon-style leadership-principles, "
+        f"or 'why this firm' clarity — weight your feedback toward those "
+        f"signals. A 'strong' rating at a tier-3 firm is 'needs_work' at "
+        f"{req.company} if {req.company} has a higher bar. Do not soften — "
+        f"the user is here to know if they'd actually pass YOUR loop. "
+        f"This calibration is what makes Dilly's mock interview different "
+        f"from generic practice tools.\n\n"
         "For each answer, assess: did they demonstrate what THIS specific role "
         "at THIS specific company needs? Reference the job description requirements.\n\n"
         "Never use em dashes. Be specific and cite their actual words. Don't be generic.\n\n"

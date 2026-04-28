@@ -162,18 +162,49 @@ function StatusPills({ current, onChange }: { current: AppStatus; onChange: (s: 
 
 // ── Application Card ──────────────────────────────────────────────────────────
 
-function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }: {
+// Application context the card lazy-loads on first expand. This is what
+// pushes the tracker from "list of jobs" into "live coaching surface" —
+// each card becomes a place where the user's chat history, recruiter
+// intel, and fit gap LIVE for that specific application.
+interface AppContext {
+  recruiter?: { label: string; value: string; category: string } | null;
+  people_at_company?: Array<{ label: string; value: string; category: string }>;
+  gap?: { score: number; cohort_bar: number; delta: number; message: string } | null;
+  prep_notes?: string[];
+  next_milestone?: { type: string; label: string; date?: string } | null;
+}
+
+function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp, onAskDilly }: {
   app: Application;
   onStatusChange: (id: string, status: AppStatus) => void;
   onDelete: (id: string) => void;
   onEdit: (app: Application) => void;
   onTailor: (app: Application) => void;
   onFollowUp: (app: Application) => void;
+  onAskDilly: (app: Application, ctx: AppContext | null) => void;
 }) {
   const theme = useResolvedTheme();
   const cfg = statusConfig(app.status);
   const isInterviewing = app.status === 'interviewing';
   const appliedAge = daysAgo(app.applied_at);
+
+  // Context state — lazy fetched on first expand. Most cards stay
+  // collapsed (cheap), expanding triggers a single GET and renders chat
+  // context inline.
+  const [expanded, setExpanded] = useState(false);
+  const [ctx, setCtx] = useState<AppContext | null>(null);
+  const [ctxLoading, setCtxLoading] = useState(false);
+
+  async function loadContext() {
+    if (ctx || ctxLoading) return;
+    setCtxLoading(true);
+    try {
+      const data = await dilly.get(`/applications/${app.id}/context`);
+      if (data) setCtx(data as AppContext);
+    } catch {} finally {
+      setCtxLoading(false);
+    }
+  }
   const isSilent = app.status === 'applied' && app.applied_at && (() => {
     try { return (Date.now() - new Date(app.applied_at).getTime()) > 14 * 86400000; } catch { return false; }
   })();
@@ -302,6 +333,103 @@ function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }
           </AnimatedPressable>
         )}
       </View>
+
+      {/* ── Dilly knows about this app ───────────────────────────────
+          The thing that makes the tracker into a coaching surface. Tap
+          to expand and Dilly pulls everything she's captured about
+          this specific application: recruiter from the Profile, the
+          fit gap vs cohort, prep notes from past chats, suggested next
+          move. No competitor (Huntr/Teal/Simplify) has anything like
+          this — they only know the company name. */}
+      <AnimatedPressable
+        style={ts.contextToggle}
+        onPress={() => {
+          if (!expanded) loadContext();
+          setExpanded(v => !v);
+        }}
+        scaleDown={0.97}
+      >
+        <Ionicons
+          name={expanded ? 'chevron-down' : 'chevron-forward'}
+          size={11}
+          color={theme.surface.t3}
+        />
+        <Text style={[ts.contextToggleText, { color: theme.surface.t3 }]}>
+          {expanded ? 'Dilly\'s context for this app' : 'See what Dilly knows about this app'}
+        </Text>
+      </AnimatedPressable>
+
+      {expanded && (
+        <View style={[ts.contextPanel, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+          {ctxLoading && (
+            <Text style={[ts.contextHint, { color: theme.surface.t3 }]}>Pulling context…</Text>
+          )}
+          {!ctxLoading && ctx && (() => {
+            const hasAny = !!(ctx.recruiter || (ctx.people_at_company && ctx.people_at_company.length) || ctx.gap || (ctx.prep_notes && ctx.prep_notes.length) || ctx.next_milestone);
+            if (!hasAny) {
+              return (
+                <Text style={[ts.contextHint, { color: theme.surface.t3 }]}>
+                  Dilly hasn't captured anything specific to {app.company} yet. Talk to her about this role and the next time you open this card it'll be richer.
+                </Text>
+              );
+            }
+            return (
+              <>
+                {ctx.recruiter && (
+                  <View style={ts.contextRow}>
+                    <Text style={[ts.contextLabel, { color: theme.surface.t3 }]}>RECRUITER / CONTACT</Text>
+                    <Text style={[ts.contextValue, { color: theme.surface.t1 }]}>
+                      {ctx.recruiter.label}
+                      {ctx.recruiter.value ? ` — ${ctx.recruiter.value}` : ''}
+                    </Text>
+                  </View>
+                )}
+                {ctx.gap && (
+                  <View style={ts.contextRow}>
+                    <Text style={[ts.contextLabel, { color: theme.surface.t3 }]}>FIT GAP</Text>
+                    <Text style={[
+                      ts.contextValue,
+                      { color: ctx.gap.delta >= 0 ? GREEN : CORAL },
+                    ]}>
+                      {ctx.gap.score} vs cohort bar {ctx.gap.cohort_bar}. {ctx.gap.message}
+                    </Text>
+                  </View>
+                )}
+                {ctx.next_milestone && (
+                  <View style={ts.contextRow}>
+                    <Text style={[ts.contextLabel, { color: theme.surface.t3 }]}>NEXT MILESTONE</Text>
+                    <Text style={[ts.contextValue, { color: theme.surface.t1 }]}>
+                      {ctx.next_milestone.label}
+                    </Text>
+                  </View>
+                )}
+                {ctx.prep_notes && ctx.prep_notes.length > 0 && (
+                  <View style={ts.contextRow}>
+                    <Text style={[ts.contextLabel, { color: theme.surface.t3 }]}>PREP NOTES FROM CHAT</Text>
+                    {ctx.prep_notes.slice(0, 4).map((note, i) => (
+                      <Text
+                        key={i}
+                        style={[ts.contextNote, { color: theme.surface.t2 }]}
+                        numberOfLines={3}
+                      >
+                        {note}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+              </>
+            );
+          })()}
+          <AnimatedPressable
+            style={[ts.askDillyBtn, { backgroundColor: theme.accent }]}
+            onPress={() => onAskDilly(app, ctx)}
+            scaleDown={0.97}
+          >
+            <Ionicons name="chatbubble" size={12} color="#FFF" />
+            <Text style={ts.askDillyBtnText}>Ask Dilly about this app</Text>
+          </AnimatedPressable>
+        </View>
+      )}
 
       {/* Status progression buttons */}
       <View style={ts.appActions}>
@@ -642,6 +770,34 @@ export default function InternshipTrackerScreen() {
                 onEdit={handleEdit}
                 onTailor={handleTailor}
                 onFollowUp={handleFollowUp}
+                onAskDilly={(a, ctx) => {
+                  // Seed the AI overlay with full per-app context so
+                  // Dilly opens already knowing this is about the
+                  // specific application — recruiter, gap, prep, next
+                  // milestone all in the opening message. No competitor
+                  // tracker can do this because none of them have the
+                  // chat-context layer Dilly does.
+                  const lines: string[] = [
+                    `I want to talk about my ${a.role || 'role'} application at ${a.company}.`,
+                    `Status: ${a.status}.`,
+                  ];
+                  if (a.deadline) lines.push(`Deadline: ${a.deadline}.`);
+                  if (ctx?.recruiter) {
+                    lines.push(`Recruiter / contact: ${ctx.recruiter.label}${ctx.recruiter.value ? ' — ' + ctx.recruiter.value : ''}.`);
+                  }
+                  if (ctx?.gap) {
+                    lines.push(`My current Dilly score is ${ctx.gap.score}; cohort bar is ${ctx.gap.cohort_bar} (delta ${ctx.gap.delta >= 0 ? '+' : ''}${ctx.gap.delta}).`);
+                  }
+                  if (ctx?.next_milestone) {
+                    lines.push(`Next milestone: ${ctx.next_milestone.label}.`);
+                  }
+                  if (a.notes) lines.push(`My notes: ${a.notes}.`);
+                  lines.push("Help me move this forward — what's the highest-leverage thing I should do next?");
+                  openDillyOverlay({
+                    isPaid: true,
+                    initialMessage: lines.join(' '),
+                  });
+                }}
               />
             </FadeInView>
           ))
@@ -756,6 +912,34 @@ const ts = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 5,
   },
   actionChipText: { fontSize: 10, fontWeight: '600' },
+
+  // Per-app context expansion ("what Dilly knows about this app").
+  // The unique surface no other tracker has — pulls recruiter, fit gap,
+  // chat prep notes, and next milestone for THIS specific application.
+  contextToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingTop: 8, paddingBottom: 4,
+  },
+  contextToggleText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+  contextPanel: {
+    borderWidth: 1, borderRadius: 10,
+    padding: 10, marginTop: 4, marginBottom: 4,
+    gap: 8,
+  },
+  contextHint: { fontSize: 11, fontStyle: 'italic', lineHeight: 16 },
+  contextRow: { gap: 2 },
+  contextLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
+  contextValue: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
+  contextNote: {
+    fontSize: 11, lineHeight: 15,
+    paddingLeft: 8, marginTop: 2,
+    borderLeftWidth: 2, borderLeftColor: '#94A3B8',
+  },
+  askDillyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 8, borderRadius: 8, marginTop: 4,
+  },
+  askDillyBtnText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.2 },
 
   // Empty
   emptyWrap: { alignItems: 'center', paddingVertical: 48, gap: 10 },

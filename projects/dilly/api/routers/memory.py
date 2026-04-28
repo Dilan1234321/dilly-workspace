@@ -67,6 +67,119 @@ async def get_memory(request: Request):
     }
 
 
+@router.get("/memory/graph")
+async def get_memory_graph(request: Request):
+    """Memory tab data — same items as /memory but enriched with the
+    cross-category CONNECTIONS that make the Profile feel like a
+    knowledge graph rather than a flat list. This is the surface that
+    crystallizes Dilly's positioning: the user's career second-brain.
+
+    Returns:
+      - total: total facts
+      - categories: count per category
+      - clusters: items grouped + ranked by impact-for-resume
+      - connections: list of cross-category links Dilly noticed
+        (e.g., "Sarah" mentioned in a fact that also mentions "Goldman")
+      - growth: counts at d-30 / d-7 / now so the UI can show
+        "Dilly knew 12 things about you 30 days ago. Now: 187."
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    surface = get_memory_surface(email)
+    items = surface.get("items") or []
+
+    # ── Group by category ──────────────────────────────────────────
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for it in items:
+        cat = str(it.get("category") or "other")
+        grouped.setdefault(cat, []).append(it)
+
+    categories = [
+        {"category": cat, "count": len(rows)}
+        for cat, rows in sorted(grouped.items(), key=lambda kv: -len(kv[1]))
+    ]
+
+    # ── Cross-category connections ─────────────────────────────────
+    # Naive but effective: for each pair of items in different
+    # categories, if one's label appears in the other's value, mark
+    # a connection. This catches "Sarah → Goldman" when the person
+    # fact's value is "Sarah from Goldman" or the company fact's
+    # value mentions "Sarah". User sees a small "Dilly noticed"
+    # callout in the Memory UI that's hard to fake.
+    connections: list[dict[str, Any]] = []
+    seen_pairs: set[tuple[str, str]] = set()
+    for a in items[:200]:
+        a_label = (a.get("label") or "").strip()
+        a_cat = (a.get("category") or "").lower()
+        if not a_label or len(a_label) < 3:
+            continue
+        a_label_low = a_label.lower()
+        for b in items[:200]:
+            if b is a:
+                continue
+            b_cat = (b.get("category") or "").lower()
+            if a_cat == b_cat:
+                continue
+            b_value = (b.get("value") or "").lower()
+            b_label = (b.get("label") or "").strip()
+            if not b_value or not b_label:
+                continue
+            if a_label_low in b_value:
+                key = (str(a.get("id")), str(b.get("id")))
+                rev = (key[1], key[0])
+                if key in seen_pairs or rev in seen_pairs:
+                    continue
+                seen_pairs.add(key)
+                connections.append({
+                    "from": {"id": a.get("id"), "category": a_cat, "label": a_label},
+                    "to": {"id": b.get("id"), "category": b_cat, "label": b_label},
+                    "evidence": (b.get("value") or "")[:160],
+                })
+                if len(connections) >= 30:
+                    break
+        if len(connections) >= 30:
+            break
+
+    # ── Growth: how many facts at d-30, d-7, now ───────────────────
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    d7 = now - timedelta(days=7)
+    d30 = now - timedelta(days=30)
+
+    def _ts(it: dict) -> datetime | None:
+        raw = it.get("created_at") or it.get("captured_at") or it.get("ts")
+        if not isinstance(raw, str):
+            return None
+        try:
+            return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    count_now = len(items)
+    count_7 = sum(1 for it in items if (t := _ts(it)) is not None and t <= d7)
+    count_30 = sum(1 for it in items if (t := _ts(it)) is not None and t <= d30)
+    # Items without timestamps (legacy) are counted as "always there"
+    # for d-30 and d-7 — undercounts growth, conservative on the win.
+    untimed = sum(1 for it in items if _ts(it) is None)
+    count_7 += untimed
+    count_30 += untimed
+
+    return {
+        "total": count_now,
+        "categories": categories,
+        "clusters": grouped,
+        "connections": connections,
+        "growth": {
+            "now": count_now,
+            "d7": count_7,
+            "d30": count_30,
+            "added_last_7d": max(0, count_now - count_7),
+            "added_last_30d": max(0, count_now - count_30),
+        },
+        "narrative": surface.get("narrative"),
+    }
+
+
 @router.post("/memory/items")
 async def create_memory_item(request: Request, body: dict = Body(...)):
     user = deps.require_auth(request)

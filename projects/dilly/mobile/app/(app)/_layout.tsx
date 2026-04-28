@@ -369,6 +369,10 @@ function AppLayoutInner() {
         options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
+        name="memory"
+        options={{ href: null, animation: 'fade' }}
+      />
+      <Tabs.Screen
         name="raise-brief"
         options={{ href: null, animation: 'fade' }}
       />

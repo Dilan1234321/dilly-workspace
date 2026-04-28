@@ -1425,6 +1425,27 @@ function SeekerProfileScreen() {
                 <Ionicons name="chatbubble" size={13} color="#fff" />
                 <Text style={d.growthCtaText}>{situationCopy.talk_cta}</Text>
               </AnimatedPressable>
+              {/* Memory tab entry — visualizes the Profile as a knowledge
+                  graph. The moat is the data; this surface makes it
+                  feel like a moat. Always shown so users discover it. */}
+              {totalFacts >= 3 && (
+                <AnimatedPressable
+                  style={{
+                    marginTop: 8,
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                    gap: 6, paddingVertical: 10, borderRadius: 10,
+                    borderWidth: 1, borderColor: theme.accentBorder,
+                    backgroundColor: 'transparent',
+                  }}
+                  onPress={() => router.push('/(app)/memory' as any)}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="git-network" size={13} color={theme.accent} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: theme.accent, letterSpacing: 0.3 }}>
+                    See your Memory graph
+                  </Text>
+                </AnimatedPressable>
+              )}
             </View>
           </FadeInView>
         )}

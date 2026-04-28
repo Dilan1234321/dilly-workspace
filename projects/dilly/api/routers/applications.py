@@ -123,6 +123,164 @@ async def list_applications(request: Request):
     return {"applications": apps, "count": len(apps)}
 
 
+@router.get("/applications/{app_id}/context")
+async def application_context(app_id: str, request: Request):
+    """Pull all the chat context Dilly knows about ONE specific application.
+
+    This is what pushes the tracker from "list of jobs" to "live coaching
+    surface." Each card can show:
+      - The recruiter (from memory_items category=person matched to this company)
+      - The fit gap (vs cohort bar — pulled from latest audit scores)
+      - Recent prep notes (chat snippets that mentioned this company)
+      - The company's known interview process (Field Intel)
+      - Suggested next move
+
+    No competitor tracker has this — Huntr / Teal / Simplify only know the
+    company name. Dilly knows the conversation.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    apps = _load_applications(email)
+    app = next((a for a in apps if isinstance(a, dict) and str(a.get("id")) == app_id), None)
+    if not app:
+        raise errors.not_found("application")
+
+    company = (app.get("company") or "").strip()
+    role = (app.get("role") or "").strip()
+    company_norm = " ".join(company.lower().split())
+
+    out: dict = {
+        "id": app_id,
+        "company": company,
+        "role": role,
+        "status": app.get("status"),
+        "recruiter": None,
+        "people_at_company": [],
+        "gap": None,
+        "prep_notes": [],
+        "next_milestone": None,
+    }
+
+    # ── Recruiter / people at this company ─────────────────────────────
+    # Pull from memory_surface items where the value mentions the company.
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        surface = get_memory_surface(email) or {}
+        items = surface.get("items") or []
+        people: list[dict] = []
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            cat = (it.get("category") or "").lower()
+            if cat not in ("person_to_follow_up", "person", "recruiter"):
+                continue
+            label = (it.get("label") or "").strip()
+            value = (it.get("value") or "").strip()
+            text = f"{label} {value}".lower()
+            if company_norm and company_norm in text:
+                people.append({
+                    "label": label,
+                    "value": value,
+                    "category": cat,
+                    "source": it.get("source") or "chat",
+                })
+        if people:
+            out["people_at_company"] = people[:5]
+            # Pick the highest-confidence person as the primary recruiter
+            out["recruiter"] = people[0]
+    except Exception:
+        pass
+
+    # ── Fit gap ─────────────────────────────────────────────────────────
+    # Latest audit composite vs cohort bar. If user is below bar, surface
+    # by how much.
+    try:
+        from projects.dilly.api.audit_history import get_audits
+        from projects.dilly.api.profile_store import get_profile
+        profile = get_profile(email) or {}
+        track = (profile.get("track") or "General").strip()
+        cohort_bar_map = {"Tech": 75, "Finance": 72, "Health": 68, "General": 65}
+        bar = cohort_bar_map.get(track, 65)
+        audits = get_audits(email) or []
+        latest = audits[0] if audits else {}
+        scores = latest.get("scores") or {}
+        composite = None
+        if all(scores.get(k) is not None for k in ("smart", "grit", "build")):
+            composite = round((scores["smart"] + scores["grit"] + scores["build"]) / 3)
+        if composite is not None:
+            delta = composite - bar
+            out["gap"] = {
+                "score": composite,
+                "cohort_bar": bar,
+                "delta": delta,  # negative means below bar
+                "message": (
+                    f"You're {abs(delta)} pts above this cohort's bar"
+                    if delta >= 0
+                    else f"{abs(delta)} pts below the cohort bar — work on weakest dimension"
+                ),
+            }
+    except Exception:
+        pass
+
+    # ── Prep notes from chat ────────────────────────────────────────────
+    # Pull the user's last 30 chat turns and surface lines that mention
+    # this company. The user already wrote them — surfacing them here
+    # makes the tracker card a place where their prep lives.
+    try:
+        from projects.dilly.api.chat_thread_store import list_threads, get_thread_messages
+        threads = list_threads(email, limit=10) or []
+        snippets: list[str] = []
+        for t in threads:
+            if not isinstance(t, dict):
+                continue
+            conv_id = t.get("conv_id")
+            if not conv_id:
+                continue
+            try:
+                msgs = get_thread_messages(email, conv_id) or []
+            except Exception:
+                msgs = []
+            for m in msgs:
+                if not isinstance(m, dict):
+                    continue
+                content = (m.get("content") or "").strip()
+                if not content:
+                    continue
+                if company_norm and company_norm in content.lower():
+                    role_label = "You" if (m.get("role") or "") == "user" else "Dilly"
+                    snippets.append(f"{role_label}: {content[:240]}")
+                    if len(snippets) >= 6:
+                        break
+            if len(snippets) >= 6:
+                break
+        out["prep_notes"] = snippets
+    except Exception:
+        pass
+
+    # ── Next milestone (deadline, interview date, follow-up) ───────────
+    if app.get("deadline"):
+        out["next_milestone"] = {
+            "type": "deadline",
+            "date": app["deadline"],
+            "label": f"Application deadline for {company}",
+        }
+    elif app.get("status") == "applied" and app.get("applied_at"):
+        out["next_milestone"] = {
+            "type": "follow_up",
+            "label": "Send a follow-up if you haven't heard back in 2 weeks",
+        }
+    elif app.get("status") == "interviewing":
+        out["next_milestone"] = {
+            "type": "interview_prep",
+            "label": f"Practice {company} mock interview before your next round",
+        }
+
+    return out
+
+
 @router.get("/applications/stats")
 async def application_stats(request: Request):
     """Application funnel stats: applied, responses, interviews, silent 2+ weeks."""
