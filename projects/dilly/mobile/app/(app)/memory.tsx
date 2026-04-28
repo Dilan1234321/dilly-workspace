@@ -18,6 +18,7 @@
  */
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import Svg, { Polyline, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,35 @@ import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { DillyFace } from '../../components/DillyFace';
 import { FadeInView } from '../../components/FadeInView';
+
+/** Tiny growth sparkline — shows the user the moat compounding.
+ *  Three real data points (30 days ago, 7 days ago, now) with line +
+ *  end-dot, scaled to a fixed pixel area. Not pretending to be a
+ *  full chart — just enough motion to make Profile growth feel real. */
+function GrowthSparkline({ d30, d7, now, color, w = 100, h = 36 }: {
+  d30: number; d7: number; now: number; color: string; w?: number; h?: number;
+}) {
+  const max = Math.max(now, 1);
+  const min = Math.min(d30, d7, now, 0);
+  const span = Math.max(1, max - min);
+  const pts = [d30, d7, now];
+  const xs = [0, w * 0.5, w];
+  const ys = pts.map(v => h - ((v - min) / span) * (h - 4) - 2);
+  const polyPoints = xs.map((x, i) => `${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  return (
+    <Svg width={w} height={h}>
+      <Polyline
+        points={polyPoints}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx={xs[2]} cy={ys[2]} r={3.5} fill={color} />
+    </Svg>
+  );
+}
 
 type GraphItem = { id?: string; category?: string; label?: string; value?: string };
 interface GraphData {
@@ -169,6 +199,40 @@ export default function MemoryScreen() {
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 14, fontWeight: '800', color: theme.surface.t1 }}>{data?.categories?.length || 0}</Text>
                   <Text style={{ fontSize: 10, color: theme.surface.t3, letterSpacing: 0.3 }}>categories</Text>
+                </View>
+              </View>
+            )}
+            {/* Growth sparkline — three points (30d ago / 7d ago / now)
+                with a connecting line. Crystallizes the moat: every
+                conversation makes Dilly know more, and the line goes
+                up. Shown only when there's actual movement to chart. */}
+            {data?.growth && data.growth.now > 0 && (data.growth.added_last_30d > 0 || data.growth.added_last_7d > 0) && (
+              <View style={{ width: '100%', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.surface.border }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                  <View>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: theme.surface.t3, letterSpacing: 0.8 }}>
+                      30 DAYS AGO
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t2, marginTop: 2 }}>
+                      {data.growth.d30}
+                    </Text>
+                  </View>
+                  <GrowthSparkline
+                    d30={data.growth.d30}
+                    d7={data.growth.d7}
+                    now={data.growth.now}
+                    color={theme.accent}
+                    w={120}
+                    h={36}
+                  />
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: theme.accent, letterSpacing: 0.8 }}>
+                      NOW
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: theme.accent, marginTop: 2 }}>
+                      {data.growth.now}
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}

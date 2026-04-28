@@ -2756,6 +2756,12 @@ class GenerateResumeRequest(BaseModel):
     job_description: Optional[str] = ""
     cohort: Optional[str] = None       # override auto-detection
     base_variant_id: Optional[str] = None  # which variant to use as source material
+    # Variant style — lets the user generate the same JD multiple ways
+    # and pick. "balanced" is the existing default behavior; the other
+    # two add explicit framing rules to the system prompt without
+    # changing any sourcing logic. All three still source every bullet
+    # from real Profile facts (Truth Ledger unchanged).
+    variant_style: Optional[str] = "balanced"  # "conservative" | "balanced" | "aggressive"
 
 
 @router.post("/resume/generate")
@@ -3456,11 +3462,51 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
         "(if ≥3.5), one page, Projects required, Skills prominent."
     ))
 
+    # Variant style block — three flavors of the same fact set. The
+    # user can generate all three and swipe to pick. NONE of these
+    # change sourcing — every bullet still cites real Profile facts.
+    # They only change the FRAMING / tone / order.
+    _variant_style = (body.variant_style or "balanced").strip().lower()
+    if _variant_style == "conservative":
+        _variant_block = (
+            "VARIANT STYLE: CONSERVATIVE. Lean traditional. Use the "
+            "user's most credentialed-sounding language. Lead with "
+            "school + GPA prominently if strong. Bullet style is "
+            "straight-line: action verb + measurable outcome. Skip the "
+            "scrappy / startup-y framing. This version targets banks, "
+            "consulting, big-firm finance, government, big tech with "
+            "highly process-driven recruiting. The user may still "
+            "regenerate as 'balanced' or 'aggressive' to compare."
+        )
+    elif _variant_style == "aggressive":
+        _variant_block = (
+            "VARIANT STYLE: AGGRESSIVE. Lean scrappy / hacker / shipped-"
+            "things energy. Lead with the most impressive PROOF the "
+            "user has — a launched product, a hard project, a "
+            "leadership role. Bullets emphasize ownership and outcome "
+            "over process. Drop GPA if not exceptional. This version "
+            "targets startups, growth-stage product companies, "
+            "research labs, anywhere brand-name credentials matter "
+            "less than evidence of ability. The user may still "
+            "regenerate as 'conservative' or 'balanced' to compare."
+        )
+    else:
+        _variant_block = (
+            "VARIANT STYLE: BALANCED. Default framing. Mix of "
+            "credentials and evidence; both school AND shipped work "
+            "are surfaced; bullets cover both process and outcome. "
+            "This is the safest default that performs well at most "
+            "firms. The user may regenerate as 'conservative' or "
+            "'aggressive' to compare."
+        )
+
     system_prompt = f"""You are Dilly's resume generation AI. Your single job is to turn a student's verified profile into a tailored resume that (a) is 100% true to the profile and (b) passes the target company's ATS.
 
 {_path_block}
 
 {_field_tailor_block}
+
+{_variant_block}
 
 TARGET JOB:
   Title: {job_title}
@@ -3807,6 +3853,9 @@ Include only sections that have content. Do not include markdown, explanations, 
         # Tell the mobile how many facts Dilly actually used for this resume,
         # so the UI can show "built from 47 of your 312 profile facts"
         "facts_used": len(selected_facts) if selected_facts else 0,
+        # Variant style this generation used. Mobile uses this to label
+        # the result and offer "Regenerate as <other style>" buttons.
+        "variant_style": _variant_style,
         # ── TRUTH LEDGER ──
         # Per-bullet citations are now inline on each bullet (`citations`
         # + `unsourced` fields). These rolled-up summaries drive the
