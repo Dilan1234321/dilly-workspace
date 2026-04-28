@@ -126,6 +126,7 @@ from projects.dilly.api.routers import health as health_router
 from projects.dilly.api.routers import admin_cost as admin_cost_router
 from projects.dilly.api.routers import admin_jobs as admin_jobs_router
 from projects.dilly.api.routers import career_type as career_type_router
+from projects.dilly.api.routers import career_plan as career_plan_router
 from projects.dilly.api.routers import waitlist as waitlist_router
 from projects.dilly.api.routers import cron as cron_router
 from projects.dilly.api.routers import family as family_router
@@ -199,6 +200,7 @@ app.include_router(health_router.router)
 app.include_router(admin_cost_router.router)
 app.include_router(admin_jobs_router.router)
 app.include_router(career_type_router.router)
+app.include_router(career_plan_router.router)
 app.include_router(waitlist_router.router)
 app.include_router(cron_router.router)
 app.include_router(family_router.router)

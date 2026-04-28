@@ -198,6 +198,15 @@ export default function FutureTrajectory() {
         </TouchableOpacity>
       ))}
 
+      {/* 90-day plan section — generated server-side from the user's
+          actual scores, profile facts, and Career Type. Each week is
+          one concrete move, checkable. Closes the gap with RoadMap.sh
+          / CareerExplorer (cluster-3 P-lift). */}
+      <Plan90Day
+        targetRole={`${playbook.shortName} by ${futureYear}`}
+        theme={theme}
+      />
+
       {/* Closing - one tap to put the WHOLE plan into Dilly chat. */}
       <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
         <TouchableOpacity
@@ -244,6 +253,158 @@ function cohortToSlug(cohort: string | undefined): string | null {
     'Social Sciences & Nonprofit':        'social-sciences-nonprofit',
   }
   return map[cohort] || null
+}
+
+// ── 90-day plan component ────────────────────────────────────────────────
+// Generates a 12-week structured plan via /career-plan/90-day. Renders
+// each week as a checkable card. Plan persists on the user's profile so
+// they can come back and toggle weeks done. cluster-3 P-lift: closes
+// the gap with RoadMap.sh/CareerExplorer.
+interface PlanWeek { week: number; title: string; move: string; why: string; completed: boolean }
+interface Plan { weeks: PlanWeek[]; summary?: string; target_role?: string; generated_at?: string | null; stale?: boolean }
+
+function Plan90Day({ targetRole, theme }: { targetRole: string; theme: ReturnType<typeof useResolvedTheme> }) {
+  const [plan, setPlan] = useState<Plan | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await dilly.get('/career-plan/90-day')
+        if (data) setPlan(data as Plan)
+      } catch {} finally { setLoaded(true) }
+    })()
+  }, [])
+
+  async function generate() {
+    if (generating) return
+    setGenerating(true)
+    try {
+      const res = await dilly.fetch('/career-plan/90-day', {
+        method: 'POST', body: JSON.stringify({ target_role: targetRole }),
+      })
+      const data = await res.json().catch(() => null)
+      if (data?.weeks) setPlan(data as Plan)
+    } catch {} finally { setGenerating(false) }
+  }
+
+  async function toggle(week: number, completed: boolean) {
+    if (!plan) return
+    // Optimistic update
+    setPlan({
+      ...plan,
+      weeks: plan.weeks.map(w => w.week === week ? { ...w, completed } : w),
+    })
+    try {
+      await dilly.fetch(`/career-plan/90-day/week/${week}`, {
+        method: 'PATCH', body: JSON.stringify({ completed }),
+      })
+    } catch {}
+  }
+
+  if (!loaded) return null
+
+  const hasPlan = plan && Array.isArray(plan.weeks) && plan.weeks.length > 0
+  const completedCount = hasPlan ? plan!.weeks.filter(w => w.completed).length : 0
+
+  return (
+    <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
+      <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 1.4, color: theme.surface.t3, marginBottom: 8 }}>
+        YOUR 12-WEEK PLAN
+      </Text>
+      {!hasPlan ? (
+        <View style={{
+          backgroundColor: theme.surface.s1, borderColor: theme.surface.border,
+          borderWidth: 1, borderRadius: 14, padding: 16, alignItems: 'center', gap: 10,
+        }}>
+          <Text style={{ fontSize: 13, color: theme.surface.t2, textAlign: 'center', lineHeight: 18 }}>
+            Generate a real 12-week plan to {targetRole}. Built from your scores, your Profile, and your Career Type.
+          </Text>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={generate}
+            disabled={generating}
+            style={{
+              backgroundColor: theme.accent, paddingHorizontal: 18, paddingVertical: 10,
+              borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6,
+            }}
+          >
+            <Ionicons name={generating ? 'hourglass-outline' : 'map'} size={14} color="#FFF" />
+            <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.3 }}>
+              {generating ? 'Building your plan…' : 'Generate 12-week plan'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          {plan!.summary ? (
+            <Text style={{ fontSize: 13, color: theme.surface.t2, marginBottom: 12, lineHeight: 18, fontStyle: 'italic' }}>
+              {plan!.summary}
+            </Text>
+          ) : null}
+          <Text style={{ fontSize: 11, color: theme.surface.t3, marginBottom: 8 }}>
+            {completedCount} of {plan!.weeks.length} weeks complete
+          </Text>
+          <View style={{ gap: 8 }}>
+            {plan!.weeks.map(w => (
+              <TouchableOpacity
+                key={w.week}
+                activeOpacity={0.85}
+                onPress={() => toggle(w.week, !w.completed)}
+                style={{
+                  backgroundColor: w.completed ? theme.accentSoft : theme.surface.s1,
+                  borderColor: w.completed ? theme.accent : theme.surface.border,
+                  borderWidth: 1, borderRadius: 12, padding: 12,
+                  flexDirection: 'row', gap: 10,
+                }}
+              >
+                <View style={{
+                  width: 22, height: 22, borderRadius: 11,
+                  borderWidth: 1.5,
+                  borderColor: w.completed ? theme.accent : theme.surface.border,
+                  backgroundColor: w.completed ? theme.accent : 'transparent',
+                  alignItems: 'center', justifyContent: 'center',
+                  marginTop: 1,
+                }}>
+                  {w.completed ? <Ionicons name="checkmark" size={12} color="#FFF" /> : (
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: theme.surface.t3 }}>W{w.week}</Text>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 13, fontWeight: '800',
+                    color: theme.surface.t1,
+                    textDecorationLine: w.completed ? 'line-through' : 'none',
+                  }}>
+                    Week {w.week} · {w.title}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: theme.surface.t1, marginTop: 3, lineHeight: 17 }}>
+                    {w.move}
+                  </Text>
+                  {w.why ? (
+                    <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 4, fontStyle: 'italic' }}>
+                      Why: {w.why}
+                    </Text>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={generate}
+            disabled={generating}
+            style={{ marginTop: 10, alignSelf: 'center', paddingVertical: 6 }}
+          >
+            <Text style={{ fontSize: 11, color: theme.surface.t3, textDecorationLine: 'underline' }}>
+              {generating ? 'Regenerating…' : 'Regenerate plan'}
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  )
 }
 
 const s = StyleSheet.create({
