@@ -202,6 +202,10 @@ def stream_chat_completion(
     """
     Stream tokens from Claude. Yields string chunks as they arrive.
     Yields nothing (empty iterator) on failure or missing key.
+
+    Caches the system prompt when long enough to be worth caching.
+    Without this, voice chat was paying full input cost on a 5k–8k
+    token system prompt every turn instead of the 90%-off cache rate.
     """
     try:
         from anthropic import Anthropic
@@ -211,11 +215,15 @@ def stream_chat_completion(
     if not api_key:
         return
     model = (model or os.environ.get("DILLY_LLM_MODEL_LIGHT") or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
+    if isinstance(system, str) and len(system) >= 4000:
+        system_param: Any = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    else:
+        system_param = system
     try:
         client = Anthropic(api_key=api_key)
         with client.messages.stream(
             model=model,
-            system=system,
+            system=system_param,
             messages=[{"role": "user", "content": user}],
             max_tokens=max_tokens,
             temperature=temperature,

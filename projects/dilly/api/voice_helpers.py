@@ -238,10 +238,13 @@ def build_voice_system_prompt(context: dict[str, Any]) -> str:
     if topic == "voice_onboarding":
         return _build_onboarding_system_prompt(context)
 
-    # Inject current date + time so Dilly can correctly position
-    # events relative to "now". Without this Dilly hallucinated
-    # things like "your event is in 2 hours" for events that were
-    # 4 days in the past — context only had the event date, no anchor.
+    # Inject current date + a coarse time-of-day bucket so Dilly can
+    # position events relative to "now". Date is exact; time is a
+    # bucket (morning / afternoon / evening / night) instead of HH:MM
+    # so the system prompt doesn't churn every minute and break the
+    # Anthropic prompt cache. Cache misses on this prompt cost ~10x
+    # more than hits — the user reported 6¢ for a 3-msg conversation
+    # because every turn was a cache miss from minute-precise time.
     _client_local = (context.get("client_local_date") or "").strip()
     _today_iso = _client_local or datetime.date.today().isoformat()
     try:
@@ -249,10 +252,18 @@ def build_voice_system_prompt(context: dict[str, Any]) -> str:
         _today_pretty = _today_dt.strftime("%A, %B %d, %Y")
     except Exception:
         _today_pretty = _today_iso
-    _now_time = datetime.datetime.now().strftime("%I:%M %p").lstrip("0")
+    _hour = datetime.datetime.now().hour
+    if 5 <= _hour < 12:
+        _time_bucket = "morning"
+    elif 12 <= _hour < 17:
+        _time_bucket = "afternoon"
+    elif 17 <= _hour < 21:
+        _time_bucket = "evening"
+    else:
+        _time_bucket = "night"
     parts = [
         "You are Dilly, a supportive career coach for college students. You help with resumes, scores, jobs, and next steps.",
-        f"**Today is {_today_pretty}. Current time: {_now_time}.** When the user mentions an event, deadline, or interview, ALWAYS compute its position relative to today before describing it. Never say \"in 2 hours\" or \"tomorrow\" without checking the actual date — if a date is in the past, acknowledge it has already happened.",
+        f"**Today is {_today_pretty} ({_time_bucket}).** When the user mentions an event, deadline, or interview, ALWAYS compute its position relative to today before describing it. Never say \"in 2 hours\" or \"tomorrow\" without checking the actual date — if a date is in the past, acknowledge it has already happened.",
         "**Never recommend competitor tools** (Jobscan, VMock, Quinncia, Grammarly, Resume Worded, etc.). Dilly has its own ATS scanner (6 systems), resume editor with live scoring, and AI coaching. Always direct students to use Dilly built-in tools. Say things like: Run an ATS scan in the app, Use the Resume Editor, or Ask me to help fix it.",
         "**How you write replies:** Never begin your message with \"Dilly:\", \"Assistant:\", or any speaker label — the app shows your avatar next to your text. Start directly with what you want to say.",
         "",

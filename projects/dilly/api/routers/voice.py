@@ -576,16 +576,21 @@ async def voice_chat(request: Request, body: dict = Body(...)):
         history=history if isinstance(history, list) else [],
     )
     system = build_voice_system_prompt(context)
-    if agent_context:
-        system = f"{system}\n\n{agent_context}"
     user_content = format_voice_user_content(message, history, context)
+    # agent_context is dynamic per message (intent results, calendar
+    # adds, action confirmations). Concatenating into `system` would
+    # invalidate Anthropic's prompt cache on every turn — cache key
+    # is byte-exact match. Stick it in user_content instead so the
+    # 5k-8k-token system prompt stays cached at 90% off.
+    if agent_context:
+        user_content = f"{agent_context}\n\n{user_content}"
 
     reply = "I'm having trouble responding right now. Try again in a moment."
     suggestions: list[str] = []
     try:
         from dilly_core.llm_client import is_llm_available, get_chat_completion, get_light_model
         if is_llm_available():
-            raw = get_chat_completion(system, user_content, model=get_light_model(), temperature=0.5, max_tokens=800)
+            raw = get_chat_completion(system, user_content, model=get_light_model(), temperature=0.5, max_tokens=500)
             if raw:
                 reply, suggestions = extract_suggestions_from_reply(raw.strip())
                 reply, suggestions = sanitize_voice_reply_and_suggestions(reply, suggestions)
@@ -670,9 +675,11 @@ async def voice_stream(request: Request, body: dict = Body(...)):
         history=history if isinstance(history, list) else [],
     )
     system = build_voice_system_prompt(context)
-    if agent_context:
-        system = f"{system}\n\n{agent_context}"
     user_content = format_voice_user_content(message, history, context)
+    # Same prompt-cache rationale as the non-streaming path: keep
+    # agent_context out of the cached system block.
+    if agent_context:
+        user_content = f"{agent_context}\n\n{user_content}"
 
     async def _stream():
         full_reply = []
