@@ -12,3 +12,13 @@ docx2txt==0.9
 resend
 reportlab==4.4.10
 pytest>=8.0
+python-jose[cryptography]==3.5.0
+cryptography==45.0.7
+apscheduler==3.11.0
+beautifulsoup4
+requests
+openai
+psycopg2-binary
+stripe
+firebase-admin
+apns2
