@@ -745,10 +745,14 @@ def _message_looks_typo_prone(text: str) -> bool:
 
 
 def format_voice_user_content(message: str, history: list[dict], context: dict[str, Any]) -> str:
-    """Format history + current message + context into one user blob for the LLM."""
+    """Format history + current message + context into one user blob for the LLM.
+    History capped at last 6 turns (was 10) — quadratic input cost
+    accumulation was the single biggest driver of per-message cost.
+    Six turns is enough context for coherent multi-turn back-and-forth
+    while cutting input tokens roughly in half on long sessions."""
     lines = []
     if history:
-        for m in history[-10:]:
+        for m in history[-6:]:
             role = (m.get("role") or "user").lower()
             content = (m.get("content") or "").strip()
             if not content:
@@ -1204,6 +1208,21 @@ def _normalize_deadline_item(item: dict, existing_set: set[str]) -> dict | None:
     return {"label": label, "date": date_str}
 
 
+_DEADLINE_HINT_RE = re.compile(
+    r"\b("
+    r"deadline|due|by\s+(?:the\s+)?\d|interview|application|apply|"
+    r"today|tomorrow|tonight|yesterday|"
+    r"next\s+(?:week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|"
+    r"this\s+(?:week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|"
+    r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(?:uary|ruary|ch|il|e|y|ust|tember|ober|ember)?\b\s*\d{1,2}|"
+    r"\b\d{1,2}/\d{1,2}|"
+    r"\b\d{1,2}-\d{1,2}-?\d{0,4}|"
+    r"due\s+by|due\s+date"
+    r")\b",
+    re.I,
+)
+
+
 def extract_deadlines_from_conversation(
     user_message: str,
     assistant_reply: str | None = None,
@@ -1215,8 +1234,13 @@ def extract_deadlines_from_conversation(
     Looks at user message (and optionally assistant reply) for mentions of dates, companies, roles.
     Returns list of { label: str, date: str } with date in YYYY-MM-DD.
     Skips deadlines that match existing_deadlines (by label+date).
+    Cost gate: skips the LLM call entirely if neither the user message
+    nor the assistant reply contains date-shaped text.
     """
     if not (user_message or "").strip():
+        return []
+    combined = f"{user_message} {assistant_reply or ''}"
+    if not _DEADLINE_HINT_RE.search(combined):
         return []
 
     # Existing deadlines to skip (avoid duplicates)

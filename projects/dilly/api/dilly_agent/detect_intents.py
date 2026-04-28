@@ -50,6 +50,25 @@ def _resolve_date_fields(extracted: dict[str, Any], today: date) -> tuple[dict[s
     return out, needs_clar, question
 
 
+_INTENT_HINT_RE = re.compile(
+    r"\b("
+    # Action verbs
+    r"add|track|save|remove|delete|done|finish|complete|skip|cancel|"
+    r"applied|interview|interviewed|interviewing|deadline|due|"
+    r"reminder|remind|schedule|meeting|call|"
+    # Time references
+    r"today|tomorrow|tonight|yesterday|next\s+(week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|"
+    r"this\s+(week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|"
+    r"\d{1,2}\s*(am|pm|:\d{2})|"
+    r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(uary|ruary|ch|il|e|y|ust|tember|ober|ember)?\b\s*\d{1,2}|"
+    r"\b\d{1,2}/\d{1,2}|"
+    # Common app actions
+    r"resume|cover\s+letter|application|job\s+post|offer|rejected"
+    r")\b",
+    re.I,
+)
+
+
 def detect_intents(
     message: str,
     today: date | str | datetime,
@@ -61,6 +80,13 @@ def detect_intents(
 ) -> list[dict[str, Any]]:
     msg = str(message or "").strip()
     if not msg:
+        return []
+    # Cost gate: 90% of chat messages have zero actionable intent
+    # ("tell me about X", "what do you think", reflective questions).
+    # Skip the LLM call entirely if the message has no intent-shaped
+    # signal. The regex covers action verbs, dates, and app objects —
+    # if none of those appear, there's nothing for the agent to do.
+    if not _INTENT_HINT_RE.search(msg):
         return []
     t = _to_date(today)
     history_lines = []
@@ -119,7 +145,7 @@ Only include medium/high confidence intents."""
         },
         ensure_ascii=True,
     )
-    raw = get_chat_completion(sys_prompt, user_prompt, model="claude-haiku-4-5-20251001", max_tokens=600, temperature=0.1)
+    raw = get_chat_completion(sys_prompt, user_prompt, model="claude-haiku-4-5-20251001", max_tokens=300, temperature=0.1)
     if not raw:
         return []
     try:
