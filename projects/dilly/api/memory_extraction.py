@@ -288,10 +288,14 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         "skill",
         # Captures "used X", "I used X and Y", "used kafka and scala"
         # when described inside a project/experience narrative.
+        # Bare "with" was here previously and matched "research with
+        # prof chen" / "talking with my mentor" → false-positive skill
+        # captures of people's names. Removed; "built with" is the
+        # explicit kept form for stack-mention phrasing.
         re.compile(
-            r"\b(?:used|we used|team used|stack was|built with|using|with) "
+            r"\b(?:used|we used|team used|stack was|built with|using) "
             r"([A-Za-z0-9 +#./\-]{2,40}?)"
-            r"(?=\s*(?:,|;)|\s+(?:and|plus|for|to|in|on|\.|$))",
+            r"(?=\s*(?:,|;)|\s+\b(?:and|plus|for|to|in|on)\b|\s*\.|$)",
             re.IGNORECASE,
         ),
         "Worked with {v}",
@@ -347,6 +351,191 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
             re.IGNORECASE,
         ),
         "Working on: {v}",
+    ),
+    # ── Class year / school standing — extremely common in college chat ──
+    (
+        "education",
+        re.compile(
+            r"\bi'?m (?:a |an )?(freshman|sophomore|junior|senior|first[- ]year|second[- ]year|third[- ]year|fourth[- ]year|grad student|graduate student|phd student|masters student|undergrad|undergraduate)\b",
+            re.IGNORECASE,
+        ),
+        "{v}",
+    ),
+    (
+        "education",
+        # "I'm a CS major" / "I'm an econ major"
+        re.compile(
+            r"\bi'?m (?:a |an )"
+            r"([A-Za-z][A-Za-z &/\-]{1,40}?) "
+            r"(?:major|minor)\b",
+            re.IGNORECASE,
+        ),
+        "Major: {v}",
+    ),
+    (
+        "education",
+        # "I'm taking [class]" / "I take [class]" — class mentions
+        re.compile(
+            r"\bi'?m (?:currently )?taking "
+            r"([A-Za-z][A-Za-z0-9 :&/\-]{2,60}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:and|right now|currently|this|next|$))",
+            re.IGNORECASE,
+        ),
+        "Taking: {v}",
+    ),
+    (
+        "education",
+        # "I'm in [class] this semester"
+        re.compile(
+            r"\bi'?m in "
+            r"([A-Za-z][A-Za-z0-9 :&/\-]{3,60}?) "
+            r"this (?:semester|quarter|term)\b",
+            re.IGNORECASE,
+        ),
+        "Class: {v}",
+    ),
+    (
+        "education",
+        # "I went to X" / "I graduated from X"
+        re.compile(
+            r"\b(?:i went to|i graduated from|i'?ve graduated from|graduated from) "
+            r"([A-Z][A-Za-z.'\- ]{1,60}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:in|with|where|last|this|right|currently|and|$))",
+            re.IGNORECASE,
+        ),
+        "Attended {v}",
+    ),
+    # ── Interview / application events — was missing entirely ──
+    (
+        "interview",
+        re.compile(
+            r"\b(?:i have an interview|i have a (?:final|phone|technical|onsite|on-site|behavioral|coding) interview|"
+            r"i'?m interviewing) (?:at|with|for) "
+            r"([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:next|this|on|tomorrow|in|for|$))",
+            re.IGNORECASE,
+        ),
+        "Interview at {v}",
+    ),
+    (
+        "interview",
+        re.compile(
+            r"\bi (?:got|just got|received|landed) (?:an |a )?(?:interview|onsite|on[- ]site|callback) (?:at|with|for) "
+            r"([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:next|this|on|for|tomorrow|in|$))",
+            re.IGNORECASE,
+        ),
+        "Interview at {v}",
+    ),
+    (
+        "interview",
+        # "I applied to X" — record as application/interview event
+        re.compile(
+            r"\bi (?:just )?applied (?:to|for a job at|for a role at) "
+            r"([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:for|as|in|on|last|this|yesterday|today|$))",
+            re.IGNORECASE,
+        ),
+        "Applied to {v}",
+    ),
+    # ── Extracurriculars / clubs / leadership / research ──
+    (
+        "experience",
+        re.compile(
+            r"\bi'?m (?:in|on|part of|a member of|the (?:president|treasurer|chair|lead|captain|co[- ]?president|vp|vice president) of) "
+            r"(?:the )?"
+            r"([A-Za-z][A-Za-z0-9&'.,\- ]{2,60}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:club|team|board|society|organization|group|chapter|frat|fraternity|sorority|right now|currently|and|$))",
+            re.IGNORECASE,
+        ),
+        "Member of {v}",
+    ),
+    (
+        "experience",
+        # "I lead X" / "I run X" / "I started X club"
+        re.compile(
+            r"\bi (?:lead|run|head up|started|founded|co[- ]?founded) "
+            r"(?:the |a |an |our )?"
+            r"([A-Za-z][A-Za-z0-9&'.,\- ]{2,60}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:club|team|board|society|organization|group|chapter|right now|currently|and|where|that|which|$))",
+            re.IGNORECASE,
+        ),
+        "Leads {v}",
+    ),
+    (
+        "experience",
+        # Research-specific: "I'm doing research with Prof X" / "I work in
+        # the X lab" / "doing research with prof chen". Standalone
+        # "doing research" form catches phrasings where it isn't directly
+        # preceded by "I'm" (e.g. "I'm a senior, doing research with X").
+        re.compile(
+            r"\b(?:i (?:do|did) research|i'?m doing research|doing research|my research|i work in the) (?:with|under|in|on|at) "
+            r"([A-Za-z][A-Za-z0-9 &'.\-]{2,80}?)"
+            r"(?=\s*(?:,|;|\.)|\s+\b(?:on|in|about|where|right now|currently|and)\b|$)",
+            re.IGNORECASE,
+        ),
+        "Research: {v}",
+    ),
+    # ── Hobby / sport / creative pursuit ──
+    (
+        "hobby",
+        re.compile(
+            r"\bi (?:play|do|practice|love playing|enjoy|like to play) "
+            r"([A-Za-z][A-Za-z &'.\-]{2,40}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:on|in|at|with|for|every|right now|currently|and|$))",
+            re.IGNORECASE,
+        ),
+        "Hobby: {v}",
+    ),
+    # ── Personality / fun-fact / quirk ──
+    (
+        "personality",
+        # Word-boundaries on the connector alternation — without `\b`,
+        # "so" matched inside "soccer" and the capture stopped early
+        # ("Fun fact: i play club" instead of "i play club soccer too").
+        # The `$` branch lets the capture run to end-of-string when no
+        # terminator word is present.
+        re.compile(
+            r"\bfun fact[:,]?\s+"
+            r"([A-Za-z0-9 ,&'.\-]{5,120}?)"
+            r"(?=\s*(?:\.|;)|\s+\b(?:and|so|because|but)\b|$)",
+            re.IGNORECASE,
+        ),
+        "Fun fact: {v}",
+    ),
+    # ── Location / where I live ──
+    (
+        "location_pref",
+        re.compile(
+            r"\bi (?:live|am based|am living|currently live) (?:in|near|around|outside) "
+            r"([A-Z][A-Za-z.,'\- ]{2,40}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:right now|currently|and|but|$))",
+            re.IGNORECASE,
+        ),
+        "Lives in {v}",
+    ),
+    # ── Achievements / awards / wins (broader than the existing "shipped" pattern) ──
+    (
+        "achievement",
+        re.compile(
+            r"\bi (?:won|earned|got|received|was awarded|placed) "
+            r"(?:the |a |an |first |second |third |1st |2nd |3rd )?"
+            r"([A-Za-z0-9 ,&'.\-]{3,80}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:at|in|from|for|because|when|after|last|this|$))",
+            re.IGNORECASE,
+        ),
+        "{v}",
+    ),
+    # ── Certifications / credentials ──
+    (
+        "achievement",
+        re.compile(
+            r"\bi (?:have|got|earned|just got|completed|finished) (?:my |a |an |the )?"
+            r"([A-Za-z0-9 ,&'.\-]{2,60}?) "
+            r"(?:certification|certificate|cert|credential|license)\b",
+            re.IGNORECASE,
+        ),
+        "{v} cert",
     ),
 ]
 
@@ -426,12 +615,13 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
                 if len(val) < 2 or low in _PRONOUNS or first_tok in _PRONOUNS:
                     continue
                 label = label_tmpl.format(v=val[:60])
-                # Cap lifted from 8 → 15. At 8 a real 5-message chat
-                # hit the ceiling before the last couple of categories
-                # (education, career_interest, goal) had a chance to
-                # emit. 15 is still safe — a single chat cannot produce
-                # more than ~15 distinct (category,label) facts.
-                if _emit(category, label, val) and len(out) >= 15:
+                # Cap lifted from 8 → 15 → 25. We added ~12 new patterns
+                # for student-specific phrasings (year, club, interview,
+                # research, hobby, location, certs) so a long substantive
+                # chat can legitimately produce 18+ facts. 25 still bounds
+                # the worst case where a single fluent paragraph somehow
+                # pattern-matches every regex.
+                if _emit(category, label, val) and len(out) >= 25:
                     return out
 
         # Skill list post-pass: pull the whole list chunk and split on
@@ -452,7 +642,7 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
                 if t.lower() in _PRONOUNS:
                     continue
                 label = "Skill: {v}".format(v=t[:60])
-                if _emit("skill", label, t) and len(out) >= 15:
+                if _emit("skill", label, t) and len(out) >= 25:
                     return out
 
     return out

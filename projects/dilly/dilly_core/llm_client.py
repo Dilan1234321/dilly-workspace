@@ -173,42 +173,70 @@ def get_chat_completion(
     else:
         system_param = system
 
+    # One retry on transient errors (rate-limit, timeout, 5xx, connection
+    # blip). Most Anthropic outages are sub-second blips and a single
+    # retry recovers them. Without this, one bad packet = profile fact
+    # evaporates for that turn. The retry is bounded to 1 attempt so
+    # we don't stack latency on already-failing calls.
+    client = Anthropic(api_key=api_key, timeout=45.0)
+    last_err: Exception | None = None
+    for _attempt in (1, 2):
+        try:
+            response = client.messages.create(
+                model=model,
+                system=system_param,
+                messages=[{"role": "user", "content": user}],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            try:
+                from projects.dilly.api.llm_usage_log import log_from_anthropic_response
+                log_from_anthropic_response(
+                    log_email, log_feature, response,
+                    metadata=log_metadata or {"route": "dilly_core/llm_client.py"},
+                    session_id=log_session_id,
+                )
+            except Exception:
+                pass
+            text = response.content[0].text if response.content else None
+            return (text or "").strip() or None
+        except Exception as _llm_e:
+            last_err = _llm_e
+            _name = type(_llm_e).__name__
+            # Retry only on the kinds of failure that are likely transient.
+            # Permanent errors (bad request, auth, model-not-found) won't
+            # recover from a retry — fail fast on those.
+            _retryable = (
+                "RateLimit" in _name
+                or "Timeout" in _name
+                or "APIConnection" in _name
+                or "ServiceUnavailable" in _name
+                or "Overloaded" in _name
+                or "InternalServer" in _name
+            )
+            if _attempt == 1 and _retryable:
+                try:
+                    import time as _t
+                    _t.sleep(1.0)
+                except Exception:
+                    pass
+                continue
+            break
+
+    # Both attempts (or only-attempt for non-retryable) failed. Log to
+    # stderr so Railway shows the failure in real time and we can tell
+    # when an empty profile was caused by the API vs by the LLM
+    # returning [].
     try:
-        client = Anthropic(api_key=api_key, timeout=45.0)
-        response = client.messages.create(
-            model=model,
-            system=system_param,
-            messages=[{"role": "user", "content": user}],
-            max_tokens=max_tokens,
-            temperature=temperature,
+        import sys as _sys
+        _sys.stderr.write(
+            f"[get_chat_completion] anthropic error feature={log_feature} "
+            f"email={(log_email[:6] + '***') if log_email else 'anon'}: "
+            f"{type(last_err).__name__}: {str(last_err)[:200]}\n"
         )
-        try:
-            from projects.dilly.api.llm_usage_log import log_from_anthropic_response
-            log_from_anthropic_response(
-                log_email, log_feature, response,
-                metadata=log_metadata or {"route": "dilly_core/llm_client.py"},
-                session_id=log_session_id,
-            )
-        except Exception:
-            pass
-        text = response.content[0].text if response.content else None
-        return (text or "").strip() or None
-    except Exception as _llm_e:
-        # Silent return previously — every Anthropic error (rate-limit,
-        # timeout, network blip) caused extraction to evaporate with
-        # no indication. Log to stderr so Railway shows the failure
-        # in real time and we can tell when an empty profile was
-        # caused by the API vs by the LLM returning [].
-        try:
-            import sys as _sys
-            _sys.stderr.write(
-                f"[get_chat_completion] anthropic error feature={log_feature} "
-                f"email={(log_email[:6] + '***') if log_email else 'anon'}: "
-                f"{type(_llm_e).__name__}: {str(_llm_e)[:200]}\n"
-            )
-        except Exception:
-            pass
-        return None
+    except Exception:
+        pass
+    return None
 
 
 def stream_chat_completion(
