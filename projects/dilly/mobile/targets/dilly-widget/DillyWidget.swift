@@ -821,19 +821,70 @@ struct DillyProfileView: View {
         }
     }
 
+    // Threshold below which Dilly admits she doesn't know the user
+    // well enough yet. Surfaces a "tell Dilly more" prompt instead of
+    // showing a sad zero. 8 facts ≈ enough for one fact to feel real;
+    // below that the widget reads as half-baked and undermines trust.
+    private var hasEnoughData: Bool {
+        // 3 is the bar — below that the widget hasn't seen enough
+        // signal to show a real fact + count without looking weird.
+        return (entry.data.profileFactCount ?? 0) >= 3
+            && !(entry.data.profileRecentFacts ?? []).isEmpty
+    }
+
     private var homeMedium: some View {
-        // Two-column layout: a visual identity block on the left
-        // (face + count + category ring), a quote-style fact on the
-        // right with category pills and freshness indicator.
+        Group {
+            if hasEnoughData {
+                homeMediumKnown
+            } else {
+                homeMediumEmpty
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetURL(URL(string: "dilly:///(app)/my-dilly-profile"))
+    }
+
+    // EMPTY state: doesn't know user well enough. Asks them to talk
+    // to Dilly. No fake "0 facts" — that reads as broken.
+    private var homeMediumEmpty: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            EyebrowLabel(text: "DILLY REMEMBERS", tint: inkSecondary)
+            HStack(alignment: .top, spacing: 12) {
+                DillyFaceView(size: 56, mood: .curious, accessory: .none,
+                    inkColor: inkPrimary, ringColor: inkPrimary.opacity(0.45), ringFill: inkPrimary.opacity(0.06))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Dilly doesn't know you well enough yet.")
+                        .font(.system(size: 14, weight: .heavy, design: .serif)).italic()
+                        .foregroundColor(inkPrimary)
+                        .lineLimit(3).minimumScaleFactor(0.85)
+                    Text("Open Dilly and tell her about you — what you're working on, where you want to go, what you've already done. Your widget fills in here.")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(inkSecondary)
+                        .lineLimit(4).minimumScaleFactor(0.85)
+                }
+            }
+            Spacer(minLength: 0)
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.up.right.circle.fill")
+                    .font(.system(size: 11)).foregroundColor(Color(hex: 0xE5B143))
+                Text("TAP TO TALK TO DILLY")
+                    .font(.system(size: 9, weight: .black)).tracking(1.0)
+                    .foregroundColor(inkPrimary)
+            }
+        }
+    }
+
+    // KNOWN state: ring + count on the left, recent fact on the right.
+    // Pills row removed (was showing literal "GOAL TRAIT" text). All
+    // text uses inkPrimary (theme-aware) so it stays readable on the
+    // light cream surface — earlier the soft-secondary tone vanished.
+    private var homeMediumKnown: some View {
         HStack(alignment: .top, spacing: 12) {
-            // ── LEFT COLUMN — identity + visual count ──────────
             VStack(alignment: .leading, spacing: 6) {
                 EyebrowLabel(text: "DILLY REMEMBERS", tint: inkSecondary)
                 ZStack {
-                    // Background ring showing how filled out the
-                    // profile is (categories covered out of ~24 total).
                     Circle()
-                        .stroke(inkPrimary.opacity(0.12), lineWidth: 6)
+                        .stroke(inkPrimary.opacity(0.14), lineWidth: 6)
                         .frame(width: 76, height: 76)
                     Circle()
                         .trim(from: 0, to: categoryCompletion)
@@ -850,42 +901,27 @@ struct DillyProfileView: View {
                             .minimumScaleFactor(0.6)
                         Text("facts")
                             .font(.system(size: 9, weight: .heavy)).tracking(1.0)
-                            .foregroundColor(inkSecondary)
+                            .foregroundColor(inkPrimary.opacity(0.7))
                     }
                 }
                 HStack(spacing: 4) {
                     Image(systemName: "square.grid.3x3.fill")
-                        .font(.system(size: 8)).foregroundColor(inkSecondary)
+                        .font(.system(size: 9)).foregroundColor(inkPrimary.opacity(0.7))
                     Text("\(entry.data.profileCategoryCount ?? 0) categories")
                         .font(.system(size: 10, weight: .heavy)).tracking(0.4)
-                        .foregroundColor(inkSecondary)
+                        .foregroundColor(inkPrimary.opacity(0.85))
                 }
             }
             .frame(width: 100, alignment: .leading)
 
-            // ── RIGHT COLUMN — quote + category pills + freshness ──
             VStack(alignment: .leading, spacing: 8) {
                 if let fact = surfacedFact {
                     Text("\u{201C}\(fact)\u{201D}")
                         .font(.system(size: 13, weight: .semibold, design: .serif))
                         .italic().foregroundColor(inkPrimary).lineSpacing(2)
-                        .lineLimit(4).minimumScaleFactor(0.85)
-                } else {
-                    EmptyHint(icon: "book.closed", line: "Tell Dilly about you and your profile fills in here.")
+                        .lineLimit(5).minimumScaleFactor(0.85)
                 }
                 Spacer(minLength: 0)
-                // Category pill row — pulls from latest category if
-                // available, otherwise shows a couple of common ones.
-                HStack(spacing: 4) {
-                    ForEach(displayCategories, id: \.self) { cat in
-                        Text(cat.uppercased())
-                            .font(.system(size: 8, weight: .black)).tracking(0.6)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Capsule().fill(inkPrimary.opacity(0.10)))
-                            .foregroundColor(inkSecondary)
-                    }
-                    Spacer(minLength: 0)
-                }
                 if let date = entry.data.profileLatestFactDate, !date.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "circle.fill")
@@ -893,32 +929,16 @@ struct DillyProfileView: View {
                             .foregroundColor(Color(hex: 0xE5B143))
                         Text("Latest capture · \(date)")
                             .font(.system(size: 9, weight: .heavy)).tracking(0.8)
-                            .foregroundColor(inkSecondary)
+                            .foregroundColor(inkPrimary.opacity(0.75))
                     }
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(URL(string: "dilly:///(app)/my-dilly-profile"))
     }
 
-    // ~24 is the rough total category count Dilly tracks. Used to
-    // visualize "how filled out is the profile" in the ring chart.
     private var categoryCompletion: CGFloat {
         let cats = CGFloat(entry.data.profileCategoryCount ?? 0)
         return min(1.0, cats / 24.0)
-    }
-
-    // Latest category gets shown first; fall back to a default mix.
-    private var displayCategories: [String] {
-        var out: [String] = []
-        if let latest = entry.data.profileLatestFactCategory, !latest.isEmpty {
-            out.append(latest.replacingOccurrences(of: "_", with: " "))
-        }
-        for d in ["goal", "trait"] where !out.contains(where: { $0.lowercased() == d }) {
-            out.append(d)
-        }
-        return Array(out.prefix(3))
     }
 }
 

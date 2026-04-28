@@ -225,9 +225,23 @@ export default function RootLayout() {
     const unsub = installAppStateConsumer();
     let unsubQa: undefined | (() => void);
     installQuickActionsHandler().then((u) => { unsubQa = u; }).catch(() => {});
+
+    // Widgets only re-render their content when the host app writes
+    // fresh data into App Group UserDefaults. Without re-firing this
+    // on every foreground, a user who's been adding facts via chat
+    // will see stale widgets ("Dilly doesn't know you well enough")
+    // long after their profile has filled in.
+    const { AppState } = require('react-native');
+    const sub = AppState.addEventListener('change', (state: string) => {
+      if (state === 'active') {
+        refreshAllWidgets().catch(() => {});
+      }
+    });
+
     return () => {
       try { unsub(); } catch {}
       try { unsubQa?.(); } catch {}
+      try { sub.remove(); } catch {}
     };
   }, []);
   // Index Dilly's app sections into iOS Spotlight on cold start so a
