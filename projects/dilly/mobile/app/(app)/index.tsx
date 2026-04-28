@@ -1267,6 +1267,7 @@ function SeekerHome() {
         setGsTranscript(Boolean(profileRes?.gs_transcript));
         setGsWin(Boolean(profileRes?.gs_win));
         setGsChapter(Boolean(profileRes?.gs_chapter));
+        setGsCustomize(Boolean(profileRes?.gs_customize));
         setGsCalendar(Boolean(profileRes?.gs_calendar));
       } catch {
         const still = await getToken();
