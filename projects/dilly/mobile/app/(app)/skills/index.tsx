@@ -328,6 +328,45 @@ function FeedLanding() {
           <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
         </View>
 
+        {/* Certifications entry — pinned to the top of Skills so the
+            full searchable library is one tap away. Browse, search,
+            filter, save, mark complete. */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push('/(app)/certifications' as any)}
+          style={{
+            marginHorizontal: 0,
+            marginBottom: 14,
+            backgroundColor: theme.accent,
+            borderRadius: 14,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            shadowColor: theme.accent,
+            shadowOpacity: 0.18,
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 12,
+            elevation: 4,
+          }}
+        >
+          <View style={{
+            width: 38, height: 38, borderRadius: 19,
+            backgroundColor: '#FFFFFF22',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="ribbon" size={20} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 }}>
+              Browse certifications
+            </Text>
+            <Text style={{ fontSize: 11, color: '#FFFFFFCC', marginTop: 1 }}>
+              Search, filter, save the ones recruiters in your field actually look for.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#FFFFFFCC" />
+        </TouchableOpacity>
+
         <Text style={[feedStyles.subhead, { color: theme.surface.t2 }]}>{copy.subhead}</Text>
 
         {!feed?.hero ? (
