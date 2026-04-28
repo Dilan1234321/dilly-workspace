@@ -124,6 +124,7 @@ from projects.dilly.api.routers import ats as ats_router
 from projects.dilly.api.routers import report as report_router
 from projects.dilly.api.routers import health as health_router
 from projects.dilly.api.routers import admin_cost as admin_cost_router
+from projects.dilly.api.routers import admin_jobs as admin_jobs_router
 from projects.dilly.api.routers import waitlist as waitlist_router
 from projects.dilly.api.routers import cron as cron_router
 from projects.dilly.api.routers import family as family_router
@@ -195,6 +196,7 @@ app.include_router(ats_router.router)
 app.include_router(report_router.router)
 app.include_router(health_router.router)
 app.include_router(admin_cost_router.router)
+app.include_router(admin_jobs_router.router)
 app.include_router(waitlist_router.router)
 app.include_router(cron_router.router)
 app.include_router(family_router.router)
@@ -437,6 +439,30 @@ def _on_startup() -> None:
                 import threading
                 print(f"[CRON] discovered_boards has {current_total} rows; firing one-shot discovery in background", flush=True)
                 threading.Thread(target=_run_discover_boards, daemon=True).start()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+
+        # One-shot CRAWL kick on startup if active listings count < 5000.
+        # Same pattern as the discovery one-shot above. The user reports
+        # they "don't know if the nightly crawl is running" — this gives
+        # us a deterministic trigger: deploy this commit, listings count
+        # is checked on startup, if low the crawl runs in background and
+        # the table populates within 10–20 minutes. Once it's healthy
+        # (5000+ active listings) this no-ops on every restart.
+        try:
+            from projects.dilly.crawl_internships_v2 import get_db as _get_db_jobs
+            _conn = _get_db_jobs()
+            _cur = _conn.cursor()
+            _cur.execute("SELECT COUNT(*) FROM internships WHERE status = 'active'")
+            _active_count = int(_cur.fetchone()[0] or 0)
+            _conn.close()
+            if _active_count < 5000:
+                import threading
+                print(f"[CRON] internships has {_active_count} active listings (<5000); firing one-shot crawl in background", flush=True)
+                threading.Thread(target=_run_crawl_internships, daemon=True).start()
+            else:
+                print(f"[CRON] internships has {_active_count} active listings (healthy); skipping startup crawl", flush=True)
         except Exception:
             import traceback
             traceback.print_exc()
