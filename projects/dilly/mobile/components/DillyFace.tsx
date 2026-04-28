@@ -53,6 +53,12 @@ interface DillyFaceProps {
    *  Default true. Pass false for "clean" contexts (loading screens,
    *  onboarding hero, AI arena) where the ring reads as chrome. */
   ring?: boolean
+  /** Hero "AI coach" treatment from the website: large circular
+   *  container with light cool-lavender bg, soft navy border, and
+   *  elevated drop shadow. Use for landing/hero contexts where
+   *  Dilly is the centerpiece. Adds ~16% padding around the face
+   *  inside the container. */
+  circular?: boolean
 }
 
 const AnimatedPath = Animated.createAnimatedComponent(Path)
@@ -112,7 +118,7 @@ function shapeFor(mood: DillyMood): MoodShape {
 /* DillyFace                                                       */
 /* ─────────────────────────────────────────────────────────────── */
 
-export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true }: DillyFaceProps) {
+export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true, circular = false }: DillyFaceProps) {
   const TRAVEL = size * 0.15
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
@@ -244,13 +250,19 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     pickTarget()
     const moveInterval = setInterval(pickTarget, 2600)
     const smileInterval = setInterval(() => {
-      // Idle roams freely. Writing gets a gentle breath so the
-      // chapter loading screen doesn't read as frozen - smile
-      // wobbles between 0.25 and 0.45 on a slow cycle.
+      // Every mood breathes — small ±0.10 wobble around the mood's
+      // base smile value keeps the face feeling alive instead of
+      // frozen. Idle + writing get larger wobble ranges since they
+      // have nothing else animating; the rest get gentle breath.
+      const base = shape.smile
       if (mood === 'idle') {
         smileTargetRef.current = 0.15 + Math.random() * 0.45
       } else if (mood === 'writing') {
         smileTargetRef.current = 0.25 + Math.random() * 0.20
+      } else {
+        // Gentle breath: base ±0.10, clamped to valid smile range.
+        const wobble = (Math.random() - 0.5) * 0.20
+        smileTargetRef.current = Math.max(-1, Math.min(1, base + wobble))
       }
     }, 2200)
 

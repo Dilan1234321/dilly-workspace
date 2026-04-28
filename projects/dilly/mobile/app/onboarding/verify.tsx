@@ -125,12 +125,25 @@ export default function VerifyScreen() {
       setError(null);
       try {
         const emailToVerify = isReturning ? returningEmail.trim() : email;
-        // Pass intent so the backend creates the right account_type. Without
-        // this, every verify falls through to account_type='student' even
-        // when the user picked a non-student situation (jobholder, parent
-        // returning, veteran, etc.). userType is set by choose-path.tsx
-        // based on which email field they used.
-        const intent = userType === 'general' ? 'general' : 'student';
+        // Pass intent so the backend creates the right account_type. We
+        // determine intent two ways and prefer general whenever any
+        // signal points there:
+        //   1. userType param from choose-path.tsx (which form they used)
+        //   2. dilly_pending_user_path from AsyncStorage (which situation
+        //      they picked on choose-situation, set BEFORE choose-path)
+        // The second one is the durable source of truth — params can
+        // get stripped between screens, but AsyncStorage persists. If
+        // user picked any non-student situation (i_have_a_job,
+        // exploring, senior_reset, etc.) we MUST use intent='general'
+        // even if userType param somehow lost its value.
+        let intent: 'general' | 'student' = userType === 'general' ? 'general' : 'student';
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const pendingPath = await AsyncStorage.getItem('dilly_pending_user_path');
+          // Only the explicit student situation should stay as student;
+          // every other path is general.
+          if (pendingPath && pendingPath !== 'student') intent = 'general';
+        } catch {}
         const res = await fetch(`${API_BASE}/auth/verify-code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -11,10 +11,19 @@
  * Honors Apple HIG for Wallet buttons: solid black pill, white wordmark.
  */
 import { useEffect, useState } from 'react';
-import { View, Text, Platform, ActivityIndicator } from 'react-native';
-import AnimatedPressable from './AnimatedPressable';
+import { View, Text, Platform, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { dilly } from '../lib/dilly';
 import { showToast } from '../lib/globalToast';
+
+// Surface diagnostic info via BOTH toast AND system Alert so the user
+// can't miss feedback when something fails. Earlier the toast alone
+// showed nothing because the press handler was apparently swallowed.
+function notify(message: string, type: 'success' | 'error') {
+  try { showToast({ message, type }); } catch {}
+  if (type === 'error') {
+    setTimeout(() => Alert.alert('Add to Apple Wallet', message), 100);
+  }
+}
 
 export default function AddToWalletButton() {
   const [supported, setSupported] = useState<boolean | null>(null);
@@ -61,18 +70,12 @@ export default function AddToWalletButton() {
       // or as default-only (Wallet.default.addPass). Try both.
       const wallet = Wallet?.addPass ? Wallet : Wallet?.default;
       if (!wallet?.addPass) {
-        showToast({
-          message: 'Wallet module not loaded. The next app build will fix this.',
-          type: 'error',
-        });
+        notify('Wallet module not loaded. The next app build will fix this.', 'error');
         return;
       }
       const meta = await dilly.get('/wallet/career-pass/url').catch(() => null);
       if (!meta?.url) {
-        showToast({
-          message: 'Wallet pass server is not ready. Check Railway env vars.',
-          type: 'error',
-        });
+        notify('Wallet pass server is not ready. Check Railway env vars.', 'error');
         return;
       }
       const { authHeaders } = await import('../lib/auth');
@@ -80,22 +83,24 @@ export default function AddToWalletButton() {
       const ok = await wallet.addPass(meta.url, headers as Record<string, string>);
       if (ok) {
         setAdded(true);
-        showToast({ message: 'Added to Apple Wallet.', type: 'success' });
+        notify('Added to Apple Wallet.', 'success');
+      } else {
+        notify('Wallet did not add the pass. Try again.', 'error');
       }
     } catch (e: any) {
-      showToast({ message: e?.message || 'Could not add to Wallet.', type: 'error' });
+      notify(e?.message || 'Could not add to Wallet.', 'error');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <AnimatedPressable
+    <TouchableOpacity
       onPress={handlePress}
-      scaleDown={0.97}
+      activeOpacity={0.7}
       style={{
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 8, backgroundColor: '#000', paddingVertical: 12, borderRadius: 10,
+        gap: 8, backgroundColor: '#000', paddingVertical: 14, borderRadius: 10,
       }}
     >
       {busy ? (
@@ -108,7 +113,7 @@ export default function AddToWalletButton() {
           </Text>
         </>
       )}
-    </AnimatedPressable>
+    </TouchableOpacity>
   );
 }
 
