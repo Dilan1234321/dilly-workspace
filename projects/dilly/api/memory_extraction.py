@@ -469,7 +469,15 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
 # personality tells) gates on substantive chat length.
 # The mobile UI shows a progress pill ("Dilly needs X more messages
 # to save what she's learning") so users know the bar exists.
-LLM_EXTRACTION_MIN_USER_MSGS = 5
+# Lowered from 5 → 2. The per-turn extraction in /ai/chat is now
+# throttled (every 5th user msg), so /ai/chat/flush is the primary
+# extraction path. A 6-msg conversation (3 user msgs) was getting
+# zero LLM extraction because both gates were too high — user saw
+# nothing land in My Dilly. At 2, any conversation with 2+ real
+# user turns earns one Haiku extraction call (~0.4¢) at session
+# close. That's the right tradeoff: extraction is the feature
+# users said "works so well, don't touch it."
+LLM_EXTRACTION_MIN_USER_MSGS = 2
 
 # Map Voice/beyond-resume extractor types → profile_facts categories (whitelist).
 _COACH_TYPE_TO_MEMORY: dict[str, str] = {
