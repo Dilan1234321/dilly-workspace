@@ -193,16 +193,16 @@ class ChatResponse(BaseModel):
     """When non-null, contains `added` / `count` — new memory-surface facts persisted this turn.
     Populated synchronously so the client can refresh My Dilly without waiting for /flush."""
 
-    conv_cost_usd: Optional[float] = None
+    conv_cost_usd: float = 0.0
     """Cumulative LLM cost (USD) for this conversation, summed straight from llm_usage_log.
-    Lets the client show real cost so claims about cost reductions are verifiable."""
+    Always set (0.0 on lookup failure / empty conversation) so the client footer always renders."""
 
-    conv_cost_breakdown: Optional[List[Dict[str, Any]]] = None
-    """Per-feature breakdown of conv_cost_usd: [{feature, calls, usd}]."""
+    conv_cost_breakdown: List[Dict[str, Any]] = []
+    """Per-feature breakdown of conv_cost_usd: [{feature, calls, usd}]. Empty list on lookup failure."""
 
-    conv_cost_debug: Optional[Dict[str, Any]] = None
+    conv_cost_debug: Dict[str, Any] = {}
     """Diagnostic block from get_session_cost — recent row count,
-    session_ids seen, etc. Used to debug "shows 0¢" cases."""
+    session_ids seen, etc. Used to debug \"shows 0¢\" cases. Always set."""
 
 
 def _build_rich_context(email: str) -> dict:
@@ -2053,20 +2053,41 @@ async def ai_chat(request: Request, body: ChatRequest):
         # ── Cost transparency: read the actual logged cost for this
         # conversation from llm_usage_log. Surfaces in the UI so the
         # user can verify cost claims directly instead of trusting
-        # estimates. Costs include this turn (logged above before
-        # extraction runs).
-        conv_cost_usd: Optional[float] = None
-        conv_cost_breakdown: Optional[List[Dict[str, Any]]] = None
-        conv_cost_debug: Optional[Dict[str, Any]] = None
-        if email and body.conv_id:
-            try:
+        # estimates.
+        # ALWAYS populate these fields (no None) so the footer always
+        # renders. Empty body.conv_id falls back to conv_id_resolved
+        # (the sha256-derived id used by extraction logging) so the
+        # lookup matches whatever session_ids actually got written.
+        conv_cost_usd: float = 0.0
+        conv_cost_breakdown: List[Dict[str, Any]] = []
+        conv_cost_debug: Dict[str, Any] = {
+            "email_set": bool(email),
+            "conv_id_in_body": (body.conv_id or "")[:16],
+            "conv_id_resolved": "",
+        }
+        try:
+            _lookup_email = email or ""
+            _lookup_conv = (body.conv_id or "").strip()
+            if not _lookup_conv:
+                # Recompute the same fallback used by extraction logging
+                # so we can still find the rows it wrote.
+                import hashlib as _hl
+                _first_msg = raw_messages[0].get("content", "") if raw_messages else ""
+                _lookup_conv = _hl.sha256(
+                    f"{_lookup_email}:{_first_msg[:100]}".encode()
+                ).hexdigest()[:16] if _lookup_email else ""
+            conv_cost_debug["conv_id_resolved"] = _lookup_conv
+            if _lookup_email and _lookup_conv:
                 from projects.dilly.api.llm_usage_log import get_session_cost
-                sc = get_session_cost(email, body.conv_id)
+                sc = get_session_cost(_lookup_email, _lookup_conv)
                 conv_cost_usd = round(float(sc.get("total_usd", 0.0)), 6)
-                conv_cost_breakdown = sc.get("by_feature", [])
-                conv_cost_debug = sc.get("debug", None)
-            except Exception as _e:
-                conv_cost_debug = {"error": str(_e)[:200]}
+                conv_cost_breakdown = sc.get("by_feature", []) or []
+                _dbg = sc.get("debug", {}) or {}
+                conv_cost_debug.update(_dbg)
+            else:
+                conv_cost_debug["skipped"] = "missing email or conv_id"
+        except Exception as _e:
+            conv_cost_debug["error"] = str(_e)[:200]
 
         return ChatResponse(
             content=content.strip(),
