@@ -1386,17 +1386,17 @@ function SeekerHome() {
 
   if (loading) {
     return (
-      <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
-        <ScrollView contentContainerStyle={[s.scroll, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 40 }]}>
-          <Skeleton width={160} height={20} style={{ marginBottom: 8 }} />
-          <Skeleton width={220} height={14} style={{ marginBottom: 24 }} />
-          <View style={{ alignItems: 'center', marginVertical: 20 }}>
-            <Skeleton width={80} height={80} style={{ borderRadius: 40 }} />
-          </View>
-          <Skeleton width="100%" height={48} style={{ borderRadius: 12, marginBottom: 12 }} />
-          <Skeleton width="100%" height={48} style={{ borderRadius: 12, marginBottom: 12 }} />
-          <Skeleton width="100%" height={48} style={{ borderRadius: 12 }} />
-        </ScrollView>
+      <View style={[s.container, { backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center' }]}>
+        <DillyFace size={140} mood="writing" accessory="pencil" />
+        <Text style={{
+          marginTop: 24,
+          fontSize: 15,
+          fontFamily: theme.type.body,
+          color: theme.surface.t2,
+          letterSpacing: 0.2,
+        }}>
+          Getting your dashboard ready…
+        </Text>
       </View>
     );
   }

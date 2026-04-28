@@ -345,6 +345,15 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   // Circular hero treatment matches the website's AI coach surface:
   // larger soft cool-lavender bg, thin navy border, elevated shadow.
   // Trumps the regular `ring` prop when set — they don't compose.
+  // On dark surfaces (Midnight, OLED, Carbon, Cocoa, Dark Blue) the
+  // hardcoded light lavender bg looked like a glaring white square
+  // around the face. Use s2 (mid-elevation surface) on dark themes
+  // so the chip sits on the page like every other card.
+  const isDarkSurface = !!theme.surface?.dark
+  const circularBg = isDarkSurface ? (theme.surface?.s2 || '#1A1F2E') : '#F5F6FF'
+  const circularBorderColor = isDarkSurface
+    ? 'rgba(255,255,255,0.08)'
+    : 'rgba(43,58,142,0.12)'
   const circularBorder = circular ? Math.max(1.5, Math.round(size * 0.012)) : 0
   return (
     <View style={{
@@ -364,8 +373,8 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
           height: size,
           borderRadius: size / 2,
           borderWidth: circular ? circularBorder : (ring ? ringBorder : 0),
-          borderColor: circular ? 'rgba(43,58,142,0.12)' : (ring ? theme.accent : 'transparent'),
-          backgroundColor: circular ? '#F5F6FF' : (ring ? theme.accentSoft : 'transparent'),
+          borderColor: circular ? circularBorderColor : (ring ? theme.accent : 'transparent'),
+          backgroundColor: circular ? circularBg : (ring ? theme.accentSoft : 'transparent'),
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
@@ -393,6 +402,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
               smilePath={smilePath}
               archEyes={shape.archEyes}
               ink={faceInk}
+              eyeBoost={accessory === 'pencil' ? 1.4 : 1}
             />
             {/* Non-pencil accessories (magnifier, paintbrush) still
                 render inside the animated layer so they track with
@@ -467,11 +477,14 @@ interface EyesProps {
   archEyes: boolean
   /** Ink color for eyes, brows, and smile. Swapped per-theme. */
   ink: string
+  /** Boost eye base radius — pencil/circular hero variant uses bigger
+   *  eyes to match the website. */
+  eyeBoost?: number
 }
 
-function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smilePath, archEyes, ink }: EyesProps) {
+function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smilePath, archEyes, ink, eyeBoost = 1 }: EyesProps) {
   // Eye radius is interpolated from scale so transitions are smooth.
-  const baseR = 2.8 * s
+  const baseR = 2.8 * s * eyeBoost
   const eyeR = eyeScaleAnim.interpolate({
     inputRange: [0, 0.25, 1, 1.2],
     outputRange: [0.35 * s, baseR * 0.6, baseR, baseR * 1.15],

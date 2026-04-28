@@ -893,6 +893,26 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               Mode pills (Coach / Practice) move to a second tier below
               so the top bar doesn't look like a cluttered toolbar. */}
           <View style={[s.header, { paddingTop: insets.top + 10, borderBottomColor: theme.surface.border }]}>
+            {/* Logo is absolute-positioned so it centers to the SCREEN,
+                not to the available space between left + right zones.
+                Earlier attempt used flex:1 in the middle but the left
+                zone (40px) and right zone (80px) are unequal, so the
+                logo sat 20px left of screen center. */}
+            <View pointerEvents="none" style={{
+              position: 'absolute',
+              top: insets.top + 10,
+              left: 0,
+              right: 0,
+              bottom: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Image
+                source={require('../assets/logo.png')}
+                style={[s.wordmarkLogo, { tintColor: theme.accent }]}
+                resizeMode="contain"
+              />
+            </View>
             <TouchableOpacity
               onPress={onClose}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -900,13 +920,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
             >
               <Ionicons name="chevron-down" size={26} color={theme.surface.t2} />
             </TouchableOpacity>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Image
-                source={require('../assets/logo.png')}
-                style={[s.wordmarkLogo, { tintColor: theme.accent }]}
-                resizeMode="contain"
-              />
-            </View>
+            <View style={{ flex: 1 }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, width: 80, justifyContent: 'flex-end' }}>
               {/* New chat - clears the live conversation and starts a
                   fresh thread. Use when the user wants to switch
