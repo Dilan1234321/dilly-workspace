@@ -1248,37 +1248,6 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               }}>
                 Go run the moves. Dilly's saving what she learned.
               </Text>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => {
-                  setSessionEnded(false);
-                  sessionEndScale.setValue(0);
-                  sessionEndOpacity.setValue(0);
-                  setMessages([]);
-                  setRichContext(null);
-                  convIdRef.current = null;
-                  initialMessageSent.current = false;
-                  pendingInitialMessage.current = null;
-                  AsyncStorage.removeItem(LIVE_CHAT_KEY).catch(() => {});
-                  setSuggestions(getInitialSuggestions(studentContext, mode));
-                  suggestionsOpacity.setValue(1);
-                  setConvCostUsd(null);
-                  setConvCostBreakdown(null);
-                }}
-                style={{
-                  marginTop: 18,
-                  paddingHorizontal: 22, paddingVertical: 10,
-                  borderRadius: 22,
-                  backgroundColor: theme.surface.s1,
-                  borderWidth: 1, borderColor: theme.surface.border,
-                  flexDirection: 'row', alignItems: 'center', gap: 8,
-                }}
-              >
-                <Ionicons name="add" size={14} color={theme.surface.t1} />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>
-                  Start a new chat
-                </Text>
-              </TouchableOpacity>
             </Animated.View>
           ) : null}
 
