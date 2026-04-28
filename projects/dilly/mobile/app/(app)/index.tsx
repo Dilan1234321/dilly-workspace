@@ -1452,14 +1452,65 @@ function SeekerHome() {
           </View>
         </FadeInView>
 
-        {/* ── YOUR PLAN anchor (seeker + student paths) ─────────
-            The product promise in one card: "Dilly turns your career
-            confusion into a plan." Sits above every other block so
-            the mental model is inescapable: Dilly makes the plan,
-            the rest of the app is where it gets executed. */}
-        <FadeInView delay={10}>
-          <YourPlanCard plan={plan} firstName={firstName} />
+        {/* Top row: FactCircle (visual count of what Dilly knows) on
+            the left + Quick Tools horizontal scroll on the right. The
+            circle crystallizes the moat in a glanceable way: every
+            time you open Home you see Dilly's number grow. Tap to
+            jump to the Memory tab. */}
+        <FadeInView delay={6}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 12 }}>
+            <AnimatedPressable
+              onPress={() => router.push('/(app)/memory' as any)}
+              scaleDown={0.94}
+              style={{
+                width: 64, height: 64, borderRadius: 32,
+                borderWidth: 2.5, borderColor: theme.accent,
+                backgroundColor: theme.accentSoft,
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Text style={{
+                fontFamily: theme.type.display,
+                fontSize: 22, fontWeight: '900',
+                color: theme.accent, letterSpacing: -0.4, lineHeight: 24,
+              }}>
+                {factCount}
+              </Text>
+              <Text style={{
+                fontSize: 8, fontWeight: '800', letterSpacing: 0.6,
+                color: theme.accent, marginTop: -2,
+              }}>
+                FACTS
+              </Text>
+            </AnimatedPressable>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[s.toolRow, { paddingLeft: 4, paddingRight: 4 }]}
+              style={{ flex: 1 }}
+            >
+              {[
+                { icon: 'document-text' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
+                { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
+                { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
+                { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar' as any) },
+                { icon: 'color-palette' as const, color: '#00C853', label: 'Customize', onPress: () => router.push('/(app)/customize' as any) },
+              ].map(tool => (
+                <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
+                  <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
+                    <Ionicons name={tool.icon} size={20} color={tool.color} />
+                  </View>
+                  <Text style={[s.toolLabel, { color: theme.surface.t2, fontFamily: theme.type.body }]}>{tool.label}</Text>
+                </AnimatedPressable>
+              ))}
+            </ScrollView>
+          </View>
         </FadeInView>
+
+        {/* "Your Plan" card removed per product direction — the
+            12-week plan now lives on the Future page (Arena), and
+            Home stays focused on next-move surfaces (Quick Tools,
+            Chapter, Jobs). */}
 
         {/* DillyFace + pull-quote + talk CTA.
             Moved here per product direction: above Chapter but below
@@ -1932,50 +1983,16 @@ function SeekerHome() {
           </FadeInView>
         )}
 
-        {/* Quick Tools (moved above pipeline) */}
-        <FadeInView delay={showJourney ? 360 : 140}>
-          <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>QUICK TOOLS</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[s.toolRow, { justifyContent: 'center', flexGrow: 1 }]}
-          >
-            {[
-              // "What We Think" removed. It was an on-demand LLM button that
-              // could be hammered. Replaced with the weekly Chapters ritual
-              // surfaced via ChapterCard higher up on Home.
-              { icon: 'document-text' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
-              { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
-              { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
-              { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar' as any) },
-              { icon: 'color-palette' as const, color: '#00C853', label: 'Customize', onPress: () => router.push('/(app)/customize' as any) },
-            ].map(tool => (
-              <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
-                <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
-                  <Ionicons name={tool.icon} size={20} color={tool.color} />
-                </View>
-                <Text style={[s.toolLabel, { color: theme.surface.t2, fontFamily: theme.type.body }]}>{tool.label}</Text>
-              </AnimatedPressable>
-            ))}
-          </ScrollView>
-        </FadeInView>
-
         {/* Pipeline tiles removed - felt like a status dashboard,
             not a next-move surface. Users who want to see their
             tracker reach it via the Jobs tab. Kept PipelineTile for
             any future reuse. */}
 
-        {/* Activity feed */}
-        {activities.length > 0 && (
-          <FadeInView delay={showJourney ? 440 : 220}>
-            <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>WHAT'S HAPPENING</Text>
-            <View style={{ gap: 6 }}>
-              {activities.map((a, i) => (
-                <ActivityCard key={i} {...a} />
-              ))}
-            </View>
-          </FadeInView>
-        )}
+        {/* "What's happening" feed removed per product direction —
+            it duplicated info already visible elsewhere (fact count
+            now shown as the FactCircle at the top, jobs in the Recent
+            Jobs section, pipeline in the Tracker tab). Home stays
+            focused on next-move surfaces. */}
 
         {/* Recent jobs */}
         {topJobs.length > 0 && (

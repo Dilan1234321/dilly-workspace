@@ -261,17 +261,12 @@ export default function SplashScreen({ onDismiss }: Props) {
       <Animated.View style={[ss.orbWrap, { transform: [{ scale: orbScale }] }]}>
         <RippleRing delay={0} borderColor={theme.accent} />
         <RippleRing delay={1000} borderColor={theme.accent} />
-        {/* Orb outer is transparent so ripple rings show; inner is
-            flush with the screen bg (not a white cutout) so on
-            Midnight the DillyFace reads as floating on the dark
-            backdrop instead of sitting in a bright circle.
-            Border pulls from theme.accent so the whole orb tracks
-            the user's Customize Dilly color. */}
-        <View style={[ss.orbOuter, { borderColor: theme.accentBorder }]}>
-          <View style={[ss.orbInner, { backgroundColor: theme.surface.bg, borderColor: theme.accent }]}>
-            <DillyFace size={156} />
-          </View>
-        </View>
+        {/* Pencil-variant DillyFace from the website. The pencil
+            accessory auto-applies the circular hero treatment with
+            soft drop shadow + bigger website-matched eyes, so we
+            drop the old orbOuter/orbInner wrappers. The ripple rings
+            still pulse out behind it. */}
+        <DillyFace size={156} mood="writing" accessory="pencil" />
       </Animated.View>
 
       <Animated.View style={[ss.contentBlock, { opacity: contentOpacity }]}>

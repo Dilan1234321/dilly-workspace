@@ -412,6 +412,13 @@ export default function JobsScreen() {
   // Per-job expand state. Exactly one expanded at a time keeps the
   // feed scannable; tapping a second job collapses the first.
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // LinkedIn-style detail sheet. Tapping a card opens a full-height
+  // modal with the company header, big title, action row, full JD,
+  // Dilly's read, and the rest of the per-job intelligence — same
+  // shape recruiters know from LinkedIn so users feel oriented
+  // immediately. Inline expansion stays for power users who want to
+  // skim multiple jobs without leaving the feed.
+  const [detailJob, setDetailJob] = useState<Listing | null>(null);
   // Per-job cached fit narratives (keyed by job id). Populated lazily
   // the first time a job expands.
   const [narratives, setNarratives] = useState<Record<string, FitNarrative | { __loading: true } | { __error: string }>>({});
