@@ -1467,7 +1467,7 @@ function SeekerHome() {
             the plan anchor. Full block cut from its previous slot
             below Jobs so there is exactly one rendering on Home. */}
         <FadeInView delay={12}>
-          <View style={{ alignItems: 'center', marginVertical: 16 }}>
+          <View style={{ alignItems: 'center', marginTop: 28, marginBottom: 20 }}>
             <DillyFace size={showJourney ? 100 : 80} mood="warm" />
           </View>
           <AnimatedPressable
@@ -1479,21 +1479,6 @@ function SeekerHome() {
             scaleDown={0.99}
           >
             <View style={{ paddingHorizontal: 28, alignItems: 'center', marginTop: 4 }}>
-              {/* Ornamental opening quote. Big, accent-colored, sits
-                  above the line so the quote reads as ambient art. */}
-              <Text
-                style={{
-                  fontSize: 46,
-                  lineHeight: 36,
-                  color: theme.accent,
-                  fontFamily: theme.type.display,
-                  fontWeight: '900',
-                  opacity: 0.85,
-                  marginBottom: -4,
-                }}
-              >
-                {'\u201C'}
-              </Text>
               <Text
                 style={{
                   fontSize: 19,
