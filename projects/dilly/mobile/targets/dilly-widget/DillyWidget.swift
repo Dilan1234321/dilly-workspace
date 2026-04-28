@@ -568,6 +568,159 @@ struct WeekDotsRow: View {
     }
 }
 
+/// Hero streak ring. Outer trim shows progress toward a perfect
+/// 7-day week. Inner shows the streak number + a flame. Replaces
+/// the small flame chip with a real visual centerpiece.
+struct StreakRing: View {
+    let streakDays: Int
+    var body: some View {
+        let pct: CGFloat = min(1.0, CGFloat(streakDays) / 7.0)
+        ZStack {
+            Circle().stroke(Color.white.opacity(0.18), lineWidth: 4)
+            Circle()
+                .trim(from: 0, to: pct)
+                .stroke(LinearGradient(
+                    colors: [Color(hex: 0xFFD27A), Color(hex: 0xFF8E5C)],
+                    startPoint: .top, endPoint: .bottomTrailing
+                ), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: -2) {
+                Image(systemName: "flame.fill").font(.system(size: 12)).foregroundColor(Color(hex: 0xFFD27A))
+                Text("\(streakDays)")
+                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .foregroundColor(Color.white)
+                    .minimumScaleFactor(0.5)
+            }
+        }
+    }
+}
+
+/// 7 day dots with weekday labels (M T W T F S S). Today's dot pulses
+/// outline; past days fill based on streak; future days are dim.
+/// Same idea as WeekDotsRow but bigger + with letter labels for the
+/// large widget's hero presence.
+struct WeekDotsRowLarge: View {
+    let streakDays: Int
+    let today: Int
+    private let labels = ["S","M","T","W","T","F","S"]
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(1...7, id: \.self) { day in
+                VStack(spacing: 5) {
+                    Text(labels[day-1])
+                        .font(.system(size: 8, weight: .heavy)).tracking(0.5)
+                        .foregroundColor(Color.white.opacity(day == today ? 0.95 : 0.45))
+                    dot(for: day)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+    @ViewBuilder
+    private func dot(for day: Int) -> some View {
+        if day < today {
+            let daysBack = today - day
+            let filled = daysBack <= streakDays
+            Circle()
+                .fill(filled ? Color.white.opacity(0.92) : Color.white.opacity(0.18))
+                .frame(width: 10, height: 10)
+        } else if day == today {
+            ZStack {
+                Circle().stroke(Color.white.opacity(0.9), lineWidth: 1.6).frame(width: 13, height: 13)
+                Circle().fill(Color.white).frame(width: 5, height: 5)
+            }
+        } else {
+            Circle().stroke(Color.white.opacity(0.30), lineWidth: 1).frame(width: 10, height: 10)
+        }
+    }
+}
+
+/// Card row used for the large widget's three info sections. Icon
+/// in a tinted circle on the left, eyebrow + body text on the right,
+/// glassy translucent background.
+struct InfoCard: View {
+    let eyebrow: String
+    let text: String?
+    let icon: String
+    let accent: Color
+    let italicStyle: Bool
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                Circle().fill(accent.opacity(0.18)).frame(width: 32, height: 32)
+                Image(systemName: icon).font(.system(size: 14, weight: .heavy)).foregroundColor(accent)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                EyebrowLabel(text: eyebrow, tint: Color.white.opacity(0.65))
+                if let t = text, !t.isEmpty {
+                    if italicStyle {
+                        Text(t).font(.system(size: 13, weight: .heavy, design: .serif)).italic()
+                            .foregroundColor(Color.white).lineLimit(2).minimumScaleFactor(0.85)
+                    } else {
+                        Text(t).font(.system(size: 13, weight: .heavy))
+                            .foregroundColor(Color.white).lineLimit(2).minimumScaleFactor(0.85)
+                    }
+                } else {
+                    Text("Open Dilly to load.")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color.white.opacity(0.45))
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.06)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+    }
+}
+
+/// Full-widget constellation field. 9 stars + curved connecting
+/// lines drift across the entire surface. Sits behind content with
+/// soft opacity so it gives the large widget atmospheric depth
+/// without competing with the data. The corner-only earlier version
+/// felt like an afterthought; this one feels like the night sky.
+struct ConstellationField: View {
+    var body: some View {
+        Canvas { ctx, size in
+            // 9 hand-tuned star positions distributed across the
+            // surface (avoiding the hot zones where text lives).
+            let stars: [(CGFloat, CGFloat, CGFloat)] = [
+                (0.08, 0.06, 1.6),
+                (0.92, 0.04, 1.3),
+                (0.18, 0.22, 2.2),
+                (0.62, 0.10, 1.5),
+                (0.85, 0.30, 1.9),
+                (0.05, 0.55, 1.4),
+                (0.45, 0.55, 1.7),
+                (0.92, 0.62, 1.6),
+                (0.30, 0.92, 1.5),
+            ].map { ($0.0, $0.1, $0.2) }
+
+            // Draw faint connecting curves between subsets of stars.
+            let lineColor = Color.white.opacity(0.10)
+            let connections: [(Int, Int)] = [(0, 2), (2, 3), (3, 4), (5, 6), (6, 7), (8, 6)]
+            for (a, b) in connections {
+                let pa = CGPoint(x: stars[a].0 * size.width, y: stars[a].1 * size.height)
+                let pb = CGPoint(x: stars[b].0 * size.width, y: stars[b].1 * size.height)
+                var p = Path()
+                p.move(to: pa); p.addLine(to: pb)
+                ctx.stroke(p, with: .color(lineColor), lineWidth: 0.5)
+            }
+
+            // Stars themselves (small filled circle + soft halo).
+            for s in stars {
+                let p = CGPoint(x: s.0 * size.width, y: s.1 * size.height)
+                let r = s.2
+                let halo = Path(ellipseIn: CGRect(x: p.x - r * 2.4, y: p.y - r * 2.4, width: r * 4.8, height: r * 4.8))
+                let core = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
+                ctx.fill(halo, with: .color(Color.white.opacity(0.06)))
+                ctx.fill(core, with: .color(Color.white.opacity(0.55)))
+            }
+        }
+    }
+}
+
 /// Subtle constellation in the upper-right of the large widget.
 /// Three stars connected by faint lines — adds atmospheric depth
 /// without competing with content. Pure decoration.
@@ -669,40 +822,103 @@ struct DillyProfileView: View {
     }
 
     private var homeMedium: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                DillyFaceView(size: family == .systemSmall ? 32 : 38, mood: .warm, accessory: .none,
-                    inkColor: inkPrimary, ringColor: inkPrimary.opacity(0.45), ringFill: inkPrimary.opacity(0.06))
-                VStack(alignment: .leading, spacing: 1) {
-                    EyebrowLabel(text: "DILLY REMEMBERS", tint: inkSecondary)
-                    if let n = entry.data.profileFactCount, n > 0 {
-                        Text(family == .systemSmall ? "\(n) facts" : "\(n) facts · \(entry.data.profileCategoryCount ?? 1) categories")
-                            .font(.system(size: 10, weight: .semibold)).foregroundColor(inkSecondary)
+        // Two-column layout: a visual identity block on the left
+        // (face + count + category ring), a quote-style fact on the
+        // right with category pills and freshness indicator.
+        HStack(alignment: .top, spacing: 12) {
+            // ── LEFT COLUMN — identity + visual count ──────────
+            VStack(alignment: .leading, spacing: 6) {
+                EyebrowLabel(text: "DILLY REMEMBERS", tint: inkSecondary)
+                ZStack {
+                    // Background ring showing how filled out the
+                    // profile is (categories covered out of ~24 total).
+                    Circle()
+                        .stroke(inkPrimary.opacity(0.12), lineWidth: 6)
+                        .frame(width: 76, height: 76)
+                    Circle()
+                        .trim(from: 0, to: categoryCompletion)
+                        .stroke(LinearGradient(
+                            colors: [Color(hex: 0xE5B143), Color(hex: 0xC78A3A)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ), style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .frame(width: 76, height: 76)
+                        .rotationEffect(.degrees(-90))
+                    VStack(spacing: -2) {
+                        Text("\(entry.data.profileFactCount ?? 0)")
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .foregroundColor(inkPrimary)
+                            .minimumScaleFactor(0.6)
+                        Text("facts")
+                            .font(.system(size: 9, weight: .heavy)).tracking(1.0)
+                            .foregroundColor(inkSecondary)
                     }
                 }
-                Spacer()
-            }
-            if let fact = surfacedFact {
-                Text("\u{201C}\(fact)\u{201D}")
-                    .font(.system(size: family == .systemSmall ? 13 : 15, weight: .semibold, design: .serif))
-                    .italic().foregroundColor(inkPrimary).lineSpacing(2)
-                    .lineLimit(family == .systemSmall ? 5 : 4).minimumScaleFactor(0.85).padding(.top, 2)
-            } else {
-                EmptyHint(icon: "book.closed", line: "Tell Dilly about you and your profile fills in here.")
-            }
-            Spacer(minLength: 0)
-            if family != .systemSmall, let date = entry.data.profileLatestFactDate, !date.isEmpty {
                 HStack(spacing: 4) {
-                    Image(systemName: "circle.fill").font(.system(size: 5)).foregroundColor(Color(hex: 0xE5B143))
-                    Text("Latest capture · \(date)")
-                        .font(.system(size: 10, weight: .heavy)).tracking(0.8).foregroundColor(inkSecondary)
+                    Image(systemName: "square.grid.3x3.fill")
+                        .font(.system(size: 8)).foregroundColor(inkSecondary)
+                    Text("\(entry.data.profileCategoryCount ?? 0) categories")
+                        .font(.system(size: 10, weight: .heavy)).tracking(0.4)
+                        .foregroundColor(inkSecondary)
                 }
-            } else if family == .systemSmall {
-                Text("Tap to add more").font(.system(size: 10, weight: .heavy)).tracking(1.0).foregroundColor(inkSecondary)
+            }
+            .frame(width: 100, alignment: .leading)
+
+            // ── RIGHT COLUMN — quote + category pills + freshness ──
+            VStack(alignment: .leading, spacing: 8) {
+                if let fact = surfacedFact {
+                    Text("\u{201C}\(fact)\u{201D}")
+                        .font(.system(size: 13, weight: .semibold, design: .serif))
+                        .italic().foregroundColor(inkPrimary).lineSpacing(2)
+                        .lineLimit(4).minimumScaleFactor(0.85)
+                } else {
+                    EmptyHint(icon: "book.closed", line: "Tell Dilly about you and your profile fills in here.")
+                }
+                Spacer(minLength: 0)
+                // Category pill row — pulls from latest category if
+                // available, otherwise shows a couple of common ones.
+                HStack(spacing: 4) {
+                    ForEach(displayCategories, id: \.self) { cat in
+                        Text(cat.uppercased())
+                            .font(.system(size: 8, weight: .black)).tracking(0.6)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Capsule().fill(inkPrimary.opacity(0.10)))
+                            .foregroundColor(inkSecondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                if let date = entry.data.profileLatestFactDate, !date.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 5))
+                            .foregroundColor(Color(hex: 0xE5B143))
+                        Text("Latest capture · \(date)")
+                            .font(.system(size: 9, weight: .heavy)).tracking(0.8)
+                            .foregroundColor(inkSecondary)
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(URL(string: "dilly:///(app)/my-dilly-profile"))
+    }
+
+    // ~24 is the rough total category count Dilly tracks. Used to
+    // visualize "how filled out is the profile" in the ring chart.
+    private var categoryCompletion: CGFloat {
+        let cats = CGFloat(entry.data.profileCategoryCount ?? 0)
+        return min(1.0, cats / 24.0)
+    }
+
+    // Latest category gets shown first; fall back to a default mix.
+    private var displayCategories: [String] {
+        var out: [String] = []
+        if let latest = entry.data.profileLatestFactCategory, !latest.isEmpty {
+            out.append(latest.replacingOccurrences(of: "_", with: " "))
+        }
+        for d in ["goal", "trait"] where !out.contains(where: { $0.lowercased() == d }) {
+            out.append(d)
+        }
+        return Array(out.prefix(3))
     }
 }
 
@@ -760,29 +976,57 @@ struct MomentOfTruthView: View {
     }
 
     private var homeSmall: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                EyebrowLabel(text: "MOMENT OF TRUTH", tint: Color.white.opacity(0.85))
+        let streak = entry.data.truthStreakDays ?? 0
+        let today = Calendar.current.component(.weekday, from: entry.date)
+        return VStack(alignment: .leading, spacing: 6) {
+            // ── HEADER: eyebrow + streak ring ─────────────────
+            HStack(alignment: .center, spacing: 6) {
+                EyebrowLabel(text: "MOMENT OF TRUTH", tint: Color.white.opacity(0.92))
                 Spacer()
-                if let streak = entry.data.truthStreakDays, streak > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill").font(.system(size: 10)).foregroundColor(Color.white)
-                        Text("\(streak)").font(.system(size: 12, weight: .black)).foregroundColor(Color.white)
-                    }
-                    .padding(.horizontal, 6).padding(.vertical, 2).background(Color.white.opacity(0.18)).clipShape(Capsule())
+                ZStack {
+                    Circle().stroke(Color.white.opacity(0.20), lineWidth: 2.5)
+                        .frame(width: 26, height: 26)
+                    Circle()
+                        .trim(from: 0, to: min(1.0, CGFloat(streak) / 7.0))
+                        .stroke(Color.white, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .frame(width: 26, height: 26)
+                        .rotationEffect(.degrees(-90))
+                    Text("\(streak)")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundColor(Color.white)
                 }
             }
+
+            // ── QUESTION (italic serif, the hero) ─────────────
             if let q = entry.data.truthQuestion, !q.isEmpty {
-                Text(q).font(.system(size: 13, weight: .heavy, design: .serif)).foregroundColor(Color.white)
+                Text(q)
+                    .font(.system(size: 13, weight: .heavy, design: .serif))
+                    .foregroundColor(Color.white)
                     .lineLimit(4).minimumScaleFactor(0.85).padding(.top, 2)
             } else {
                 EmptyHint(icon: "questionmark.circle", line: "Today's question will appear here.")
             }
+
             Spacer(minLength: 0)
-            HStack { Spacer()
-                DillyFaceView(size: 36, mood: .proud, accessory: .trophy,
-                    inkColor: Color.white, ringColor: Color.white.opacity(0.35), ringFill: Color.white.opacity(0.1))
+
+            // ── MINI WEEK BAR — visual streak indicator ───────
+            HStack(spacing: 4) {
+                ForEach(1...7, id: \.self) { day in
+                    if day < today {
+                        let filled = (today - day) <= streak
+                        Capsule()
+                            .fill(filled ? Color.white.opacity(0.92) : Color.white.opacity(0.18))
+                            .frame(width: 10, height: 4)
+                    } else if day == today {
+                        Capsule().fill(Color.white).frame(width: 14, height: 4)
+                    } else {
+                        Capsule().fill(Color.white.opacity(0.20)).frame(width: 10, height: 4)
+                    }
+                }
+                Spacer(minLength: 0)
             }
+
+            // ── ACTION ROW ────────────────────────────────────
             if entry.data.truthAnswered != true, entry.data.truthQuestion != nil {
                 Button(intent: AnswerTruthIntent(answer: true)) {
                     HStack(spacing: 4) {
@@ -793,6 +1037,11 @@ struct MomentOfTruthView: View {
                     .background(Color.white).clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+            } else if entry.data.truthAnswered == true {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.seal.fill").font(.system(size: 10)).foregroundColor(Color.white)
+                    Text("Logged today").font(.system(size: 10, weight: .heavy)).tracking(0.6).foregroundColor(Color.white.opacity(0.85))
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -872,51 +1121,79 @@ struct DillyTodayView: View {
     }
 
     private var homeLarge: some View {
-        ZStack(alignment: .topTrailing) {
-            // Decorative constellation in the upper-right corner. Three
-            // tiny stars + faint connecting lines — adds the "premium
-            // night sky" texture that Apple Weather pulls off without
-            // a single character of UI clutter.
-            ConstellationDecoration()
-                .frame(width: 110, height: 80)
-                .offset(x: 6, y: -4)
+        // Layered design — full-bleed constellation field overlays the
+        // gradient background, then content sits on top. Hero ring,
+        // day-label habit row, three info cards, then a quote footer.
+        ZStack {
+            // Full-widget constellation field (not just a corner). 9
+            // stars + curved connecting lines drift across the whole
+            // surface for "night sky" feel. Sits BEHIND content with
+            // low opacity so it never competes.
+            ConstellationField()
 
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    DillyFaceView(size: 44, mood: .warm, accessory: .none,
-                        inkColor: Color.white, ringColor: Color.white.opacity(0.45), ringFill: Color.white.opacity(0.1))
-                    VStack(alignment: .leading, spacing: 1) {
-                        EyebrowLabel(text: "DILLY · TODAY", tint: Color.white.opacity(0.85))
-                        Text(formattedDate()).font(.system(size: 11, weight: .semibold)).foregroundColor(Color.white.opacity(0.7))
+                // ── HERO BAND: face + day/title + streak ring ──
+                HStack(alignment: .center, spacing: 12) {
+                    ZStack {
+                        // Soft halo behind the face — premium glow.
+                        Circle()
+                            .fill(RadialGradient(
+                                colors: [Color.white.opacity(0.22), Color.white.opacity(0)],
+                                center: .center, startRadius: 0, endRadius: 36))
+                            .frame(width: 72, height: 72)
+                        DillyFaceView(size: 52, mood: .warm, accessory: .none,
+                            inkColor: Color.white,
+                            ringColor: Color.white.opacity(0.55),
+                            ringFill: Color.white.opacity(0.10))
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        EyebrowLabel(text: "DILLY · TODAY", tint: Color.white.opacity(0.9))
+                        Text(formattedDate())
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundColor(Color.white)
+                        Text(greeting())
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color.white.opacity(0.65))
                     }
                     Spacer()
-                    // Streak flame badge — same one from the small Moment of
-                    // Truth widget. Pulled into the Large header so users
-                    // who pin only the Large still see their streak.
-                    if let streak = entry.data.truthStreakDays, streak > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "flame.fill").font(.system(size: 11)).foregroundColor(Color.white)
-                            Text("\(streak)").font(.system(size: 13, weight: .black)).foregroundColor(Color.white)
-                        }
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Color.white.opacity(0.18))
-                        .clipShape(Capsule())
-                    }
+                    StreakRing(streakDays: entry.data.truthStreakDays ?? 0)
+                        .frame(width: 60, height: 60)
                 }
-                // Week progress bar — 7 dots, one per day of the week.
-                // Filled dots = days with a recorded answer or win in
-                // the last 7 days. The dots before today are filled
-                // based on streak; today's dot pulses softly via
-                // opacity. Glanceable habit progress without crowding.
-                WeekDotsRow(streakDays: entry.data.truthStreakDays ?? 0, today: Calendar.current.component(.weekday, from: entry.date))
-                Divider().background(Color.white.opacity(0.2))
-                sectionRow(eyebrow: "TODAY · QUESTION", body: entry.data.todaysQuestion, icon: "moon.stars", fontSize: 14, italicStyle: true)
-                sectionRow(eyebrow: "THIS WEEK · ONE MOVE", body: entry.data.oneMoveTitle, icon: "flag.checkered", fontSize: 15, italicStyle: false)
-                sectionRow(eyebrow: "TONIGHT · 15 MIN", body: entry.data.tonightTitle, icon: "play.circle", fontSize: 14, italicStyle: false)
+
+                // ── HABIT WEEK with day labels ──
+                WeekDotsRowLarge(
+                    streakDays: entry.data.truthStreakDays ?? 0,
+                    today: Calendar.current.component(.weekday, from: entry.date)
+                )
+
+                // ── THREE INFO CARDS ──
+                VStack(spacing: 6) {
+                    InfoCard(
+                        eyebrow: "TODAY · QUESTION",
+                        text: entry.data.todaysQuestion,
+                        icon: "moon.stars.fill",
+                        accent: Color(hex: 0xC0A4FF),
+                        italicStyle: true
+                    )
+                    InfoCard(
+                        eyebrow: "THIS WEEK · ONE MOVE",
+                        text: entry.data.oneMoveTitle,
+                        icon: "flag.checkered",
+                        accent: Color(hex: 0xFFC078),
+                        italicStyle: false
+                    )
+                    InfoCard(
+                        eyebrow: "TONIGHT · 15 MIN",
+                        text: entry.data.tonightTitle,
+                        icon: "play.circle.fill",
+                        accent: Color(hex: 0x7AC6E8),
+                        italicStyle: false
+                    )
+                }
+
                 Spacer(minLength: 0)
-                // Recent-win footer line — pulled from profile latest
-                // facts. Reads like a small reminder that Dilly knows
-                // what you've done. Falls back to a neutral CTA.
+
+                // ── QUOTE FOOTER — recent win in italic serif ──
                 recentSignalFooter
             }
         }
@@ -924,17 +1201,28 @@ struct DillyTodayView: View {
         .widgetURL(URL(string: "dilly:///(app)"))
     }
 
+    private func greeting() -> String {
+        switch entry.timeOfDay {
+        case .morning: return "Good morning. Here's your day."
+        case .midday:  return "Mid-day check-in."
+        case .evening: return "Evening reflection."
+        case .night:   return "Late-night clarity."
+        }
+    }
+
     @ViewBuilder
     private var recentSignalFooter: some View {
         if let recent = (entry.data.profileRecentFacts ?? []).first, !recent.isEmpty {
             HStack(spacing: 6) {
-                Image(systemName: "sparkle").font(.system(size: 9, weight: .heavy)).foregroundColor(Color.white.opacity(0.55))
+                Image(systemName: "sparkle").font(.system(size: 10, weight: .heavy)).foregroundColor(Color.white.opacity(0.65))
                 Text(recent)
                     .font(.system(size: 11, weight: .semibold, design: .serif)).italic()
-                    .foregroundColor(Color.white.opacity(0.78))
+                    .foregroundColor(Color.white.opacity(0.82))
                     .lineLimit(1).truncationMode(.tail)
                 Spacer(minLength: 0)
             }
+            .padding(.horizontal, 8).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.06)))
         } else {
             HStack { Spacer()
                 Text("Tap to open Dilly").font(.system(size: 10, weight: .heavy)).tracking(1.0).foregroundColor(Color.white.opacity(0.7))

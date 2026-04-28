@@ -29,14 +29,14 @@ export default function AddToWalletButton() {
     (async () => {
       try {
         const Wallet: any = await import('dilly-wallet').catch(() => null);
-        const can = Boolean(await Wallet?.canAddPasses?.());
+        const wallet = Wallet?.canAddPasses ? Wallet : Wallet?.default;
+        const can = Boolean(await wallet?.canAddPasses?.());
         setSupported(can);
         if (!can) return;
-        // Check if pass already in Wallet (skip if URL fetch fails).
         try {
           const meta = await dilly.get('/wallet/career-pass/url').catch(() => null);
-          if (meta?.serial && meta?.pass_type_id) {
-            const has = await Wallet.hasPass(meta.pass_type_id, meta.serial);
+          if (meta?.serial && meta?.pass_type_id && wallet.hasPass) {
+            const has = await wallet.hasPass(meta.pass_type_id, meta.serial);
             setAdded(Boolean(has));
           }
         } catch {}
@@ -46,29 +46,38 @@ export default function AddToWalletButton() {
     })();
   }, []);
 
-  if (Platform.OS !== 'ios' || supported === false) return null;
-  if (supported === null) return null;
+  if (Platform.OS !== 'ios') return null;
+  // Show button even before canAddPasses resolves — earlier this hid
+  // the button entirely when the native module didn't load. Now if
+  // the module isn't loaded, the press handler shows a friendly
+  // toast so the user can see the button is THERE and report back.
 
   async function handlePress() {
     if (busy) return;
     setBusy(true);
     try {
       const Wallet: any = await import('dilly-wallet').catch(() => null);
-      if (!Wallet?.addPass) {
-        showToast({ message: 'Wallet is not available on this device.', type: 'error' });
+      // Two ways the module can resolve: as namespace (Wallet.addPass)
+      // or as default-only (Wallet.default.addPass). Try both.
+      const wallet = Wallet?.addPass ? Wallet : Wallet?.default;
+      if (!wallet?.addPass) {
+        showToast({
+          message: 'Wallet module not loaded. The next app build will fix this.',
+          type: 'error',
+        });
         return;
       }
       const meta = await dilly.get('/wallet/career-pass/url').catch(() => null);
       if (!meta?.url) {
-        showToast({ message: 'Wallet pass is not ready yet. Try again in a moment.', type: 'error' });
+        showToast({
+          message: 'Wallet pass server is not ready. Check Railway env vars.',
+          type: 'error',
+        });
         return;
       }
-      // The .pkpass endpoint requires the user's auth token. Pass it
-      // through to the native module so URLSession sends Authorization
-      // on the download.
       const { authHeaders } = await import('../lib/auth');
       const headers = await authHeaders();
-      const ok = await Wallet.addPass(meta.url, headers as Record<string, string>);
+      const ok = await wallet.addPass(meta.url, headers as Record<string, string>);
       if (ok) {
         setAdded(true);
         showToast({ message: 'Added to Apple Wallet.', type: 'success' });

@@ -63,15 +63,19 @@ export async function donateAppIntents(): Promise<void> {
 }
 
 /** Install AppState listener so any time the app becomes active we
- *  check for a pending intent (Siri / Shortcuts may have just fired). */
+ *  check for a pending intent (Siri / Shortcuts may have just fired)
+ *  AND re-donate intents — Apple sometimes misses the first donation
+ *  on fresh install, so retrying on foreground gets Siri to index. */
 export function installAppStateConsumer(): () => void {
   if (_installed) return () => {};
   _installed = true;
-  // Check on install (covers cold start where the intent fired before
-  // RN was ready).
   consumeAndRoute().catch(() => {});
+  donateAppIntents().catch(() => {});
   const sub = AppState.addEventListener('change', (state) => {
-    if (state === 'active') consumeAndRoute().catch(() => {});
+    if (state === 'active') {
+      consumeAndRoute().catch(() => {});
+      donateAppIntents().catch(() => {});
+    }
   });
   return () => {
     try { sub.remove(); } catch {}
