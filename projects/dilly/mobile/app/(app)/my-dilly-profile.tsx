@@ -604,6 +604,65 @@ function SeekerProfileScreen() {
     }
   }
 
+  const [linkedInImporting, setLinkedInImporting] = useState(false);
+
+  async function pickAndImportLinkedIn() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset.name.toLowerCase().endsWith('.pdf')) {
+        showToast({ message: 'Please upload a LinkedIn PDF (Profile → More → Save to PDF).', type: 'error' });
+        return;
+      }
+      if ((asset.size ?? 0) > 10 * 1024 * 1024) {
+        showToast({ message: 'PDF must be under 10 MB.', type: 'error' });
+        return;
+      }
+      setLinkedInImporting(true);
+      const hdrs = await authHeaders();
+      const formData = new FormData();
+      formData.append('file', { uri: asset.uri, name: asset.name, type: 'application/pdf' } as any);
+      const res = await fetch(`${API_BASE}/resume/import-linkedin`, {
+        method: 'POST',
+        headers: { ...hdrs },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const factsAdded = Number(data?.facts_added || 0);
+        const sectionCount = Number(data?.section_count || 0);
+        if (factsAdded > 0) {
+          showToast({
+            message: `Dilly learned ${factsAdded} new ${factsAdded === 1 ? 'thing' : 'things'} about you from LinkedIn.`,
+            type: 'success',
+          });
+        } else if (sectionCount > 0) {
+          showToast({
+            message: `Imported ${sectionCount} ${sectionCount === 1 ? 'section' : 'sections'} from LinkedIn.`,
+            type: 'success',
+          });
+        }
+        // Refresh the full profile so memory + facts repaint.
+        fetchData();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        const raw = body?.detail;
+        let msg = '';
+        if (typeof raw === 'string') msg = raw;
+        else if (raw && typeof raw === 'object') msg = String(raw.message || raw.detail || raw.error || '');
+        showToast({ message: msg.trim() || 'LinkedIn import failed. Try again.', type: 'error' });
+      }
+    } catch {
+      showToast({ message: 'LinkedIn import failed. Try again.', type: 'error' });
+    } finally {
+      setLinkedInImporting(false);
+    }
+  }
+
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
   async function addCity(city: string) {
@@ -2164,6 +2223,49 @@ function SeekerProfileScreen() {
             </AnimatedPressable>
           </FadeInView>
         )}
+
+        {/* ── 8b. LinkedIn import — bootstraps the Dilly Profile in one
+            tap. This is the #1 way to make Truth Ledger work for new
+            users: a fresh import gives Dilly 30-50 facts in 30 seconds,
+            so the very first generated resume is fully sourced. Always
+            visible (not gated by gs_*) so existing users can also do
+            it whenever LinkedIn is more current than their last chat. */}
+        <FadeInView delay={412}>
+          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>IMPORT FROM LINKEDIN</Text>
+          <AnimatedPressable
+            style={[
+              d.resumeCard,
+              {
+                backgroundColor: theme.surface.s1,
+                borderColor: linkedInImporting ? theme.accentBorder : theme.surface.border,
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                paddingVertical: 14,
+              },
+            ]}
+            onPress={linkedInImporting ? undefined : pickAndImportLinkedIn}
+            scaleDown={linkedInImporting ? 1 : 0.98}
+            disabled={linkedInImporting}
+          >
+            <View style={[d.strengthIcon, { backgroundColor: '#0A66C220' }]}>
+              <Ionicons
+                name={linkedInImporting ? 'hourglass-outline' : 'logo-linkedin'}
+                size={18}
+                color="#0A66C2"
+              />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>
+                {linkedInImporting ? 'Reading your LinkedIn…' : 'Import your LinkedIn'}
+              </Text>
+              <Text style={[d.resumeSub, { color: theme.surface.t3 }]} numberOfLines={2}>
+                {linkedInImporting
+                  ? 'Pulling skills, jobs, and projects'
+                  : 'In LinkedIn: Profile → More → Save to PDF, then upload here.'}
+              </Text>
+            </View>
+            {!linkedInImporting && <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />}
+          </AnimatedPressable>
+        </FadeInView>
 
         {/* ── 9. Transcript ───────────────────────────────────── */}
         <FadeInView delay={415}>

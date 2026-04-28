@@ -1452,6 +1452,44 @@ function ExpandedDetails({ job, theme, narrative, gapVideoId, onApply, onAsk, on
           <Ionicons name="document-text-outline" size={14} color={theme.surface.t2} />
           <Text style={[styles.actionSecondaryText, { color: theme.surface.t2 }]}>Tailor resume</Text>
         </TouchableOpacity>
+        {/* "Find on LinkedIn" — integration play. We don't try to be a
+            job aggregator (LinkedIn has 25M+ listings vs Dilly's ~10K).
+            Instead, every Dilly job card has a one-tap escape to
+            LinkedIn for research: see the company page, find mutual
+            connections, check who got hired into similar roles. Dilly
+            stays the user's home base, LinkedIn provides the breadth.
+            URL search format works for any company + role. */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            const q = encodeURIComponent(`${job.company} ${job.title}`.trim());
+            const url = `https://www.linkedin.com/jobs/search/?keywords=${q}`;
+            Linking.openURL(url).catch(() => {});
+          }}
+          style={[styles.actionSecondary, { borderColor: theme.surface.border }]}
+        >
+          <Ionicons name="logo-linkedin" size={14} color="#0A66C2" />
+          <Text style={[styles.actionSecondaryText, { color: theme.surface.t2 }]}>Find on LinkedIn</Text>
+        </TouchableOpacity>
+        {/* "Reviews on Glassdoor" — integration play. Glassdoor owns
+            100M+ employee reviews; Dilly shouldn't try to compete on
+            review data. One-tap escape to Glassdoor for the company
+            page lets the user research the firm without leaving
+            Dilly's frame. Search URL works for any company name. */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            const q = encodeURIComponent(job.company);
+            const url = `https://www.glassdoor.com/Search/results.htm?keyword=${q}`;
+            Linking.openURL(url).catch(() => {});
+          }}
+          style={[styles.actionSecondary, { borderColor: theme.surface.border }]}
+        >
+          <Ionicons name="document-text" size={14} color="#0CAA41" />
+          <Text style={[styles.actionSecondaryText, { color: theme.surface.t2 }]}>Reviews</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

@@ -408,6 +408,91 @@ async def import_linkedin(request: Request, file: UploadFile = File(None), body:
     if not result or not result.get("sections"):
         raise errors.internal("Could not parse the LinkedIn data. Try uploading the PDF instead of pasting.")
 
+    # ── Bootstrap the Dilly Profile ─────────────────────────────────
+    # The parsed resume sections are great for the editor, but the
+    # Truth Ledger (and every downstream feature) keys off the
+    # MEMORY SURFACE, not the resume. So feed the raw LinkedIn text
+    # through the same memory_extraction pipeline that chat uses, so
+    # the user lands with a richly populated Profile after one click.
+    # This is the difference between "I imported my LinkedIn" and
+    # "Dilly now knows 47 things about me."
+    facts_added = 0
+    try:
+        # Build a single user-message chunk from the parsed sections.
+        # We pass it through extract_memory_items with use_llm=True so
+        # Haiku pulls out skills, companies, achievements, projects,
+        # etc. as Profile facts. One LLM call (~$0.003) per import.
+        from projects.dilly.api.memory_extraction import run_extraction
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        import asyncio as _asyncio
+        # Flatten the sections into a single text blob the extractor
+        # can read. We label each section so Haiku knows what kind
+        # of fact each chunk is most likely to be.
+        chunks: list[str] = []
+        if result.get("name"):    chunks.append(f"Name: {result['name']}")
+        if result.get("headline"): chunks.append(f"Headline: {result['headline']}")
+        for sec in result["sections"]:
+            if not isinstance(sec, dict):
+                continue
+            kind = sec.get("key") or sec.get("label") or "section"
+            chunks.append(f"\n[{str(kind).upper()}]")
+            # Education
+            edu = sec.get("education")
+            if isinstance(edu, dict):
+                chunks.append(
+                    f"University: {edu.get('university','')} · "
+                    f"Major: {edu.get('major','')} · "
+                    f"Graduation: {edu.get('graduation','')}"
+                )
+            for entry in (sec.get("experiences") or []) + (sec.get("projects") or []):
+                if not isinstance(entry, dict):
+                    continue
+                head = " · ".join(filter(None, [
+                    entry.get("company") or entry.get("name") or "",
+                    entry.get("role") or "",
+                    entry.get("date") or "",
+                ]))
+                if head:
+                    chunks.append(head)
+                for b in entry.get("bullets") or []:
+                    text = b if isinstance(b, str) else (b.get("text") if isinstance(b, dict) else "")
+                    if text:
+                        chunks.append(f"  - {text}")
+            simple = sec.get("simple")
+            if isinstance(simple, dict):
+                for line in simple.get("lines") or []:
+                    if line:
+                        chunks.append(f"  {line}")
+        blob = "\n".join(chunks)[:6000]  # cap to keep extraction cheap
+        if blob.strip():
+            messages = [{"role": "user", "content": blob}]
+            before = get_memory_surface(email) or {}
+            before_count = len(before.get("items") or [])
+            # Synchronous extraction so the user sees the populated
+            # Profile by the time they navigate to it. ~3-4 sec.
+            try:
+                _asyncio.get_event_loop()
+                result_extract = await _asyncio.to_thread(
+                    run_extraction, email,
+                    f"linkedin-import-{int(time.time())}",
+                    messages, True, True,
+                )
+            except Exception:
+                # Fall back to sync call if asyncio not in scope.
+                result_extract = run_extraction(
+                    email,
+                    f"linkedin-import-{int(time.time())}",
+                    messages, True, True,
+                )
+            after = get_memory_surface(email) or {}
+            facts_added = max(0, len(after.get("items") or []) - before_count)
+    except Exception as _e:
+        # Never block the import on a failed extraction. Worst case
+        # the user has the resume sections; the Profile stays where
+        # it was. They can retry by chatting with Dilly.
+        import sys as _sys
+        _sys.stderr.write(f"[import_linkedin] profile extraction failed: {_e}\n")
+
     return {
         "ok": True,
         "sections": result["sections"],
@@ -415,6 +500,7 @@ async def import_linkedin(request: Request, file: UploadFile = File(None), body:
         "email": result.get("email", ""),
         "headline": result.get("headline", ""),
         "section_count": len(result["sections"]),
+        "facts_added": facts_added,
     }
 
 
