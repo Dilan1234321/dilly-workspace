@@ -38,6 +38,11 @@ export interface HomeSpec {
   prompts: HomeSpecPrompt[];
   marketLabel: string;
   growthNudge?: string;
+  /** Per-path framing for the MoatCard on the home screen. Tells
+   *  the user in their own voice WHY each fact Dilly captures
+   *  matters for THIS situation. Falls through to a generic line
+   *  in TieredSeekerHome when omitted. */
+  moatFraming?: string;
 }
 
 
@@ -88,6 +93,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
     ],
     marketLabel: "entry-level roles Dilly is tracking",
     growthNudge: "Tell Dilly about one class, one club, one side project. That's what makes the resume writable.",
+    moatFraming: "Every class, club, and project — captured. Each one fuels what Dilly does for you next.",
   },
 
   career_switch: {
@@ -110,6 +116,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Suggest 5 companies or role types in my target field that are known to hire career-switchers. Explain why each is switcher-friendly. Ask my target if you need it." },
     ],
     marketLabel: "switcher-friendly roles Dilly is tracking",
+    moatFraming: "Every fact she captures translates your old field into the new one's language.",
   },
 
   first_gen_college: {
@@ -132,6 +139,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Explain what a warm introduction is, why it matters, and how I can build a network that produces them when I don't know anyone. Ask me my field and where I'm based." },
     ],
     marketLabel: "roles Dilly is tracking in your field",
+    moatFraming: "Every fact you tell her becomes one less rule you have to figure out alone.",
   },
 
   trades_to_white_collar: {
@@ -154,6 +162,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Suggest 5 office-role types where my trades background is actually an advantage, not a liability. Explain why for each. Ask me what trade I'm coming from." },
     ],
     marketLabel: "office roles Dilly is tracking",
+    moatFraming: "Every job you've run translates into something a hiring manager already values.",
   },
 
   formerly_incarcerated: {
@@ -176,6 +185,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Help me pick a realistic first-step role given my record and my skills, with a real path forward from there. Ask me what I'm trained for and what I want to do." },
     ],
     marketLabel: "fair-chance roles Dilly is tracking",
+    moatFraming: "Every fact she captures gets you ready for the question — before the question gets asked.",
   },
 
   neurodivergent: {
@@ -198,6 +208,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Help me think through whether and when to disclose my neurodivergence to employers. Pros, cons, timing. Don't push me either way. Ask me what I'm considering disclosing." },
     ],
     marketLabel: "roles Dilly is tracking",
+    moatFraming: "Every rhythm and quirk she logs sharpens the picture of where your wiring is the asset.",
   },
 
   disabled_professional: {
@@ -220,6 +231,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Suggest 5 employers in my field with genuinely strong disability inclusion. Point at evidence - reviews, programs, policies - not marketing. Ask my field if needed." },
     ],
     marketLabel: "roles Dilly is tracking in your field",
+    moatFraming: "Every access need you name becomes a filter she runs on every employer she sees.",
   },
 
   lgbtq: {
@@ -242,6 +254,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Suggest 5 employers in my field with a genuine LGBTQ+ inclusion track record - not HRC-scorecard theater. Explain how each earned the list. Ask my field." },
     ],
     marketLabel: "inclusive employers Dilly is tracking",
+    moatFraming: "Every priority she captures sharpens the line between brochure and a room you'd actually want to work in.",
   },
 
   rural_remote_only: {
@@ -264,6 +277,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Help me tune my resume + LinkedIn so remote-first recruiters see the signals they look for (async comms, self-directed work, proven remote output). Ask me about a remote project I've done." },
     ],
     marketLabel: "remote roles Dilly is tracking",
+    moatFraming: "Every fact she captures filters out the hybrid-in-disguise listings before they waste your week.",
   },
 
   ex_founder: {
@@ -286,6 +300,7 @@ export const HOME_SPECS: Record<string, HomeSpec> = {
         seed: "Suggest 5 companies or role types known to hire ex-founders into seats where founder judgment is the asset, not a liability. Explain why each makes the list. Ask my field and last role." },
     ],
     marketLabel: "roles Dilly is tracking",
+    moatFraming: "Every chapter of the company you tell her becomes the asset she pitches to the next room.",
   },
 };
 
