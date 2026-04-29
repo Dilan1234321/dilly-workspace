@@ -5,7 +5,7 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Alert,
+  TouchableOpacity,
   TextInput,
   Modal,
   KeyboardAvoidingView,
@@ -538,6 +538,11 @@ export default function InternshipTrackerScreen() {
   const [showAdd, setShowAdd]       = useState(false);
   const [filterStatus, setFilterStatus] = useState<AppStatus | 'all'>('all');
   const [profile, setProfile]       = useState<Record<string, any>>({});
+  // Tracker card detail sheet (replaces Alert.alert which felt like
+  // an OS dialog inside an otherwise branded surface). Same shape as
+  // the rest of Dilly's in-app sheets — slide up, themed, dismiss by
+  // tapping the backdrop.
+  const [detailApp, setDetailApp]   = useState<Application | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -642,22 +647,10 @@ export default function InternshipTrackerScreen() {
   }
 
   function handleEdit(app: Application) {
-    // Show a detail view with all fields and actions
-    const lines: string[] = [];
-    lines.push(`Role: ${app.role}`);
-    lines.push(`Status: ${statusConfig(app.status).label}`);
-    if (app.applied_at) lines.push(`Applied: ${daysAgo(app.applied_at)}`);
-    if (app.deadline) lines.push(`Deadline: ${app.deadline}`);
-    if (app.notes) lines.push(`Notes: ${app.notes}`);
-    if (app.next_action) lines.push(`Next: ${app.next_action}`);
-
-    const buttons: any[] = [{ text: 'Close' }];
-    if (app.job_url) buttons.push({ text: 'Open Link', onPress: () => Linking.openURL(app.job_url!) });
-    buttons.push({
-      text: 'Tailor Resume',
-      onPress: () => handleTailor(app),
-    });
-    Alert.alert(app.company, lines.join('\n'), buttons);
+    // In-app sheet (was Alert.alert which felt OS-y in an otherwise
+    // branded surface). The detail content + actions render in the
+    // <DetailSheet> Modal below — opening just sets the active app.
+    setDetailApp(app);
   }
 
   if (loading) {

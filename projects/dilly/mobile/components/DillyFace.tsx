@@ -170,6 +170,13 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const posX = useRef(new Animated.Value(0)).current
   const posY = useRef(new Animated.Value(0)).current
   const smileAnim = useRef(new Animated.Value(shape.smile)).current
+  // Mount-entrance animation. Every DillyFace appears with a soft
+  // fade + scale-pop so the user sees the face arrive instead of just
+  // existing. Uses native driver so it stays smooth even on busy
+  // screens. Triggers once on mount (empty dep array on the useEffect
+  // below).
+  const enterOpacity = useRef(new Animated.Value(0)).current
+  const enterScale = useRef(new Animated.Value(0.7)).current
   // Transitionable shape props - we animate these via Animated.timing
   // when mood changes so swaps feel smooth (no jump-cut).
   const eyeScaleAnim = useRef(new Animated.Value(shape.eyeScale)).current
@@ -248,6 +255,27 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     loop.start()
     return () => loop.stop()
   }, [mood, scribbleAnim])
+
+  // Mount entrance — soft fade + spring scale-pop so every DillyFace
+  // appears with a clear "she's here" moment instead of just existing.
+  // Native driver, runs once on mount.
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(enterOpacity, {
+        toValue: 1,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(enterScale, {
+        toValue: 1,
+        damping: 10,
+        stiffness: 140,
+        mass: 0.8,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [enterOpacity, enterScale])
 
   // Accessory pulse loop. Skipped entirely when no accessory is set —
   // earlier this ran on every DillyFace mount which churned the JS
@@ -381,9 +409,11 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
         : Math.max(1.5, Math.round(size * 0.012)))
     : 0
   return (
-    <View style={{
+    <Animated.View style={{
       width: outerW,
       height: outerH,
+      opacity: enterOpacity,
+      transform: [{ scale: enterScale }],
       ...(circular ? {
         shadowColor: '#001b44',
         shadowOpacity: 0.15,
@@ -483,7 +513,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
           </Svg>
         </View>
       )}
-    </View>
+    </Animated.View>
   )
 }
 

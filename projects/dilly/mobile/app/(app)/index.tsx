@@ -1642,12 +1642,16 @@ function SeekerHome() {
             weekly ritual card - a warm invitation, not competing with
             the plan anchor. Full block cut from its previous slot
             below Jobs so there is exactly one rendering on Home. */}
-        <FadeInView delay={12}>
+        <FadeInView delay={12} distance={32} duration={800}>
           <View style={{ alignItems: 'center', marginTop: 28, marginBottom: 20 }}>
             {/* Website hero treatment: bigger size, big eyes, circular
                 hero shell (lavender bg + soft border + drop shadow) so
-                the home center face matches hellodilly.com's hero. */}
-            <DillyFace size={showJourney ? 120 : 100} mood="warm" eyeBoost={1.65} circular />
+                the home center face matches hellodilly.com's hero.
+                The DillyFace itself fade+spring-pops in on mount via
+                its built-in entrance animation. Wrapping in FadeInView
+                with a longer slide makes the whole hero block feel like
+                a dramatic reveal. */}
+            <DillyFace size={showJourney ? 130 : 110} mood="warm" eyeBoost={1.7} circular />
           </View>
           <AnimatedPressable
             onPress={() => openDillyOverlay({

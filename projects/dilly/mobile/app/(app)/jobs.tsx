@@ -777,6 +777,18 @@ export default function JobsScreen() {
     });
   }, []);
 
+  // CRITICAL: this useCallback MUST run before any early-return below
+  // (loading/error). When openDetail was declared AFTER the loading
+  // early-return, React threw "Rendered more hooks than during the
+  // previous render" because the hook count changed between the
+  // loading→ready render transition. That crash caused expo-router to
+  // fall back to the home tab — what users were reporting as "Jobs
+  // page redirects to home." Same pattern bit my-dilly-profile.tsx.
+  const openDetail = useCallback((job: Listing) => {
+    ensureNarrative(job);
+    setDetailJob(job);
+  }, [ensureNarrative]);
+
   if (loading) {
     return (
       <DillyLoadingState
@@ -809,15 +821,6 @@ export default function JobsScreen() {
   }
 
   const noticedLine = noticed[noticeIndex] || '';
-  // Tap a card → open the LinkedIn-style detail sheet. Power users can
-  // still long-press if we wire that later; default tap goes to the
-  // sheet because LinkedIn-style is the mental model users expect.
-  // We also fire the narrative fetch so by the time the sheet opens
-  // and the user scrolls, Dilly's read is loaded.
-  const openDetail = useCallback((job: Listing) => {
-    ensureNarrative(job);
-    setDetailJob(job);
-  }, [ensureNarrative]);
   const cardActions = {
     onExpand:  openDetail,
     onApply:   apply,
