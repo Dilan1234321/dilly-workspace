@@ -53,6 +53,22 @@ interface CalendarEvent {
   createdBy?: string;
   company?: string;
   role?: string;
+  // NEW: where this event came from. Drives the "Dilly suggested"
+  // badge so the user understands WHY it's on the calendar. Optional
+  // for backwards-compat — manual events have no source.
+  //   profile_fact: extracted from a chat memory item (interview /
+  //                 deadline / career_fair / application with a date)
+  //   auto_prep:    Dilly-generated 30-min prep block 24h before an
+  //                 interview, deeplinked to mock-interview
+  //   cohort_intel: typical open/close date for a target_company,
+  //                 from cohort baseline lookup
+  //   chapter:      the user's weekly chapter ritual occurrence
+  //   tracker:      auto-imported from /applications
+  //   manual / chapter / dilly: existing legacy values
+  source?: 'profile_fact' | 'auto_prep' | 'cohort_intel' | 'chapter' | 'tracker' | 'manual';
+  source_fact_id?: string;
+  // For events with deeplink payloads (e.g. auto-prep → mock interview).
+  action_payload?: Record<string, any> | null;
 }
 
 type EventType = CalendarEvent['type'];
@@ -536,6 +552,21 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
   const days = daysUntil(event.date);
   const isUrgent = days <= 2 && days >= 0;
   const isPast = days < 0;
+  // Source badge label — shows the user WHY this event is on the
+  // calendar (was it Dilly extracting it from chat, the cohort
+  // baseline, the chapter ritual, the tracker, or a manual add?).
+  // Drives trust: the calendar reads as "Dilly's operational layer"
+  // when every entry is provenance-tagged.
+  const sourceBadge = (() => {
+    switch (event.source) {
+      case 'profile_fact':  return { label: 'From your Profile', color: theme.accent };
+      case 'auto_prep':     return { label: 'Dilly auto-prep', color: PURPLE };
+      case 'cohort_intel':  return { label: 'Cohort intel', color: BLUE };
+      case 'chapter':       return { label: 'Chapter ritual', color: '#AF52DE' };
+      case 'tracker':       return { label: 'From your Tracker', color: GREEN };
+      default:              return null;
+    }
+  })();
 
   return (
     <View style={[cs.eventCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }, isUrgent && { borderColor: cfg.color + '40' }]}>
@@ -560,6 +591,25 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
             <Text style={[cs.eventCountdown, { color: CORAL }]}>Overdue</Text>
           )}
         </View>
+        {sourceBadge ? (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 5,
+            alignSelf: 'flex-start',
+            marginTop: 6,
+            paddingHorizontal: 7, paddingVertical: 2,
+            borderRadius: 6,
+            backgroundColor: sourceBadge.color + '15',
+            borderWidth: 1, borderColor: sourceBadge.color + '33',
+          }}>
+            <Ionicons name="sparkles" size={9} color={sourceBadge.color} />
+            <Text style={{
+              fontSize: 9, fontWeight: '800', letterSpacing: 0.5,
+              color: sourceBadge.color, textTransform: 'uppercase',
+            }}>
+              {sourceBadge.label}
+            </Text>
+          </View>
+        ) : null}
         {event.notes ? <Text style={[cs.eventNotes, { color: theme.surface.t2 }]} numberOfLines={2}>{event.notes}</Text> : null}
 
         {/* Reminder toggles for deadlines/interviews/applications */}
@@ -937,6 +987,48 @@ export default function CalendarScreen() {
           createdBy: 'dilly-auto',
         });
       }
+
+      // Tag the existing tracker-imported events with source='tracker'
+      // so the badge UI renders the right "from your Tracker" pill.
+      for (const e of mapped) {
+        if (e.createdBy === 'tracker' || e.createdBy === 'dilly-auto') {
+          (e as any).source = 'tracker';
+        } else if (!(e as any).source) {
+          (e as any).source = 'manual';
+        }
+      }
+
+      // 4. Profile-derived suggestions: facts with dates, target_company
+      // cohort intel, person_to_follow_up, chapter ritual, auto-prep
+      // blocks for upcoming interviews. The endpoint is zero-LLM —
+      // pure data shuffling — so we can re-fetch on every calendar
+      // open without cost concerns.
+      try {
+        const sugRes = await dilly.get('/calendar/profile-suggestions') as any;
+        const sugs: any[] = Array.isArray(sugRes?.suggestions) ? sugRes.suggestions : [];
+        const dedupKeys = new Set(
+          mapped.map(e => `${(e.title || '').toLowerCase()}|${e.date}`)
+        );
+        for (const s of sugs) {
+          if (!s || !s.date) continue;
+          const k = `${(s.title || '').toLowerCase()}|${s.date}`;
+          if (dedupKeys.has(k)) continue;
+          dedupKeys.add(k);
+          mapped.push({
+            id: s.id || uid(),
+            title: s.title || 'Untitled',
+            date: String(s.date).slice(0, 10),
+            type: (s.type as EventType) || 'custom',
+            notes: s.notes || undefined,
+            completedAt: null,
+            company: s.company || undefined,
+            createdBy: s.createdBy || 'dilly-auto',
+            source: s.source as any,
+            source_fact_id: s.source_fact_id || undefined,
+            action_payload: s.action_payload || null,
+          } as CalendarEvent);
+        }
+      } catch {}
 
       setEvents(mapped);
     } catch {}

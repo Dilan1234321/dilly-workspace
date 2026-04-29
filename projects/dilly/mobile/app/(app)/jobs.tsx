@@ -147,6 +147,50 @@ function titleCaseCohort(raw: string): string {
   }).join(' ');
 }
 
+/** Strip HTML tags + decode common entities from a job description.
+ *  Many ATS feeds (Greenhouse, Lever, Workday) ship raw HTML; on
+ *  mobile we render plain text, so we need to clean it. Also collapses
+ *  excess whitespace and converts <br>/<p> to single newlines so the
+ *  text reads as natural paragraphs instead of one giant blob. */
+function stripHtml(s: string | undefined | null): string {
+  if (!s) return '';
+  return String(s)
+    // Block-level tags become a paragraph break
+    .replace(/<\/?(p|div|li|br|h[1-6])[^>]*>/gi, '\n')
+    // Strip remaining tags
+    .replace(/<[^>]+>/g, '')
+    // Decode common HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&[a-z0-9#]+;/gi, '')
+    // Collapse 3+ newlines to 2 (paragraph), trim trailing spaces per line
+    .split('\n').map(l => l.replace(/\s+$/, '').trim()).join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Split a long narrative paragraph into clean bullet points.
+ *  The fit-narrative endpoint returns prose ("You have 2 years of
+ *  Python plus React experience. You've built three production apps.
+ *  Your ATS coverage is 78%."). For mobile we want bullets. Split on
+ *  sentence boundaries, drop empties, cap each bullet to a reasonable
+ *  length, return at most 4 bullets. */
+function splitToBullets(prose: string | undefined | null): string[] {
+  if (!prose) return [];
+  // Sentence boundary: . ! ? followed by space + capital, or newline.
+  const parts = String(prose)
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+(?=[A-Z])|\n+/)
+    .map(p => p.trim().replace(/^[-•*]\s*/, ''))
+    .filter(p => p.length >= 4);
+  // Cap each bullet at 160 chars so the cards don't run on.
+  return parts.slice(0, 4).map(p => p.length > 160 ? p.slice(0, 157) + '…' : p);
+}
+
 function daysAgo(dateStr?: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -738,7 +782,10 @@ export default function JobsScreen() {
     const loc = [job.location_city, job.location_state].filter(Boolean).join(', ')
       || (job.remote ? 'Remote' : '');
     const workMode = job.work_mode || (job.remote ? 'Remote' : '');
-    const fullJd = (job.description || job.description_preview || '').trim().slice(0, 4000);
+    // Strip HTML before sending to the LLM — many ATS feeds ship the
+    // description with markup, which would otherwise eat tokens for
+    // <p>/<div>/&nbsp; noise that adds nothing.
+    const fullJd = stripHtml(job.description || job.description_preview).slice(0, 4000);
 
     const context = [
       `COMPANY: ${job.company}`,
@@ -1152,15 +1199,27 @@ function JobDetailSheet({
   onTailor: (j: Listing) => void;
 }) {
   const insets = useSafeAreaInsets();
+  // CRITICAL: state hook before any early-return so the hook count
+  // stays constant across "no job" and "job set" renders. The same
+  // pattern broke the Jobs tab earlier (build 467 fix).
+  const [showFullJd, setShowFullJd] = useState(false);
   if (!job) return null;
   const loc = [job.location_city, job.location_state].filter(Boolean).join(', ')
     || (job.remote ? 'Remote' : '');
   const workMode = job.work_mode || (job.remote ? 'Remote' : '');
   const posted = daysAgo(job.posted_date);
-  const fullJd = (job.description || job.description_preview || '').trim();
+  // Strip raw HTML/entities — many ATS feeds (Greenhouse, Lever,
+  // Workday) ship the description with markup; on mobile we render
+  // plain text and need it to read clean.
+  const fullJd = stripHtml(job.description || job.description_preview);
   const loadingNarr = narrative && (narrative as any).__loading;
   const erroredNarr = narrative && (narrative as any).__error;
   const data: FitNarrative | null = (narrative && !loadingNarr && !erroredNarr) ? (narrative as FitNarrative) : null;
+  // Pre-compute bullets for each match section so the layout stays
+  // declarative below.
+  const haveBullets = splitToBullets(data?.what_you_have);
+  const missingBullets = splitToBullets(data?.whats_missing);
+  const todoBullets = splitToBullets(data?.what_to_do);
 
   return (
     <Modal
@@ -1288,71 +1347,59 @@ function JobDetailSheet({
             </View>
           </View>
 
-          {/* About the job — full JD */}
-          {fullJd ? (
-            <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <Ionicons name="document-text-outline" size={14} color={theme.surface.t3} />
-                <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.0, color: theme.surface.t3 }}>
-                  ABOUT THE JOB
-                </Text>
-              </View>
-              <Text style={{ fontSize: 14, color: theme.surface.t1, lineHeight: 21, fontFamily: theme.type.body }}>
-                {fullJd}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* How you match — Dilly's fit narrative grounded in Profile */}
-          <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          {/* How you match — Dilly's fit narrative grounded in Profile.
+              Promoted to ABOVE "About the job" because Dilly's read of
+              YOU vs this role is the differentiator over LinkedIn —
+              don't bury it under the JD. Bullets formatted with
+              category-colored chips, soft surface cards, and one
+              icon per group so the whole block reads like a curated
+              brief, not a wall of prose. */}
+          <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
               <Ionicons name="sparkles" size={14} color={theme.accent} />
               <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.0, color: theme.accent }}>
                 HOW YOU MATCH
               </Text>
             </View>
             {loadingNarr ? (
-              <View style={{ gap: 6 }}>
-                <View style={{ height: 10, backgroundColor: theme.surface.s2, borderRadius: 5, width: '92%' }} />
-                <View style={{ height: 10, backgroundColor: theme.surface.s2, borderRadius: 5, width: '78%' }} />
-                <View style={{ height: 10, backgroundColor: theme.surface.s2, borderRadius: 5, width: '85%' }} />
+              <View style={{ gap: 8 }}>
+                <View style={{ height: 14, backgroundColor: theme.surface.s2, borderRadius: 6, width: '92%' }} />
+                <View style={{ height: 14, backgroundColor: theme.surface.s2, borderRadius: 6, width: '78%' }} />
+                <View style={{ height: 14, backgroundColor: theme.surface.s2, borderRadius: 6, width: '85%' }} />
               </View>
             ) : data ? (
-              <View style={{ gap: 12 }}>
-                {data.what_you_have ? (
-                  <View>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#15803D', marginBottom: 3, letterSpacing: 0.4 }}>
-                      WHAT YOU HAVE
-                    </Text>
-                    <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>
-                      {data.what_you_have}
-                    </Text>
-                  </View>
-                ) : null}
-                {data.whats_missing ? (
-                  <View>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309', marginBottom: 3, letterSpacing: 0.4 }}>
-                      WHAT'S MISSING
-                    </Text>
-                    <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>
-                      {data.whats_missing}
-                    </Text>
-                  </View>
-                ) : null}
-                {data.what_to_do ? (
-                  <View style={{
-                    padding: 12, borderRadius: 10,
-                    backgroundColor: theme.accentSoft,
-                    borderWidth: 1, borderColor: theme.accentBorder,
-                  }}>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, marginBottom: 3, letterSpacing: 0.4 }}>
-                      WHAT TO DO
-                    </Text>
-                    <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>
-                      {data.what_to_do}
-                    </Text>
-                  </View>
-                ) : null}
+              <View style={{ gap: 14 }}>
+                {haveBullets.length > 0 && (
+                  <MatchGroup
+                    label="WHAT YOU HAVE"
+                    accent="#15803D"
+                    accentSoft="#15803D14"
+                    icon="checkmark-circle"
+                    bullets={haveBullets}
+                    theme={theme}
+                  />
+                )}
+                {missingBullets.length > 0 && (
+                  <MatchGroup
+                    label="WHAT'S MISSING"
+                    accent="#B45309"
+                    accentSoft="#B4530914"
+                    icon="alert-circle"
+                    bullets={missingBullets}
+                    theme={theme}
+                  />
+                )}
+                {todoBullets.length > 0 && (
+                  <MatchGroup
+                    label="WHAT TO DO"
+                    accent={theme.accent}
+                    accentSoft={theme.accentSoft}
+                    icon="arrow-forward-circle"
+                    bullets={todoBullets}
+                    theme={theme}
+                    emphasized
+                  />
+                )}
               </View>
             ) : (
               <Text style={{ fontSize: 12, color: theme.surface.t3, fontStyle: 'italic' }}>
@@ -1360,6 +1407,50 @@ function JobDetailSheet({
               </Text>
             )}
           </View>
+
+          {/* About the job — full JD, hidden by default behind a tap.
+              Most users only need Dilly's read; the raw JD is for
+              those who want to verify or skim the original. Stripped
+              of HTML so it reads as plain prose. */}
+          {fullJd ? (
+            <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowFullJd(s => !s)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  paddingVertical: 12, paddingHorizontal: 14,
+                  backgroundColor: theme.surface.s1,
+                  borderRadius: 12, borderWidth: 1, borderColor: theme.surface.border,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="document-text-outline" size={14} color={theme.surface.t3} />
+                  <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.0, color: theme.surface.t3 }}>
+                    ABOUT THE JOB
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: theme.surface.t2 }}>
+                    {showFullJd ? 'Hide' : 'Show description'}
+                  </Text>
+                  <Ionicons
+                    name={showFullJd ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color={theme.surface.t2}
+                  />
+                </View>
+              </TouchableOpacity>
+              {showFullJd ? (
+                <Text style={{
+                  fontSize: 14, color: theme.surface.t1, lineHeight: 22,
+                  fontFamily: theme.type.body, marginTop: 12,
+                }}>
+                  {fullJd}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
 
           {/* Close-the-gap video if Dilly found one */}
           {gapVideoId ? (
@@ -1418,6 +1509,63 @@ function JobDetailSheet({
 }
 
 // -- Company Logo -------------------------------------------------------------
+
+/** A single How-You-Match group: header chip + tinted soft card with
+ *  bullet list. Each bullet has a colored dot leader so the eye glides
+ *  down the list. The "emphasized" variant uses a heavier border and
+ *  full accent background — used for "WHAT TO DO" so the actionable
+ *  block stands out from the read-only "have"/"missing" groups. */
+function MatchGroup({
+  label, accent, accentSoft, icon, bullets, theme, emphasized,
+}: {
+  label: string;
+  accent: string;
+  accentSoft: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  bullets: string[];
+  theme: ReturnType<typeof useResolvedTheme>;
+  emphasized?: boolean;
+}) {
+  return (
+    <View style={{
+      borderRadius: 14,
+      backgroundColor: emphasized ? accentSoft : theme.surface.s1,
+      borderWidth: 1,
+      borderColor: emphasized ? accent + '55' : theme.surface.border,
+      padding: 14,
+      gap: 10,
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Ionicons name={icon} size={14} color={accent} />
+        <Text style={{
+          fontSize: 10, fontWeight: '900', letterSpacing: 1.0, color: accent,
+        }}>
+          {label}
+        </Text>
+      </View>
+      <View style={{ gap: 8 }}>
+        {bullets.map((b, i) => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+            <View style={{
+              width: 6, height: 6, borderRadius: 3,
+              backgroundColor: accent,
+              marginTop: 7,
+            }} />
+            <Text style={{
+              flex: 1,
+              fontSize: 14,
+              lineHeight: 20,
+              color: theme.surface.t1,
+              fontFamily: theme.type.body,
+            }}>
+              {b}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 function CompanyLogo({ job, size, theme }: { job: Listing; size: number; theme: ReturnType<typeof useResolvedTheme> }) {
   const [broken, setBroken] = useState(false);

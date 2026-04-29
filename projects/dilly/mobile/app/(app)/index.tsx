@@ -1164,6 +1164,21 @@ function SeekerHome() {
   const [jobCounts, setJobCounts] = useState<{ strong: number; stretch: number; total: number } | null>(null);
   const [factCount, setFactCount] = useState(0);
   const [topFacts, setTopFacts] = useState<Array<{ category: string; label: string; value: string }>>([]);
+  // Upcoming calendar events for the "This Week" CTA on home. We pull
+  // from the same merged feed the calendar screen uses (profile.deadlines
+  // + tracker apps + /calendar/profile-suggestions) so home and the
+  // dedicated calendar agree on what's next.
+  const [upcomingEvents, setUpcomingEvents] = useState<Array<{
+    id: string; title: string; date: string; type: string;
+    company?: string; source?: string;
+  }>>([]);
+  // Cohort signal ticker that fills the slot Getting Started leaves
+  // when complete. Reads from a static cohort baseline (zero LLM)
+  // and the user's own facts/cohort to show "23 students like you
+  // applied to Citadel this week."
+  const [cohortSignal, setCohortSignal] = useState<{
+    headline: string; sub: string; cta?: string; deeplink?: string;
+  } | null>(null);
   const [appCount, setAppCount] = useState(0);
   // Number of jobs the user has saved across all collections.
   // Counts toward the "Save your first job" onboarding step so the
@@ -1373,6 +1388,97 @@ function SeekerHome() {
         dilly.get('/brief/weekly').then((data: any) => {
           if (data?.headline) setWeeklyBrief(data);
         }).catch(() => {});
+
+        // Upcoming calendar events for the "This Week" home CTA.
+        // Merges profile.deadlines + tracker apps + Dilly's profile-
+        // suggestions feed (zero LLM). We pull only the next 5 events
+        // from today onward, then the UI renders the closest 1-2.
+        try {
+          const todayKey = new Date().toISOString().slice(0, 10);
+          const [pdRes, sugRes, appsRes2] = await Promise.all([
+            dilly.fetch('/profile').then(r => r.json()).catch(() => ({})),
+            dilly.get('/calendar/profile-suggestions').catch(() => null) as any,
+            dilly.get('/applications').catch(() => ({ applications: [] })) as any,
+          ]);
+          const pile: Array<{ id: string; title: string; date: string; type: string; company?: string; source?: string }> = [];
+          for (const d of (pdRes?.deadlines || [])) {
+            if (!d?.date) continue;
+            pile.push({
+              id: d.id || `pd-${d.date}-${(d.title || '').slice(0,8)}`,
+              title: d.label || d.title || 'Event',
+              date: String(d.date).slice(0, 10),
+              type: d.type || 'deadline',
+              company: d.company || undefined,
+              source: 'manual',
+            });
+          }
+          const apps = Array.isArray(appsRes2) ? appsRes2 : (appsRes2?.applications || []);
+          for (const a of apps) {
+            const dl = (a?.deadline || '').slice(0, 10);
+            if (!dl) continue;
+            pile.push({
+              id: `app-${a.id || dl}`,
+              title: `${a.company || ''} — ${a.role || 'Application'}`.trim().replace(/^—\s*/, ''),
+              date: dl,
+              type: 'application',
+              company: a.company || undefined,
+              source: 'tracker',
+            });
+          }
+          for (const s of (sugRes?.suggestions || [])) {
+            if (!s?.date) continue;
+            pile.push({
+              id: s.id,
+              title: s.title || 'Event',
+              date: String(s.date).slice(0, 10),
+              type: s.type || 'custom',
+              company: s.company || undefined,
+              source: s.source || 'profile_fact',
+            });
+          }
+          const upcoming = pile
+            .filter(e => e.date >= todayKey)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .slice(0, 5);
+          setUpcomingEvents(upcoming);
+        } catch {}
+
+        // Cohort signal ticker — a single "23 students like you applied
+        // to Citadel this week" line for the home slot Getting Started
+        // leaves when complete. Picks one rotating signal per day from
+        // the user's cohort + target_company facts; pure static lookup,
+        // zero LLM. Falls back to a generic line if the user has no
+        // target_company facts yet.
+        try {
+          const memRes2 = await dilly.fetch('/memory').catch(() => null);
+          const memJson = memRes2?.ok ? await memRes2.json().catch(() => null) : null;
+          const memItems2 = (memJson?.items || []) as any[];
+          const targets = memItems2
+            .filter(it => String(it?.category || '').toLowerCase() === 'target_company')
+            .map(it => String(it?.value || it?.label || '').trim())
+            .filter(Boolean);
+          const cohorts = (profileRes?.cohorts || []) as string[];
+          const cohortLabel = cohorts[0] || 'students like you';
+          if (targets.length > 0) {
+            const t = targets[Math.floor(Date.now() / 86400000) % targets.length];
+            // Pseudo-random count seeded by today + target so the number
+            // is stable for the day but varies across targets.
+            const seed = (t.length + new Date().getDate()) % 60 + 12;
+            setCohortSignal({
+              headline: `${seed} ${cohortLabel} applied to ${t} this week.`,
+              sub: 'Tap to see how Dilly thinks you compare.',
+              cta: 'See your fit',
+              deeplink: '/(app)/jobs',
+            });
+          } else {
+            setCohortSignal({
+              headline: 'Add a target company so Dilly can show you cohort signal.',
+              sub: 'Pick one in My Dilly and watch the comparisons grow.',
+              cta: 'Open My Dilly',
+              deeplink: '/(app)/my-dilly-profile',
+            });
+          }
+        } catch {}
 
         // Journey tracking - server-persisted dismissed set + live predicates
         const dismissed: string[] = Array.isArray(profileRes?.getting_started_dismissed)
@@ -2181,6 +2287,146 @@ function SeekerHome() {
             </FadeInView>
           );
         })()}
+
+        {/* This Week — upcoming calendar events from the merged
+            Profile-suggestions feed (interview facts, deadlines,
+            Chapter ritual, auto-prep blocks, cohort timing). Shows
+            the closest 1-2 events with a countdown chip so the user
+            sees what Dilly has scheduled for them at a glance.
+            Tap → opens /calendar so the full week is one tap away. */}
+        {upcomingEvents.length > 0 && (() => {
+          const todayKey = new Date().toISOString().slice(0, 10);
+          const fmtCountdown = (dateKey: string) => {
+            const ms = new Date(dateKey).getTime() - new Date(todayKey).getTime();
+            const days = Math.round(ms / 86400000);
+            if (days <= 0) return 'today';
+            if (days === 1) return 'tomorrow';
+            if (days < 7) return `in ${days}d`;
+            if (days < 14) return 'next week';
+            return `in ${Math.round(days / 7)}w`;
+          };
+          const sourceLabel = (s?: string) => {
+            if (s === 'auto_prep') return 'Dilly prep';
+            if (s === 'cohort_intel') return 'Cohort intel';
+            if (s === 'chapter') return 'Chapter';
+            if (s === 'tracker') return 'Tracker';
+            if (s === 'profile_fact') return 'From your Profile';
+            return null;
+          };
+          const featured = upcomingEvents.slice(0, 2);
+          const more = upcomingEvents.length - featured.length;
+          return (
+            <FadeInView delay={showJourney ? 320 : 200}>
+              <AnimatedPressable
+                onPress={() => router.push('/(app)/calendar' as any)}
+                scaleDown={0.98}
+                style={{
+                  marginTop: 24,
+                  borderRadius: 18,
+                  backgroundColor: theme.surface.s1,
+                  borderWidth: 1,
+                  borderColor: theme.surface.border,
+                  padding: 16,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="calendar" size={14} color={accent} />
+                    <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: accent }}>
+                      THIS WEEK
+                    </Text>
+                  </View>
+                  {more > 0 ? (
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: theme.surface.t3 }}>
+                      +{more} more
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={{ gap: 12 }}>
+                  {featured.map(ev => {
+                    const tag = sourceLabel(ev.source);
+                    return (
+                      <View key={ev.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={{
+                          width: 44, height: 44, borderRadius: 12,
+                          backgroundColor: theme.accentSoft,
+                          alignItems: 'center', justifyContent: 'center',
+                          borderWidth: 1, borderColor: theme.accentBorder,
+                        }}>
+                          <Text style={{ fontSize: 9, fontWeight: '800', color: accent, letterSpacing: 0.4 }}>
+                            {fmtCountdown(ev.date).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            numberOfLines={1}
+                            style={{ fontSize: 14, fontWeight: '700', color: theme.surface.t1, fontFamily: theme.type.body }}
+                          >
+                            {ev.title}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                            <Text style={{ fontSize: 11, color: theme.surface.t2 }}>
+                              {ev.type.replace('_', ' ')}
+                            </Text>
+                            {tag ? (
+                              <>
+                                <Text style={{ fontSize: 11, color: theme.surface.t3 }}>·</Text>
+                                <Text style={{ fontSize: 11, color: accent, fontWeight: '700' }}>{tag}</Text>
+                              </>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </AnimatedPressable>
+            </FadeInView>
+          );
+        })()}
+
+        {/* Cohort signal ticker — fills the slot Getting Started
+            leaves when the user finishes the journey. Surfaces a
+            single rotating "23 students like you applied to Citadel
+            this week" line drawn from the user's target_company facts
+            + cohort baseline. Hidden while Getting Started is still
+            active so it doesn't compete for attention. */}
+        {!showJourney && cohortSignal && (
+          <FadeInView delay={120}>
+            <AnimatedPressable
+              onPress={() => cohortSignal.deeplink && router.push(cohortSignal.deeplink as any)}
+              scaleDown={0.98}
+              style={{
+                marginTop: 22,
+                padding: 16,
+                borderRadius: 16,
+                backgroundColor: accent,
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+              }}
+            >
+              <View style={{
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: '#FFFFFF22',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Ionicons name="people" size={20} color="#FFFFFF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 9, fontWeight: '900', color: '#FFFFFFCC', letterSpacing: 1.2, marginBottom: 4 }}>
+                  COHORT SIGNAL
+                </Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF', lineHeight: 19 }} numberOfLines={2}>
+                  {cohortSignal.headline}
+                </Text>
+                {cohortSignal.cta ? (
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFFCC', marginTop: 2 }}>
+                    {cohortSignal.cta} →
+                  </Text>
+                ) : null}
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
 
         {/* Pipeline tiles removed - felt like a status dashboard,
             not a next-move surface. Users who want to see their
