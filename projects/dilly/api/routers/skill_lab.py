@@ -427,6 +427,71 @@ def ask(
     }
 
 
+@router.get("/for-job-app/{app_id}")
+def for_job_app(
+    app_id: str,
+    user: dict = Depends(require_auth),
+    limit: int = Query(8, ge=1, le=20),
+):
+    """
+    ORGANISM: Skills knows the user's tracker.
+
+    Given a tracker application id, return videos targeted to THAT
+    specific role/company combo. Reads the application's role +
+    company + (if available) profile cohort, builds a search phrase,
+    and queries skill_lab_videos with the same FTS scoring as /ask.
+    Zero LLM cost — pure data → search.
+
+    This is what makes Skills feel like part of the organism: when
+    the user has Stripe SWE in their tracker, opening Skills shows
+    "Brush up for Stripe SWE" videos at the top — not generic
+    trending.
+    """
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    # Fetch the application
+    try:
+        from projects.dilly.api.application_store import get_applications
+        apps = get_applications(email) or []
+    except Exception:
+        apps = []
+    target = None
+    for a in apps:
+        if isinstance(a, dict) and str(a.get("id") or "") == str(app_id):
+            target = a
+            break
+    if not target:
+        raise HTTPException(status_code=404, detail="Application not found")
+    company = (target.get("company") or "").strip()
+    role = (target.get("role") or "").strip()
+    if not company and not role:
+        return {"videos": [], "company": "", "role": ""}
+    phrase = f"{role} {company}".strip()
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT {SELECT_COLS}
+                  FROM skill_lab_videos
+                 WHERE search_doc @@ websearch_to_tsquery('english', %s)
+                 ORDER BY (
+                    ts_rank_cd(search_doc, websearch_to_tsquery('english', %s)) * 0.6
+                  + (quality_score / 100.0) * 0.4
+                 ) DESC
+                 LIMIT %s
+                """,
+                (phrase, phrase, limit),
+            )
+            video_rows = cur.fetchall()
+    return {
+        "videos": [_serialize(r) for r in video_rows],
+        "company": company,
+        "role": role,
+        "for_app_id": app_id,
+    }
+
+
 @router.get("/trending")
 def trending(
     limit: int = Query(12, ge=1, le=48),

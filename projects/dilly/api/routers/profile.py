@@ -2099,6 +2099,17 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         # the right subtitle instead of "Major / School".
         "current_role":    (profile.get("current_role") or "").strip() or None,
         "current_company": (profile.get("current_company") or "").strip() or None,
+        # ── ORGANISM live-feel signals on the public profile ──────
+        # Recruiters reading the public page see signs that this
+        # is a LIVE Profile — not a static resume. fact_count proves
+        # ongoing curation; recent_activity_at is the freshness anchor.
+        # All non-stigma — pure proof Dilly is a living thing on this
+        # person's side.
+        "fact_count":         len(facts),
+        "recent_activity_at": (
+            max((str(f.get("updated_at") or f.get("created_at") or "") for f in facts), default="")
+            or None
+        ),
     }
 
     return JSONResponse(
