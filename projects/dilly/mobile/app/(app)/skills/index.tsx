@@ -157,7 +157,7 @@ function LibraryLanding() {
       {/* Big co-branded header: DillyFace + "Skills" at the same size.
           No back button - Skills is a destination. */}
       <View style={styles.header}>
-        <DillyFace size={44} mood="happy" accessory="none" />
+        <DillyFace size={44} mood="happy" accessory="none" eyeBoost={1.5} />
         <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
       </View>
 

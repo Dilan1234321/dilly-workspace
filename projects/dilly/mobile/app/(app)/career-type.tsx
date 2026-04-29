@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { DillyFace } from '../../components/DillyFace';
-import { FadeInView } from '../../components/FadeInView';
+import FadeInView from '../../components/FadeInView';
 
 interface Choice { id: string; label: string }
 interface Question { id: string; prompt: string; choices: Choice[] }

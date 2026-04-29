@@ -132,9 +132,14 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   // to render the website-style bigger eyes WITHOUT the pencil
   // accessory or circular treatment.
   const hasAccessory = accessory && accessory !== 'none';
+  // All DillyFace variants now get the circular hero treatment by default
+  // (border + soft bg + drop shadow) so the face reads as a "Dilly chip"
+  // everywhere it appears — branded, not just a floating illustration.
+  // Pass circular={false} explicitly to opt out (used by inline-text
+  // mini-faces and the splash screen which uses its own outer ring).
   const circular = circularProp !== undefined
     ? circularProp
-    : hasAccessory;
+    : true;
   // Pencil gets the biggest eyes (matches the website hero illustration);
   // other accessories use a slightly smaller boost. Plain face = 1.0.
   const resolvedEyeBoost = eyeBoostProp !== undefined

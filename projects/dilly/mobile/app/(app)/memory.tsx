@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { DillyFace } from '../../components/DillyFace';
-import { FadeInView } from '../../components/FadeInView';
+import FadeInView from '../../components/FadeInView';
 
 /** Tiny growth sparkline — shows the user the moat compounding.
  *  Three real data points (30 days ago, 7 days ago, now) with line +

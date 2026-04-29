@@ -27,7 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { CERTIFICATIONS, type Certification } from '../../data/certifications';
 import { DillyFace } from '../../components/DillyFace';
-import { FadeInView } from '../../components/FadeInView';
+import FadeInView from '../../components/FadeInView';
 
 const SAVED_KEY = 'cert_saved_ids_v1';
 const COMPLETED_KEY = 'cert_completed_ids_v1';

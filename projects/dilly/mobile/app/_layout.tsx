@@ -25,6 +25,7 @@ import { indexAppSections, onSpotlightTap } from '../lib/spotlight';
 import { donateAppIntents, installAppStateConsumer, installQuickActionsHandler } from '../lib/appIntents';
 import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
 import { refreshAllWidgets } from '../lib/widgetContent';
+import { useExtractionState } from '../hooks/useExtractionPending';
 import { drainTruthAnswerQueue } from '../lib/widgetData';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useResolvedTheme } from '../hooks/useTheme';
@@ -197,6 +198,18 @@ export default function RootLayout() {
   // the user needing to open the app. Fires every ~4-6h when iOS feels
   // like it. Result: no loading spinner on next cold start.
   useEffect(() => { registerBackgroundRefresh().catch(() => {}); }, []);
+  // Live widget update on every extraction signal. When Dilly extracts
+  // new facts mid-session (per-turn /ai/chat extraction) we refresh
+  // the widget App Group cache immediately so the lock-screen + Home
+  // Screen widget shows the new fact count without the user needing
+  // to background/foreground the app or wait 30 min for the timeline
+  // to tick over.
+  const _extraction = useExtractionState();
+  useEffect(() => {
+    if (_extraction.seq === 0) return;
+    refreshAllWidgets().catch(() => {});
+  }, [_extraction.seq]);
+
   // Compute fresh content for the home-screen widgets on cold start
   // and drain any Moment-of-Truth answers the user logged from the
   // widget's interactive button while the app was closed. The widget

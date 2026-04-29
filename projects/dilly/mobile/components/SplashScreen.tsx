@@ -268,7 +268,7 @@ export default function SplashScreen({ onDismiss }: Props) {
             behind it for life. */}
         <View style={[ss.orbOuter, { borderColor: theme.accentBorder }]}>
           <View style={[ss.orbInner, { backgroundColor: theme.surface.bg, borderColor: theme.accent }]}>
-            <DillyFace size={156} eyeBoost={1.4} ring={false} />
+            <DillyFace size={156} eyeBoost={1.4} ring={false} circular={false} />
           </View>
         </View>
       </Animated.View>
