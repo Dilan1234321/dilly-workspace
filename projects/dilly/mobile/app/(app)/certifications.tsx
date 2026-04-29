@@ -15,7 +15,7 @@
  * fintech but have no quant background") are out of scope here —
  * those should go to the AI chat.
  */
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, Fragment } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity, RefreshControl,
 } from 'react-native';
@@ -296,8 +296,15 @@ export default function CertificationsScreen() {
             const saved = savedIds.has(cert.id);
             const completed = completedIds.has(cert.id);
             const cohortChip = (cert.cohorts[0] && (COHORT_LABELS[cert.cohorts[0]] || cert.cohorts[0])) || 'General';
+            // Perf: only animate the first 8 cards. Wrapping all 66+
+            // entries in FadeInView made the page lag the whole app
+            // (66 concurrent Animated.timing on mount + 600ms ramp).
+            // The cards below the fold don't need an entrance — by
+            // the time the user scrolls there, the page is settled.
+            const Wrapper = i < 8 ? FadeInView : (Fragment as any);
+            const wrapperProps = i < 8 ? { delay: i * 40 } : {};
             return (
-              <FadeInView key={cert.id} delay={Math.min(i * 30, 240)}>
+              <Wrapper key={cert.id} {...wrapperProps}>
                 <TouchableOpacity
                   activeOpacity={0.92}
                   onPress={() => WebBrowser.openBrowserAsync(cert.url).catch(() => {})}
@@ -396,7 +403,7 @@ export default function CertificationsScreen() {
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
-              </FadeInView>
+              </Wrapper>
             );
           })}
         </View>

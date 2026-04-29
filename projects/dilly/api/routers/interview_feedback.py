@@ -400,6 +400,56 @@ async def interview_feedback(req: InterviewFeedbackRequest, request: Request):
     new_count = _increment_interview_count(email)
     remaining = -1 if limit < 0 else max(0, limit - new_count)
 
+    # ── ORGANISM #474.3 — write mock-interview outcomes back to Profile
+    # Completing a mock at company X is itself a signal: the user is
+    # actively prepping for X. Write 1-2 facts so chat woven context,
+    # cohort signal, and the calendar can all reference it ("you ran
+    # a Goldman mock yesterday — verdict was 'almost'; want to drill
+    # the priority fix?"). Also write a `weakness` fact when the
+    # priority_fix is non-empty, so the rest of the organism (skills
+    # videos, Chapter prompts, Forge resume "what to emphasize") can
+    # all factor in what the user just learned about themselves.
+    try:
+        from projects.dilly.api.memory_surface_store import save_memory_surface
+        from datetime import datetime as _dt_iv
+        import uuid as _uuid_iv
+        _now_iv = _dt_iv.utcnow().isoformat() + "Z"
+        items_iv: list[dict] = [{
+            "id": str(_uuid_iv.uuid4()),
+            "uid": email,
+            "category": "achievement",
+            "label": f"{req.company} {req.role} mock interview"[:80],
+            "value": (
+                f"Ran a {req.company} mock for {req.role}. "
+                f"Verdict: {verdict}. "
+                f"{parsed.get('overall', '')[:200]}"
+            )[:500],
+            "source": "mock_interview",
+            "confidence": "high",
+            "created_at": _now_iv,
+            "updated_at": _now_iv,
+            "shown_to_user": False,
+        }]
+        priority_fix = (parsed.get("priority_fix") or "").strip()
+        if priority_fix:
+            items_iv.append({
+                "id": str(_uuid_iv.uuid4()),
+                "uid": email,
+                "category": "weakness",
+                "label": f"Mock fix: {req.company}"[:80],
+                "value": (
+                    f"From {req.company} {req.role} mock: {priority_fix}"
+                )[:500],
+                "source": "mock_interview",
+                "confidence": "high",
+                "created_at": _now_iv,
+                "updated_at": _now_iv,
+                "shown_to_user": False,
+            })
+        save_memory_surface(email, items=items_iv)
+    except Exception:
+        pass  # Non-critical; feedback already computed + returned
+
     return {
         "verdict": verdict,
         "overall": parsed.get("overall", ""),

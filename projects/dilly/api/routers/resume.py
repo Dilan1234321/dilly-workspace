@@ -3836,6 +3836,37 @@ Include only sections that have content. Do not include markdown, explanations, 
     new_resume_count = _increment_resume_count(email)
     resume_remaining = -1 if _resume_limit < 0 else max(0, _resume_limit - new_resume_count)
 
+    # ── ORGANISM #474.2 — write ats_readiness fact back to Profile ──
+    # Generating a tailored resume produces a sourced_pct (% of bullets
+    # traceable to real Profile facts). That number is a signal of how
+    # "ready" the user's Profile is for this specific role and belongs
+    # in the Profile so chat woven context, cohort signal, and home
+    # surfaces can read it. Without write-back, this score evaporated
+    # the moment the user closed the resume screen.
+    try:
+        from projects.dilly.api.memory_surface_store import save_memory_surface
+        from datetime import datetime as _dt_resume
+        import uuid as _uuid_resume
+        _now_resume = _dt_resume.utcnow().isoformat() + "Z"
+        save_memory_surface(email, items=[{
+            "id": str(_uuid_resume.uuid4()),
+            "uid": email,
+            "category": "achievement",
+            "label": f"{job_company} {job_title} resume forged"[:80],
+            "value": (
+                f"Tailored resume for {job_company} {job_title}: "
+                f"{sourced_pct}% of bullets traceable to real Profile facts "
+                f"({sourced_bullets}/{total_bullets} sourced)."
+            )[:500],
+            "source": "resume_generation",
+            "confidence": "high",
+            "created_at": _now_resume,
+            "updated_at": _now_resume,
+            "shown_to_user": False,
+        }])
+    except Exception:
+        pass  # Non-critical
+
     return {
         "sections": sections,
         "ats": job_ats,

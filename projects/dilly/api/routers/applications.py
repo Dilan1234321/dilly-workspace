@@ -352,7 +352,72 @@ async def add_application(request: Request, body: AddApplicationRequest):
         except Exception:
             pass  # Non-critical; don't fail the application save
 
-    return {"ok": True, "application": new_app.model_dump(), "deadline_added": deadline_added}
+    # ── ORGANISM #474.1 — write back to Profile ─────────────────────
+    # Adding to the tracker is itself a signal: the user is targeting
+    # this company. Write 1-2 facts so every other surface (chat woven
+    # context, cohort signal, calendar suggestions, jobs feed chip)
+    # learns about it instantly. Without this, the tracker was a
+    # one-way sink — the rest of the organism stayed blind to apps.
+    facts_added = 0
+    try:
+        from projects.dilly.api.memory_surface_store import save_memory_surface
+        from datetime import datetime as _dt_app
+        _now = _dt_app.utcnow().isoformat() + "Z"
+        items_to_write: list[dict] = []
+        company_clean = (body.company or "").strip()
+        role_clean = (body.role or "").strip()
+        if company_clean:
+            items_to_write.append({
+                "id": str(_uuid.uuid4()),
+                "uid": email,
+                "category": "target_company",
+                "label": company_clean[:80],
+                "value": (
+                    f"Tracking {company_clean}"
+                    + (f" for {role_clean}" if role_clean else "")
+                    + " — added to Tracker."
+                )[:500],
+                "source": "application",
+                "confidence": "high",
+                "created_at": _now,
+                "updated_at": _now,
+                "shown_to_user": True,
+            })
+            # Also write an explicit "application" fact so the calendar
+            # suggestions endpoint and chat woven context can both see
+            # this as live in-flight activity.
+            status_label = (body.status or "saved").lower()
+            items_to_write.append({
+                "id": str(_uuid.uuid4()),
+                "uid": email,
+                "category": "application",
+                "label": (
+                    f"{company_clean}"
+                    + (f" — {role_clean}" if role_clean else "")
+                )[:80],
+                "value": (
+                    f"Status: {status_label}"
+                    + (f". Deadline {body.deadline}." if body.deadline else ".")
+                    + (f" Applied {body.applied_at}." if body.applied_at else "")
+                )[:500],
+                "source": "application",
+                "confidence": "high",
+                "created_at": _now,
+                "updated_at": _now,
+                "shown_to_user": True,
+            })
+        if items_to_write:
+            save_memory_surface(email, items=items_to_write)
+            facts_added = len(items_to_write)
+    except Exception:
+        pass  # Non-critical; tracker save still succeeded above
+
+    return {
+        "ok": True,
+        "application": new_app.model_dump(),
+        "deadline_added": deadline_added,
+        "profile_facts_added": facts_added,
+    }
 
 
 @router.patch("/applications/{app_id}")

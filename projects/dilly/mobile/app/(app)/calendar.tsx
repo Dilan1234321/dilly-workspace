@@ -1112,6 +1112,37 @@ export default function CalendarScreen() {
     const target = events.find(e => e.id === id);
     saveEvents(events.map(e => e.id === id ? { ...e, completedAt: new Date().toISOString() } : e));
     if (target) deleteReminderForEvent(target.title, target.date).catch(() => {});
+    // ── ORGANISM #474.4 — write completion fact back to Profile ─────
+    // Marking an event done is itself a signal: the user shipped
+    // something. Write an achievement fact so chat woven context,
+    // cohort signal, the home cohort ticker, and the Wins surface
+    // can all reference it. The mobile fires this fire-and-forget;
+    // the backend just stores it.
+    if (target && !target.completedAt) {
+      const now = new Date().toISOString();
+      const verb = target.type === 'interview' ? 'Completed interview at'
+        : target.type === 'deadline' ? 'Met deadline:'
+        : target.type === 'application' ? 'Submitted application:'
+        : target.type === 'prep' ? 'Finished prep block:'
+        : 'Done:';
+      const label = (target.company
+        ? `${verb} ${target.company}`
+        : `${verb} ${target.title}`).slice(0, 80);
+      const value = (`${target.title}${target.date ? ` (${target.date})` : ''}.${target.notes ? ` ${target.notes}` : ''}`).slice(0, 500);
+      dilly.fetch('/memory/items', {
+        method: 'POST',
+        body: JSON.stringify({
+          category: 'achievement',
+          label,
+          value,
+          source: 'calendar',
+          confidence: 'high',
+          shown_to_user: false,
+          created_at: now,
+          updated_at: now,
+        }),
+      }).catch(() => {});
+    }
   }
 
   async function handleDelete(id: string) {
