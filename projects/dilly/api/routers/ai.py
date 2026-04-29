@@ -473,6 +473,133 @@ def _build_rich_context(email: str) -> dict:
     except Exception:
         pass
 
+    # ── WOVEN CONTEXT — make chat aware of the rest of the body ─────
+    # The strategic move: chat should never feel like a cold start.
+    # Every reply should know what Dilly already knows (last 5 facts
+    # learned), what's already on the user's calendar (next 2 events
+    # from the merged suggestions feed), and what the user has in
+    # flight (top 2 active tracker apps). This is what makes Dilly
+    # feel like one organism instead of a chatbot bolted onto separate
+    # screens. All zero-LLM — pulled from existing tables.
+    recently_learned: list[dict] = []
+    calendar_snapshot: list[dict] = []
+    tracker_snapshot: list[dict] = []
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        surface = get_memory_surface(email) or {}
+        items = surface.get("items") or []
+        # Sort by created_at desc, take last 5
+        items_sorted = sorted(
+            items,
+            key=lambda it: str(it.get("created_at") or ""),
+            reverse=True,
+        )
+        for it in items_sorted[:5]:
+            recently_learned.append({
+                "category": str(it.get("category") or ""),
+                "label": str(it.get("label") or "")[:60],
+                "value": str(it.get("value") or "")[:120],
+            })
+    except Exception:
+        pass
+
+    try:
+        # Reuse the profile-suggestions logic to get the next 2 events.
+        # We import lazily to avoid a circular at module-load time.
+        from projects.dilly.api.routers.calendar_feed import (
+            _parse_fact_date as _cal_parse_date,
+            _next_occurrence_of as _cal_next_occ,
+            _COHORT_TIMING as _cal_cohort_timing,
+        )
+        from datetime import datetime as _dt_woven, timedelta as _td_woven
+
+        today_woven = _dt_woven.utcnow().date()
+        events_pile: list[dict] = []
+        # Profile.deadlines (manual + Dilly tool-call writes)
+        for d in profile.get("deadlines") or []:
+            if not isinstance(d, dict):
+                continue
+            dd = str(d.get("date") or "")[:10]
+            if not dd:
+                continue
+            try:
+                ed = _dt_woven.strptime(dd, "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if ed < today_woven:
+                continue
+            events_pile.append({
+                "title": d.get("title") or d.get("label") or "Event",
+                "date": dd,
+                "type": d.get("type") or "deadline",
+                "company": d.get("company") or "",
+                "source": "calendar",
+            })
+        # Date-bearing facts (interview / deadline / career_fair / application)
+        _DATED = {"interview", "deadline", "career_fair", "application"}
+        for it in items if 'items' in locals() else []:
+            cat = str(it.get("category") or "").lower()
+            if cat not in _DATED:
+                continue
+            ds = _cal_parse_date(str(it.get("label") or "")) or _cal_parse_date(str(it.get("value") or ""))
+            if not ds:
+                continue
+            try:
+                ed = _dt_woven.strptime(ds, "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if ed < today_woven:
+                continue
+            events_pile.append({
+                "title": str(it.get("label") or "")[:60],
+                "date": ds,
+                "type": "interview" if cat == "interview" else cat,
+                "company": "",
+                "source": "profile_fact",
+            })
+        events_pile.sort(key=lambda e: e["date"])
+        calendar_snapshot = events_pile[:3]
+    except Exception:
+        pass
+
+    try:
+        # Top 2 active tracker apps (status in {applied, interviewing}).
+        # Reuse the existing tracker fetch path (same data the apps_block
+        # uses) but pick the highest-priority entries: interviewing
+        # first, then most recently applied.
+        from projects.dilly.api.profile_store import get_profile as _gp_woven
+        # The /applications endpoint logic lives elsewhere; here we just
+        # read profile.applications which mirrors the table for the
+        # short-term snapshot. If empty, _build_rich_context further
+        # above already fetched app_counts so we can re-use that.
+        apps_local = profile.get("applications") or []
+        if not apps_local:
+            try:
+                from projects.dilly.api.application_store import get_applications  # type: ignore
+                apps_local = get_applications(email) or []
+            except Exception:
+                apps_local = []
+        # Prioritize: interviewing > applied > saved
+        _PRIORITY = {"interviewing": 0, "applied": 1, "saved": 2, "offer": 0, "rejected": 99}
+        apps_sorted = sorted(
+            [a for a in apps_local if isinstance(a, dict)],
+            key=lambda a: (
+                _PRIORITY.get(str(a.get("status") or "").lower(), 50),
+                # Most-recent applied_at descending (negate by using inverse string)
+                "0" if str(a.get("status") or "").lower() == "interviewing" else "1",
+                -(int(__import__("time").mktime(__import__("time").strptime(str(a.get("applied_at") or "1970-01-01")[:10], "%Y-%m-%d")))) if a.get("applied_at") else 0,
+            ),
+        )
+        for a in apps_sorted[:2]:
+            tracker_snapshot.append({
+                "company": str(a.get("company") or "")[:60],
+                "role": str(a.get("role") or "")[:60],
+                "status": str(a.get("status") or "saved").lower(),
+                "deadline": str(a.get("deadline") or "")[:10],
+            })
+    except Exception:
+        pass
+
     return {
         "name": name, "first_name": first_name, "cohort": cohort, "school": school,
         "major": major, "minor": minor,
@@ -539,6 +666,13 @@ def _build_rich_context(email: str) -> dict:
         # you were let go, let's plan") rather than pretending the
         # pivot didn't happen. Kept out of the public web profile.
         "life_events":          profile.get("life_events") or [],
+        # WOVEN CONTEXT — see comment block above. Three short feeds
+        # that make chat aware of what the rest of the app already
+        # knows + has scheduled for the user. Drives the
+        # "WHAT YOU KNOW THIS WEEK" block in _build_rich_system_prompt.
+        "recently_learned":     recently_learned,
+        "calendar_snapshot":    calendar_snapshot,
+        "tracker_snapshot":     tracker_snapshot,
     }
 
 
@@ -661,6 +795,65 @@ def _build_rich_system_prompt(r: dict) -> str:
         profile_block = f"""DILLY PROFILE (what you've learned about this student beyond their resume — from conversations, onboarding, and their own additions. Reference these naturally. NEVER re-ask things you already know here):
 {profile_facts}
 """
+
+    # ── WOVEN CONTEXT block ─────────────────────────────────────────
+    # Three short feeds make every chat reply continuation-aware:
+    #   1. What you JUST learned (last 5 facts) — so Dilly references
+    #      what was just extracted instead of rehashing
+    #   2. What's on the calendar (next 2 events) — so "you have
+    #      Citadel Wednesday — want to prep?" replaces cold opens
+    #   3. What's in flight in the tracker (top 2 active apps) — so
+    #      Dilly can volunteer next-step thinking without being asked
+    # This is the strategic "one organism" move: chat is no longer a
+    # surface that's blind to the rest of the body.
+    woven_lines: list[str] = []
+    _recently = r.get("recently_learned") or []
+    _cal_snap = r.get("calendar_snapshot") or []
+    _trk_snap = r.get("tracker_snapshot") or []
+    if _recently:
+        rec_lines = []
+        for it in _recently:
+            cat = (it.get("category") or "").replace("_", " ")
+            lab = (it.get("label") or "").strip()
+            val = (it.get("value") or "").strip()
+            preview = lab or val[:60]
+            if preview:
+                rec_lines.append(f"  - {preview}" + (f" ({cat})" if cat else ""))
+        if rec_lines:
+            woven_lines.append("WHAT YOU JUST LEARNED (last 5 facts captured — reference these naturally; don't ask the user to repeat):\n" + "\n".join(rec_lines))
+    if _cal_snap:
+        cal_lines = []
+        for ev in _cal_snap[:2]:
+            title = (ev.get("title") or "Event").strip()[:60]
+            date_s = ev.get("date") or ""
+            try:
+                _dt_lbl = datetime.strptime(date_s, "%Y-%m-%d")
+                today_lbl = datetime.utcnow().date()
+                d_diff = (_dt_lbl.date() - today_lbl).days
+                when = "today" if d_diff == 0 else ("tomorrow" if d_diff == 1 else (f"in {d_diff}d" if d_diff <= 14 else f"in {d_diff//7}w"))
+            except Exception:
+                when = date_s
+            etype = (ev.get("type") or "").replace("_", " ")
+            cal_lines.append(f"  - {title} ({when}, {etype})")
+        if cal_lines:
+            woven_lines.append("ON YOUR CALENDAR (next events Dilly already knows about — bring them up when relevant; offer prep when an interview is in the next 7 days):\n" + "\n".join(cal_lines))
+    if _trk_snap:
+        trk_lines = []
+        for app in _trk_snap[:2]:
+            company = (app.get("company") or "").strip()
+            role = (app.get("role") or "").strip()
+            status = (app.get("status") or "").strip()
+            if company or role:
+                trk_lines.append(f"  - {company} — {role} ({status})")
+        if trk_lines:
+            woven_lines.append("IN-FLIGHT APPLICATIONS (highest-priority tracker entries — be ready to coach on these specifically):\n" + "\n".join(trk_lines))
+    woven_block = ""
+    if woven_lines:
+        woven_block = (
+            "═══ WOVEN CONTEXT (this is what makes Dilly feel like one organism — every other surface of the app already knows these things, so the chat has to as well) ═══\n"
+            + "\n\n".join(woven_lines)
+            + "\n══════════\n"
+        )
 
     # ── Academic profile block ────────────────────────────────────
     academic_parts: list[str] = []
@@ -1158,6 +1351,7 @@ Name: {name}
 {f"Field: {cohort}" if cohort and cohort != "General" else ""}
 {f"Graduation: {r.get('graduation_year')}" if r.get("graduation_year") else ""}
 
+{woven_block}
 {apps_block}
 {deadline_block}
 {target_block}
