@@ -962,11 +962,14 @@ Extract new memory items now. Return JSON array only."""
     raw = get_chat_completion(
         system,
         user_prompt,
-        model="claude-haiku-4-5-20251001",
-        # max_tokens was 1200 — but real extraction output is JSON of
-        # 1–5 facts averaging ~50 tokens each. 400 caps the worst case
-        # without truncating real responses. Direct cost cut: ~3x on
-        # output billing for this call (Haiku output is $4/M).
+        # No explicit model — let dilly_core/llm_client._provider() pick:
+        # gpt-4o-mini when OPENAI_API_KEY is set (5-7x cheaper), Haiku
+        # 4.5 otherwise. Both produce equivalent JSON for this task.
+        # Passing a "claude-..." name here would force the Anthropic
+        # path and defeat the cost optimization.
+        # max_tokens 400: real extraction output is JSON of 1–5 facts
+        # averaging ~50 tokens each. 400 caps the worst case without
+        # truncating real responses.
         max_tokens=400,
         temperature=0.2,
         log_email=uid,
@@ -1148,7 +1151,9 @@ Write the narrative now. 3-5 sentences, specific, no hollow phrases."""
     raw = get_chat_completion(
         system,
         user_prompt,
-        model="claude-haiku-4-5-20251001",
+        # Drop explicit claude model so OpenAI routing can take effect
+        # when OPENAI_API_KEY is set (5-7x cheaper for this short-form
+        # narrative generation task).
         max_tokens=200,
         temperature=0.3,
         log_email=(profile.get("email") or "") if isinstance(profile, dict) else "",
