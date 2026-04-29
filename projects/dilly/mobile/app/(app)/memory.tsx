@@ -109,11 +109,40 @@ export default function MemoryScreen() {
   const [data, setData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // ORGANISM: pull next 2 calendar events so the Memory tab can
+  // call out facts that are "active this week" — e.g., a person/
+  // company fact lights up when there's a scheduled event involving
+  // it. Reads the same merged feed everything else uses.
+  const [activeThisWeek, setActiveThisWeek] = useState<Array<{
+    title: string; date: string; daysOut: number; company: string;
+  }>>([]);
 
   const load = useCallback(async () => {
     try {
       const res = await dilly.get('/memory/graph');
       if (res) setData(res as GraphData);
+      // Calendar suggestions for active-this-week halo
+      try {
+        const sug: any = await dilly.get('/calendar/profile-suggestions').catch(() => null);
+        const items = (sug?.suggestions || []) as any[];
+        const today = new Date();
+        const todayKey = today.toISOString().slice(0, 10);
+        const week = items
+          .filter(s => s?.date && String(s.date) >= todayKey)
+          .map(s => {
+            const ms = new Date(String(s.date).slice(0, 10)).getTime() - new Date(todayKey).getTime();
+            return {
+              title: String(s.title || 'Event'),
+              date: String(s.date).slice(0, 10),
+              daysOut: Math.max(0, Math.round(ms / 86400000)),
+              company: String(s.company || ''),
+            };
+          })
+          .filter(e => e.daysOut <= 14)
+          .sort((a, b) => a.daysOut - b.daysOut)
+          .slice(0, 3);
+        setActiveThisWeek(week);
+      } catch {}
     } catch {} finally {
       setLoading(false);
       setRefreshing(false);
@@ -252,6 +281,56 @@ export default function MemoryScreen() {
                 The more she knows, the better every other tool gets.
               </Text>
             </View>
+          </FadeInView>
+        )}
+
+        {/* ── ORGANISM: ACTIVE THIS WEEK ──────────────────────
+            Surfaces facts that connect to upcoming calendar events.
+            "Memory tab" stops feeling like a static archive and
+            starts feeling like a live thing — facts light up when
+            they're relevant to what's coming up. Tap → /calendar. */}
+        {activeThisWeek.length > 0 && (
+          <FadeInView delay={130}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Ionicons name="pulse" size={11} color={theme.accent} />
+              <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, letterSpacing: 1.2 }}>
+                ACTIVE THIS WEEK
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/(app)/calendar' as any)}
+              activeOpacity={0.92}
+              style={{
+                marginBottom: 22,
+                padding: 14,
+                borderRadius: 14,
+                backgroundColor: theme.accentSoft,
+                borderWidth: 1, borderColor: theme.accent + '40',
+                gap: 8,
+              }}
+            >
+              {activeThisWeek.map((e, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{
+                    paddingHorizontal: 7, paddingVertical: 2,
+                    borderRadius: 8,
+                    backgroundColor: theme.accent,
+                  }}>
+                    <Text style={{
+                      fontSize: 9, fontWeight: '900', color: '#FFF', letterSpacing: 0.3,
+                    }}>
+                      {e.daysOut === 0 ? 'TODAY' : e.daysOut === 1 ? 'TOMORROW' : `IN ${e.daysOut}D`}
+                    </Text>
+                  </View>
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>
+                    {e.title}
+                  </Text>
+                </View>
+              ))}
+              <Text style={{ fontSize: 11, color: theme.surface.t2, marginTop: 2, fontStyle: 'italic' }}>
+                Tap to see your full calendar.
+              </Text>
+            </TouchableOpacity>
           </FadeInView>
         )}
 

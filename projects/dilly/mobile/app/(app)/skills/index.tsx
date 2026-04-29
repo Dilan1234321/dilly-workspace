@@ -254,6 +254,37 @@ function FeedLanding() {
   const [loading, setLoading] = useState(true);
   const [browseOpen, setBrowseOpen] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('student');
+  // ORGANISM bridge: Skills knows the user's tracker.
+  // Pull the top in-flight application + a few targeted videos for
+  // it from the new /skill-lab/for-job-app endpoint. Surfaces above
+  // the generic trending feed so the user sees a "Brush up for
+  // {COMPANY}" card grounded in what they're actually applying to.
+  const [forJobApp, setForJobApp] = useState<{
+    company: string; role: string; videos: any[]; appId: string;
+  } | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const apps: any = await dilly.get('/applications').catch(() => null);
+        const list = Array.isArray(apps) ? apps : (apps?.applications || []);
+        // Prioritize: interviewing > applied > saved
+        const _PR: Record<string, number> = { interviewing: 0, applied: 1, saved: 2 };
+        const sorted = [...list]
+          .filter(a => a && (a.company || a.role))
+          .sort((a, b) => (_PR[(a.status || '').toLowerCase()] ?? 9) - (_PR[(b.status || '').toLowerCase()] ?? 9));
+        const top = sorted[0];
+        if (!top?.id) return;
+        const res: any = await dilly.get(`/skill-lab/for-job-app/${top.id}`).catch(() => null);
+        if (!res?.videos?.length) return;
+        setForJobApp({
+          company: res.company || top.company || '',
+          role: res.role || top.role || '',
+          videos: res.videos.slice(0, 4),
+          appId: String(top.id),
+        });
+      } catch {}
+    })();
+  }, []);
 
   const copy = SKILLS_PERSONA_AWARE ? PERSONA_COPY[appMode] : GENERIC_COPY;
 
@@ -365,6 +396,69 @@ function FeedLanding() {
           </View>
           <Ionicons name="chevron-forward" size={16} color="#FFFFFFCC" />
         </TouchableOpacity>
+
+        {/* ── ORGANISM bridge: "Brush up for X" ─────────────────
+            When the user has a tracker app, surface targeted videos
+            for THAT specific role/company above the generic feed.
+            This is what makes Skills feel like part of the organism
+            instead of a standalone tab — it knows what's in flight. */}
+        {forJobApp && forJobApp.videos.length > 0 && (
+          <View style={{ paddingHorizontal: 18, marginBottom: 16 }}>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+              marginBottom: 10,
+            }}>
+              <Ionicons name="sparkles" size={11} color={theme.accent} />
+              <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: theme.accent }}>
+                BRUSH UP FOR {forJobApp.company.toUpperCase() || forJobApp.role.toUpperCase()}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: theme.surface.t2, marginBottom: 10, lineHeight: 16 }}>
+              Pulled from your Tracker — these are tuned to {forJobApp.role}
+              {forJobApp.company ? ` at ${forJobApp.company}` : ''}.
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 10, paddingRight: 18 }}
+            >
+              {forJobApp.videos.map(v => (
+                <TouchableOpacity
+                  key={v.id}
+                  activeOpacity={0.92}
+                  onPress={() => router.push(`/skills/video/${v.id}`)}
+                  style={{
+                    width: 200,
+                    backgroundColor: theme.surface.s1,
+                    borderColor: theme.accentBorder,
+                    borderWidth: 1.5, borderRadius: 12,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {v.thumbnail_url ? (
+                    <Image
+                      source={{ uri: v.thumbnail_url }}
+                      style={{ width: '100%', height: 112 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={{ height: 112, backgroundColor: theme.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="play-circle" size={36} color={theme.accent} />
+                    </View>
+                  )}
+                  <View style={{ padding: 10, gap: 4 }}>
+                    <Text numberOfLines={2} style={{ fontSize: 12, fontWeight: '700', color: theme.surface.t1, lineHeight: 16 }}>
+                      {v.title}
+                    </Text>
+                    <Text numberOfLines={1} style={{ fontSize: 10, color: theme.surface.t3 }}>
+                      {v.channel || ''}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         <Text style={[feedStyles.subhead, { color: theme.surface.t2 }]}>{copy.subhead}</Text>
 
