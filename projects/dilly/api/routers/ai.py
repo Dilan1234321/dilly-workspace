@@ -1979,11 +1979,23 @@ async def ai_chat(request: Request, body: ChatRequest):
                 )
                 # Per-call cost ledger — lets us answer "how much did
                 # user X spend on chat this month" with a SQL query.
+                # session_id MUST match the conv_id we use for cost lookup
+                # later (conv_id_resolved). When body.conv_id is empty,
+                # mobile shows 0¢ in the footer because the lookup uses
+                # the sha256-derived id but the log row has session_id=None.
+                # Resolve the id here using the same fallback logic so the
+                # write and the read agree.
+                import hashlib as _hl_chat_log
+                _chat_session_id = (body.conv_id or "").strip() or (
+                    _hl_chat_log.sha256(
+                        f"{email}:{raw_messages[0].get('content', '')[:100]}".encode()
+                    ).hexdigest()[:16] if email and raw_messages else None
+                )
                 from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
                 log_from_anthropic_response(
                     email, FEATURES.CHAT, response,
                     plan=_plan,
-                    session_id=(body.conv_id or None),
+                    session_id=_chat_session_id,
                     metadata={"mode": body.mode or "chat"},
                 )
         except Exception:

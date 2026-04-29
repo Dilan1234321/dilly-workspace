@@ -997,7 +997,7 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
         <View style={{ marginTop: 14 }}>
           <View style={styles.jdHeaderRow}>
             <FieldLabel text="Job Description" required inline />
-            <View style={styles.jdQualityPill}>
+            <View style={[styles.jdQualityPill, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <View style={[styles.jdQualityDot, { backgroundColor: jdQuality.color }]} />
               <Text style={[styles.jdQualityText, { color: jdQuality.color }]}>{jdQuality.label}</Text>
             </View>
@@ -1126,8 +1126,13 @@ const ledgerStyles = StyleSheet.create({
 });
 
 function FieldLabel({ text, required, top, inline }: { text: string; required?: boolean; top?: boolean; inline?: boolean }) {
+  // Use the live theme so labels stay visible on every surface (was
+  // hardcoded colors.t2 from the static Proxy, which read as transparent
+  // on the lavender accentSoft surface — Forge looked like the labels
+  // were missing).
+  const theme = useResolvedTheme();
   return (
-    <Text style={[styles.fieldLabel, { marginTop: top ? 14 : (inline ? 0 : 0), marginBottom: 6 }]}>
+    <Text style={[styles.fieldLabel, { marginTop: top ? 14 : (inline ? 0 : 0), marginBottom: 6, color: theme.surface.t1 }]}>
       {text}{required ? <Text style={{ color: CORAL }}> *</Text> : null}
     </Text>
   );

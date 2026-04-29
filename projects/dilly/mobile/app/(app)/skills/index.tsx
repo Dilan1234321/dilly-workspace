@@ -155,9 +155,10 @@ function LibraryLanding() {
       contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 120 }}
     >
       {/* Big co-branded header: DillyFace + "Skills" at the same size.
-          No back button - Skills is a destination. */}
+          Website hero treatment — bigger, big eyes, circular hero shell
+          to match hellodilly.com. No back button — Skills is a destination. */}
       <View style={styles.header}>
-        <DillyFace size={44} mood="happy" accessory="none" eyeBoost={1.5} />
+        <DillyFace size={56} mood="happy" accessory="none" eyeBoost={1.65} circular />
         <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
       </View>
 
@@ -330,23 +331,21 @@ function FeedLanding() {
 
         {/* Certifications entry — pinned to the top of Skills so the
             full searchable library is one tap away. Browse, search,
-            filter, save, mark complete. */}
+            filter, save, mark complete.
+            Full-bleed edge-to-edge: no horizontal margin, no border
+            radius, screen-wide so it reads as a banner action. */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={() => router.push('/(app)/certifications' as any)}
           style={{
-            marginHorizontal: 0,
+            alignSelf: 'stretch',
+            marginLeft: 0, marginRight: 0,
             marginBottom: 14,
             backgroundColor: theme.accent,
-            borderRadius: 14,
-            paddingVertical: 14,
-            paddingHorizontal: 16,
+            borderRadius: 0,
+            paddingVertical: 16,
+            paddingHorizontal: 20,
             flexDirection: 'row', alignItems: 'center', gap: 12,
-            shadowColor: theme.accent,
-            shadowOpacity: 0.18,
-            shadowOffset: { width: 0, height: 6 },
-            shadowRadius: 12,
-            elevation: 4,
           }}
         >
           <View style={{

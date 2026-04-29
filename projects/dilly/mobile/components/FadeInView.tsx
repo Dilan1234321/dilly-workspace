@@ -29,8 +29,13 @@ interface Props {
 export default function FadeInView({
   children,
   delay = 0,
-  duration = 400,
-  distance = 12,
+  // Defaults bumped (was 400ms / 12px) so the entrance is clearly
+  // perceptible — testers reported "the animations don't show up"
+  // because at 12px slide + 400ms the motion was too subtle to notice
+  // on most screens. 600ms + 24px reads as a deliberate composition
+  // moment, not a flash.
+  duration = 600,
+  distance = 24,
   style,
 }: Props) {
   const [reduceMotion, setReduceMotion] = useState(false);

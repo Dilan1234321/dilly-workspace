@@ -1644,7 +1644,10 @@ function SeekerHome() {
             below Jobs so there is exactly one rendering on Home. */}
         <FadeInView delay={12}>
           <View style={{ alignItems: 'center', marginTop: 28, marginBottom: 20 }}>
-            <DillyFace size={showJourney ? 100 : 80} mood="warm" eyeBoost={1.5} />
+            {/* Website hero treatment: bigger size, big eyes, circular
+                hero shell (lavender bg + soft border + drop shadow) so
+                the home center face matches hellodilly.com's hero. */}
+            <DillyFace size={showJourney ? 120 : 100} mood="warm" eyeBoost={1.65} circular />
           </View>
           <AnimatedPressable
             onPress={() => openDillyOverlay({
