@@ -484,6 +484,10 @@ def _build_rich_context(email: str) -> dict:
     recently_learned: list[dict] = []
     calendar_snapshot: list[dict] = []
     tracker_snapshot: list[dict] = []
+    # ORGANISM #2 — carry-forward thread. The previous chat thread's
+    # last user line + Dilly's last reply, so a new chat opens with
+    # awareness of what was left dangling instead of cold-starting.
+    last_thread_carry: dict | None = None
     try:
         from projects.dilly.api.memory_surface_store import get_memory_surface
         surface = get_memory_surface(email) or {}
@@ -559,6 +563,31 @@ def _build_rich_context(email: str) -> dict:
             })
         events_pile.sort(key=lambda e: e["date"])
         calendar_snapshot = events_pile[:3]
+    except Exception:
+        pass
+
+    try:
+        # ORGANISM #2 — pull the most recent past thread (excluding the
+        # one currently in progress; the front-end never persists the
+        # active conversation until close, so list_threads naturally
+        # excludes it). Use it to surface what was left dangling.
+        from projects.dilly.api.chat_thread_store import list_threads as _list_threads
+        recent_threads = _list_threads(email, limit=3) or []
+        if recent_threads:
+            # Pick the most recent (list_threads sorts by last_turn_at desc)
+            t = recent_threads[0]
+            last_assist = (t.get("last_assistant_message") or "").strip()
+            first_user = (t.get("first_user_message") or "").strip()
+            # Trim to one-line summaries — we want a hook, not a transcript.
+            def _trim(s: str, n: int) -> str:
+                s = " ".join(s.split())
+                return s if len(s) <= n else s[: n - 1].rsplit(" ", 1)[0] + "…"
+            last_thread_carry = {
+                "started_with":   _trim(first_user, 140),
+                "ended_with":     _trim(last_assist, 200),
+                "last_turn_at":   t.get("last_turn_at") or "",
+                "thread_name":    (t.get("name") or "").strip(),
+            }
     except Exception:
         pass
 
@@ -673,6 +702,7 @@ def _build_rich_context(email: str) -> dict:
         "recently_learned":     recently_learned,
         "calendar_snapshot":    calendar_snapshot,
         "tracker_snapshot":     tracker_snapshot,
+        "last_thread_carry":    last_thread_carry,
     }
 
 
@@ -810,6 +840,20 @@ def _build_rich_system_prompt(r: dict) -> str:
     _recently = r.get("recently_learned") or []
     _cal_snap = r.get("calendar_snapshot") or []
     _trk_snap = r.get("tracker_snapshot") or []
+    _carry = r.get("last_thread_carry") or None
+    if _carry and isinstance(_carry, dict):
+        ended = (_carry.get("ended_with") or "").strip()
+        started = (_carry.get("started_with") or "").strip()
+        if ended or started:
+            carry_lines = []
+            if started:
+                carry_lines.append(f"  - They opened the last thread with: \"{started}\"")
+            if ended:
+                carry_lines.append(f"  - You ended that thread by saying: \"{ended}\"")
+            woven_lines.append(
+                "PICKING UP FROM LAST TIME (the user's previous chat with you — if their first message looks like a continuation OR if it's a fresh start with no obvious topic, gracefully reference what was left dangling. Don't force it; only carry it forward when it actually fits):\n"
+                + "\n".join(carry_lines)
+            )
     if _recently:
         rec_lines = []
         for it in _recently:

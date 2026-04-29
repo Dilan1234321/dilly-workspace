@@ -75,6 +75,17 @@ export interface WidgetData {
   truthAnswered?: boolean;
   truthStreakDays?: number;
 
+  // ORGANISM #4 — what's coming up. Surfaced on the lock-screen
+  // accessoryRectangular and Home Screen widgets so the user sees
+  // "Citadel interview Wed" without unlocking the app. Sourced from
+  // the merged calendar feed (profile.deadlines + tracker apps +
+  // /calendar/profile-suggestions). 1 line max — must fit a tiny
+  // rectangular complication.
+  nextEventTitle?: string;       // e.g. "Citadel interview"
+  nextEventCountdown?: string;   // e.g. "Wed" / "tomorrow" / "in 3d"
+  nextEventCompany?: string;     // e.g. "Citadel" — used for icon hint
+  nextEventType?: string;        // e.g. "interview" | "deadline" | "prep"
+
   lastUpdatedAt?: number;
 }
 

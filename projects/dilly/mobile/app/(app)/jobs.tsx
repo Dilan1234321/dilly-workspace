@@ -147,6 +147,19 @@ function titleCaseCohort(raw: string): string {
   }).join(' ');
 }
 
+/** Whether a job actually originated on LinkedIn (so the "View on
+ *  LinkedIn" / "Find on LinkedIn" buttons should be shown). Was
+ *  hidden as "always show" before, which produced confusing dead-ends
+ *  when the user tapped Find-on-LinkedIn for a Greenhouse / Lever
+ *  / company-direct job and got "nothing found" on LinkedIn. */
+function jobIsOnLinkedIn(job: { source?: string; apply_url?: string; url?: string }): boolean {
+  const src = (job.source || '').toLowerCase();
+  if (src.includes('linkedin')) return true;
+  const u1 = (job.apply_url || '').toLowerCase();
+  const u2 = (job.url || '').toLowerCase();
+  return u1.includes('linkedin.com') || u2.includes('linkedin.com');
+}
+
 /** Strip HTML tags + decode common entities from a job description.
  *  Many ATS feeds (Greenhouse, Lever, Workday) ship raw HTML; on
  *  mobile we render plain text, so we need to clean it. Also collapses
@@ -187,8 +200,11 @@ function splitToBullets(prose: string | undefined | null): string[] {
     .split(/(?<=[.!?])\s+(?=[A-Z])|\n+/)
     .map(p => p.trim().replace(/^[-•*]\s*/, ''))
     .filter(p => p.length >= 4);
-  // Cap each bullet at 160 chars so the cards don't run on.
-  return parts.slice(0, 4).map(p => p.length > 160 ? p.slice(0, 157) + '…' : p);
+  // Cap each bullet at 240 chars (was 160 — testers reported sentences
+  // truncating mid-word at "...wit" / "...sof"). 240 fits a full
+  // 2-sentence-equivalent bullet cleanly without forcing the LLM
+  // narrative to be re-cut at a word boundary that mangles meaning.
+  return parts.slice(0, 4).map(p => p.length > 240 ? p.slice(0, 237) + '…' : p);
 }
 
 function daysAgo(dateStr?: string): string {
@@ -397,6 +413,17 @@ export default function JobsScreen() {
   const theme = useResolvedTheme();
   const insets = useSafeAreaInsets();
   const [jobs, setJobs] = useState<Listing[]>([]);
+  // ORGANISM #3 — calendar awareness on the jobs feed. We pull the
+  // user's tracker apps + upcoming calendar events on mount and use
+  // them to (a) show a "On your calendar" / "In your tracker" chip
+  // on jobs at companies the user already has activity with, (b)
+  // sort those jobs to the top of the feed. Empty by default → the
+  // chip / boost simply doesn't fire for users with no tracker.
+  const [activeCompanies, setActiveCompanies] = useState<{
+    interviewing: Set<string>;
+    applied: Set<string>;
+    hasEvent: Set<string>;  // any event source: tracker / profile / cohort
+  }>({ interviewing: new Set(), applied: new Set(), hasEvent: new Set() });
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -522,6 +549,36 @@ export default function JobsScreen() {
         ? factsRes.items
         : Array.isArray(factsRes) ? factsRes : [];
       setFacts(factArr);
+
+      // ORGANISM #3 — fetch tracker apps + calendar suggestions so
+      // we can highlight feed jobs at companies the user already
+      // has activity with. Fire-and-forget; the job list still
+      // renders normally if either call fails.
+      try {
+        const [appsRes, sugRes] = await Promise.all([
+          dilly.get('/applications').catch(() => null) as any,
+          dilly.get('/calendar/profile-suggestions').catch(() => null) as any,
+        ]);
+        const apps = Array.isArray(appsRes) ? appsRes : (appsRes?.applications || []);
+        const interviewing = new Set<string>();
+        const applied = new Set<string>();
+        const hasEvent = new Set<string>();
+        for (const a of apps) {
+          const c = String(a?.company || '').trim().toLowerCase();
+          if (!c) continue;
+          const status = String(a?.status || '').toLowerCase();
+          if (status === 'interviewing') interviewing.add(c);
+          if (status === 'applied' || status === 'interviewing') {
+            applied.add(c);
+            hasEvent.add(c);
+          }
+        }
+        for (const s of (sugRes?.suggestions || [])) {
+          const c = String(s?.company || '').trim().toLowerCase();
+          if (c) hasEvent.add(c);
+        }
+        setActiveCompanies({ interviewing, applied, hasEvent });
+      } catch {}
 
       // /skill-lab/trending returns { videos: [...] } on the current
       // backend; tolerate a plain array too.
@@ -651,14 +708,32 @@ export default function JobsScreen() {
   // City + type + remote filter. Applied client-side to the full
   // feed. Per-chip counts shown so users know what will happen
   // before they tap.
+  // ORGANISM #3 — after filtering, we re-sort so jobs at companies
+  // the user has activity with float to the top: interviewing > applied
+  // > any-event > everyone else. Within each tier, the original feed
+  // order (rank_score) is preserved. This is what turns the jobs feed
+  // from "anonymous matches" into "Dilly knows you have an interview
+  // here Wednesday — here are 3 more roles at this company."
   const filteredJobs = useMemo(() => {
-    return jobs.filter(j => {
+    const passing = jobs.filter(j => {
       if (cityFilter && (j.location_city || '').toLowerCase() !== cityFilter) return false;
       if (!jobMatchesType(j, effectiveTypeFilter)) return false;
       if (!jobMatchesRemote(j, remoteFilter)) return false;
       return true;
     });
-  }, [jobs, cityFilter, effectiveTypeFilter, remoteFilter, jobMatchesType, jobMatchesRemote]);
+    const tier = (j: Listing): number => {
+      const c = (j.company || '').trim().toLowerCase();
+      if (!c) return 9;
+      if (activeCompanies.interviewing.has(c)) return 0;
+      if (activeCompanies.applied.has(c)) return 1;
+      if (activeCompanies.hasEvent.has(c)) return 2;
+      return 9;
+    };
+    return passing
+      .map((j, i) => ({ j, i, t: tier(j) }))
+      .sort((a, b) => a.t === b.t ? a.i - b.i : a.t - b.t)
+      .map(x => x.j);
+  }, [jobs, cityFilter, effectiveTypeFilter, remoteFilter, jobMatchesType, jobMatchesRemote, activeCompanies]);
 
   // Skill-gap -> video map, keyed by job id. Computed once per data
   // change. The heavy lifting is O(jobs * cohortKeywords) which is
@@ -868,6 +943,19 @@ export default function JobsScreen() {
   }
 
   const noticedLine = noticed[noticeIndex] || '';
+  // ORGANISM #3 — chip resolver. Returns a small "On your calendar"
+  // / "Interviewing" / "In your Tracker" pill for jobs at companies
+  // the user already has activity with. This is what makes the feed
+  // stop reading as anonymous matches and start reading as "Dilly
+  // already knows you have this on your radar."
+  const organismChipFor = (j: Listing) => {
+    const c = (j.company || '').trim().toLowerCase();
+    if (!c) return null;
+    if (activeCompanies.interviewing.has(c)) return { label: 'INTERVIEWING', color: '#AF52DE' };
+    if (activeCompanies.applied.has(c))      return { label: 'IN YOUR TRACKER', color: '#34C759' };
+    if (activeCompanies.hasEvent.has(c))     return { label: 'ON YOUR CALENDAR', color: theme.accent };
+    return null;
+  };
   const cardActions = {
     onExpand:  openDetail,
     onApply:   apply,
@@ -1108,6 +1196,7 @@ export default function JobsScreen() {
           expanded={expandedId === hero.id}
           narrative={narratives[hero.id]}
           gapVideoId={gapVideoByJob[hero.id]}
+          organismChip={organismChipFor(hero)}
           {...cardActions}
         />
       ) : null}
@@ -1117,6 +1206,7 @@ export default function JobsScreen() {
           jobs={strong.slice(1)} opacity={1}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
+          organismChipFor={organismChipFor}
         />
       ) : null}
 
@@ -1125,6 +1215,7 @@ export default function JobsScreen() {
           jobs={stretch} opacity={0.88}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
+          organismChipFor={organismChipFor}
           horizontal
         />
       ) : null}
@@ -1134,6 +1225,7 @@ export default function JobsScreen() {
           jobs={known.slice(0, 12)} opacity={0.72}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
+          organismChipFor={organismChipFor}
           horizontal
         />
       ) : null}
@@ -1230,12 +1322,16 @@ function JobDetailSheet({
     >
       <View style={{ flex: 1, backgroundColor: theme.surface.bg }}>
         {/* Top bar — small, persistent so the user can close from any
-            scroll position. Mirrors LinkedIn's compact header. */}
+            scroll position. Mirrors LinkedIn's compact header.
+            CRITICAL: explicit backgroundColor so scrolled content
+            doesn't bleed through (was clipping the HOW YOU MATCH
+            section title on dark mode). */}
         <View style={{
           paddingTop: insets.top + 6,
-          paddingHorizontal: 16, paddingBottom: 8,
+          paddingHorizontal: 16, paddingBottom: 10,
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           borderBottomWidth: 1, borderBottomColor: theme.surface.border,
+          backgroundColor: theme.surface.bg,
         }}>
           <TouchableOpacity onPress={onClose} hitSlop={12}>
             <Ionicons name="close" size={24} color={theme.surface.t1} />
@@ -1326,24 +1422,33 @@ function JobDetailSheet({
                 </Text>
                 <Ionicons name="open-outline" size={14} color="#FFF" />
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => {
-                  const q = encodeURIComponent(`${job.company} ${job.title}`.trim());
-                  Linking.openURL(`https://www.linkedin.com/jobs/search/?keywords=${q}`).catch(() => {});
-                }}
-                style={{
-                  paddingVertical: 13, paddingHorizontal: 16, borderRadius: 24,
-                  borderWidth: 1.5, borderColor: theme.surface.border,
-                  alignItems: 'center', justifyContent: 'center',
-                  flexDirection: 'row', gap: 6,
-                }}
-              >
-                <Ionicons name="logo-linkedin" size={16} color="#0A66C2" />
-                <Text style={{ fontWeight: '700', fontSize: 13, color: theme.surface.t1 }}>
-                  LinkedIn
-                </Text>
-              </TouchableOpacity>
+              {/* "View on LinkedIn" — only when this job actually
+                  originated from LinkedIn. Hidden for Greenhouse /
+                  Lever / Workday / company-direct postings to prevent
+                  the dead-end "no results found" the user reported. */}
+              {jobIsOnLinkedIn(job) ? (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    const direct = (job.apply_url || job.url || '').toLowerCase();
+                    const url = direct.includes('linkedin.com')
+                      ? (job.apply_url || job.url)!
+                      : `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.company} ${job.title}`.trim())}`;
+                    Linking.openURL(url).catch(() => {});
+                  }}
+                  style={{
+                    paddingVertical: 13, paddingHorizontal: 16, borderRadius: 24,
+                    borderWidth: 1.5, borderColor: theme.surface.border,
+                    alignItems: 'center', justifyContent: 'center',
+                    flexDirection: 'row', gap: 6,
+                  }}
+                >
+                  <Ionicons name="logo-linkedin" size={16} color="#0A66C2" />
+                  <Text style={{ fontWeight: '700', fontSize: 13, color: theme.surface.t1 }}>
+                    LinkedIn
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
 
@@ -1362,10 +1467,24 @@ function JobDetailSheet({
               </Text>
             </View>
             {loadingNarr ? (
-              <View style={{ gap: 8 }}>
-                <View style={{ height: 14, backgroundColor: theme.surface.s2, borderRadius: 6, width: '92%' }} />
-                <View style={{ height: 14, backgroundColor: theme.surface.s2, borderRadius: 6, width: '78%' }} />
-                <View style={{ height: 14, backgroundColor: theme.surface.s2, borderRadius: 6, width: '85%' }} />
+              // Pencil DillyFace loading: Dilly is "writing down" how
+              // you match — same pencil-writing variant used elsewhere
+              // for Dilly-is-thinking moments. Reads as a person
+              // composing a brief, not a generic spinner.
+              <View style={{
+                alignItems: 'center', paddingVertical: 22,
+                borderRadius: 14,
+                backgroundColor: theme.surface.s1,
+                borderWidth: 1, borderColor: theme.surface.border,
+              }}>
+                <DillyFace size={88} mood="writing" accessory="pencil" />
+                <Text style={{
+                  marginTop: 16, fontSize: 13, fontWeight: '600',
+                  color: theme.surface.t2, fontFamily: theme.type.body,
+                  textAlign: 'center', paddingHorizontal: 20,
+                }}>
+                  Dilly is reading your profile against this role…
+                </Text>
               </View>
             ) : data ? (
               <View style={{ gap: 14 }}>
@@ -1617,6 +1736,11 @@ interface CardCommonProps {
    *  the trending pool didn't have a good match. Rendered inline
    *  inside the expanded card. */
   gapVideoId?: string;
+  /** ORGANISM #3 — calendar/tracker awareness chip. Set when the
+   *  user has activity at this company. The card renders a small
+   *  pill so the user sees instantly that this isn't an anonymous
+   *  match — Dilly knows you have an interview Wednesday. */
+  organismChip?: { label: string; color: string } | null;
   onExpand: (j: Listing) => void;
   onApply:  (j: Listing) => void;
   onAsk:    (j: Listing) => void;
@@ -1694,7 +1818,7 @@ function HeroCard(props: CardCommonProps) {
 
 // -- Band ---------------------------------------------------------------------
 
-function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedId, narratives, gapVideoByJob, actions, horizontal }: {
+function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedId, narratives, gapVideoByJob, actions, horizontal, organismChipFor }: {
   label: string;
   subtitle: string;
   jobs: Listing[];
@@ -1708,6 +1832,9 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
   /** Horizontal carousel - breaks the all-list feel of the page so
    *  WORTH A SHOT and ON THE RADAR don't feel like infinite scroll. */
   horizontal?: boolean;
+  /** Resolves a calendar/tracker chip per job; threaded down so the
+   *  band sections don't need to know the activeCompanies sets. */
+  organismChipFor?: (j: Listing) => { label: string; color: string } | null;
 }) {
   return (
     <View style={{ marginTop: 28, opacity }}>
@@ -1730,6 +1857,7 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
                 expanded={false /* never expand inside a horizontal carousel */}
                 narrative={narratives[j.id]}
                 gapVideoId={gapVideoByJob[j.id]}
+                organismChip={organismChipFor ? organismChipFor(j) : null}
                 {...actions}
               />
             </View>
@@ -1745,6 +1873,7 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
             expanded={expandedId === j.id}
             narrative={narratives[j.id]}
             gapVideoId={gapVideoByJob[j.id]}
+            organismChip={organismChipFor ? organismChipFor(j) : null}
             {...actions}
           />
         ))
@@ -1756,7 +1885,7 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
 // -- Job Card -----------------------------------------------------------------
 
 function JobCard(props: CardCommonProps) {
-  const { job, profile, theme, expanded, gapVideoId, onApply } = props;
+  const { job, profile, theme, expanded, gapVideoId, onApply, organismChip } = props;
   const story = buildFitStory(job, profile);
   const posted = daysAgo(job.posted_date);
 
@@ -1764,7 +1893,13 @@ function JobCard(props: CardCommonProps) {
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => props.onExpand(job)}
-      style={[styles.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+      style={[
+        styles.card,
+        { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+        // Active-company jobs get a subtle accent border so they read
+        // as "Dilly already has activity here" at a glance.
+        organismChip ? { borderColor: organismChip.color + '55', borderWidth: 1.5 } : null,
+      ]}
     >
       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
         <CompanyLogo job={job} size={32} theme={theme} />
@@ -1776,6 +1911,25 @@ function JobCard(props: CardCommonProps) {
           <Text style={[styles.cardCompany, { color: theme.surface.t2 }]} numberOfLines={1}>
             {job.company}{job.location_city ? ` · ${job.location_city}` : job.remote ? ' · Remote' : ''}
           </Text>
+          {organismChip ? (
+            <View style={{
+              alignSelf: 'flex-start',
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              marginTop: 6,
+              paddingHorizontal: 7, paddingVertical: 2,
+              borderRadius: 6,
+              backgroundColor: organismChip.color + '15',
+              borderWidth: 1, borderColor: organismChip.color + '40',
+            }}>
+              <Ionicons name="sparkles" size={9} color={organismChip.color} />
+              <Text style={{
+                fontSize: 9, fontWeight: '900', letterSpacing: 0.6,
+                color: organismChip.color,
+              }}>
+                {organismChip.label}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
       {story ? <Text style={[styles.cardStory, { color: theme.surface.t1 }]} numberOfLines={expanded ? 0 : 2}>{story}</Text> : null}
@@ -1934,26 +2088,30 @@ function ExpandedDetails({ job, theme, narrative, gapVideoId, onApply, onAsk, on
           <Ionicons name="document-text-outline" size={14} color={theme.surface.t2} />
           <Text style={[styles.actionSecondaryText, { color: theme.surface.t2 }]}>Tailor resume</Text>
         </TouchableOpacity>
-        {/* "Find on LinkedIn" — integration play. We don't try to be a
-            job aggregator (LinkedIn has 25M+ listings vs Dilly's ~10K).
-            Instead, every Dilly job card has a one-tap escape to
-            LinkedIn for research: see the company page, find mutual
-            connections, check who got hired into similar roles. Dilly
-            stays the user's home base, LinkedIn provides the breadth.
-            URL search format works for any company + role. */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={(e) => {
-            e.stopPropagation?.();
-            const q = encodeURIComponent(`${job.company} ${job.title}`.trim());
-            const url = `https://www.linkedin.com/jobs/search/?keywords=${q}`;
-            Linking.openURL(url).catch(() => {});
-          }}
-          style={[styles.actionSecondary, { borderColor: theme.surface.border }]}
-        >
-          <Ionicons name="logo-linkedin" size={14} color="#0A66C2" />
-          <Text style={[styles.actionSecondaryText, { color: theme.surface.t2 }]}>Find on LinkedIn</Text>
-        </TouchableOpacity>
+        {/* "View on LinkedIn" — gated to jobs that actually originated
+            from LinkedIn (was always-shown, which produced "no results
+            found" dead-ends for Greenhouse / Lever / company-direct
+            postings the user couldn't find on LinkedIn). When the job
+            does come from LinkedIn, link directly to the post URL
+            instead of a keyword search so the user lands on the
+            specific listing, not a search results page. */}
+        {jobIsOnLinkedIn(job) ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              const direct = (job.apply_url || job.url || '').toLowerCase();
+              const url = direct.includes('linkedin.com')
+                ? (job.apply_url || job.url)!
+                : `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.company} ${job.title}`.trim())}`;
+              Linking.openURL(url).catch(() => {});
+            }}
+            style={[styles.actionSecondary, { borderColor: theme.surface.border }]}
+          >
+            <Ionicons name="logo-linkedin" size={14} color="#0A66C2" />
+            <Text style={[styles.actionSecondaryText, { color: theme.surface.t2 }]}>View on LinkedIn</Text>
+          </TouchableOpacity>
+        ) : null}
         {/* "Reviews on Glassdoor" — integration play. Glassdoor owns
             100M+ employee reviews; Dilly shouldn't try to compete on
             review data. One-tap escape to Glassdoor for the company

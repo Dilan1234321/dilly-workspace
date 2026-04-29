@@ -281,6 +281,73 @@ async function resolveProfile(): Promise<{
   }
 }
 
+/** ORGANISM #4 — pull the closest upcoming event for the lock-screen
+ *  + Home Screen widgets. Same merge logic as the Home "This Week"
+ *  card (profile deadlines + tracker apps + /calendar/profile-
+ *  suggestions). Compact: title trimmed for a small complication,
+ *  countdown labeled relative to today. */
+async function resolveNextEvent(): Promise<{
+  title?: string; countdown?: string; company?: string; type?: string;
+}> {
+  try {
+    const { dilly } = await import('./dilly');
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const [pdRes, sugRes, appsRes]: any = await Promise.all([
+      dilly.fetch('/profile').then((r: any) => r.json()).catch(() => ({})),
+      dilly.get('/calendar/profile-suggestions').catch(() => null),
+      dilly.get('/applications').catch(() => ({ applications: [] })),
+    ]);
+    const pile: Array<{ title: string; date: string; type: string; company?: string }> = [];
+    for (const d of (pdRes?.deadlines || [])) {
+      if (!d?.date) continue;
+      pile.push({
+        title: d.label || d.title || 'Event',
+        date: String(d.date).slice(0, 10),
+        type: d.type || 'deadline',
+        company: d.company,
+      });
+    }
+    const apps = Array.isArray(appsRes) ? appsRes : (appsRes?.applications || []);
+    for (const a of apps) {
+      const dl = (a?.deadline || '').slice(0, 10);
+      if (!dl) continue;
+      pile.push({
+        title: `${a.company || ''} ${a.role || 'Application'}`.trim(),
+        date: dl,
+        type: 'application',
+        company: a.company,
+      });
+    }
+    for (const s of (sugRes?.suggestions || [])) {
+      if (!s?.date) continue;
+      pile.push({
+        title: s.title || 'Event',
+        date: String(s.date).slice(0, 10),
+        type: s.type || 'custom',
+        company: s.company,
+      });
+    }
+    const next = pile
+      .filter(e => e.date >= todayKey)
+      .sort((a, b) => a.date.localeCompare(b.date))[0];
+    if (!next) return {};
+    const ms = new Date(next.date).getTime() - new Date(todayKey).getTime();
+    const days = Math.round(ms / 86400000);
+    const countdown = days <= 0 ? 'today'
+      : days === 1 ? 'tomorrow'
+      : days < 7 ? `in ${days}d`
+      : days < 14 ? 'next week'
+      : `in ${Math.round(days / 7)}w`;
+    // Trim the title for the tiny rectangular complication. Keep
+    // company name visible if present.
+    let title = next.title || 'Event';
+    if (title.length > 28) title = title.slice(0, 27).trimEnd() + '…';
+    return { title, countdown, company: next.company, type: next.type };
+  } catch {
+    return {};
+  }
+}
+
 async function resolveTruthStreak(): Promise<number> {
   // Best-effort - reads a local AsyncStorage tally maintained by the
   // truth-answer queue drainer. If nothing yet, return 0.
@@ -313,12 +380,13 @@ function stripFormatting(s: string): string {
  *  from the widget extension. */
 export async function refreshAllWidgets(): Promise<void> {
   try {
-    const [oneMove, tonight, mirror, streak, profile] = await Promise.all([
+    const [oneMove, tonight, mirror, streak, profile, nextEvent] = await Promise.all([
       resolveOneMove(),
       resolveTonight(),
       resolveMirror(),
       resolveTruthStreak(),
       resolveProfile(),
+      resolveNextEvent(),
     ]);
 
     // Day-rotation gates the question + truth so each calendar day
@@ -348,6 +416,14 @@ export async function refreshAllWidgets(): Promise<void> {
       profileRecentFacts: profile.recentFacts,
       profileLatestFactDate: profile.latestFactDate,
       profileLatestFactCategory: profile.latestFactCategory,
+      // ORGANISM #4 — what's coming up. Lets the lock-screen +
+      // Home Screen widgets show "Citadel interview Wed" without
+      // unlocking the app. Pulled from the merged calendar feed
+      // (profile.deadlines + tracker apps + profile-suggestions).
+      nextEventTitle: nextEvent.title,
+      nextEventCountdown: nextEvent.countdown,
+      nextEventCompany: nextEvent.company,
+      nextEventType: nextEvent.type,
     };
     await writeWidgetData(payload);
   } catch {
