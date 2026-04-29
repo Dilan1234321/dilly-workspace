@@ -3500,6 +3500,74 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
             "'aggressive' to compare."
         )
 
+    # ── ORGANISM: resume reads tracker + calendar for this company ──
+    # If the user is already in flight at this company (interview
+    # scheduled, app submitted, fact-extracted activity), the resume
+    # gen prompt should know. "Interview is in 3 days, emphasize what
+    # gets tested in their first round" produces a different (better)
+    # resume than a cold-start tailor. Zero LLM cost — pure data lookup.
+    _company_activity_block = ""
+    try:
+        from projects.dilly.api.application_store import get_applications as _ga_resume
+        from projects.dilly.api.profile_store import get_profile as _gp_resume
+        from datetime import datetime as _dt_resume_w, timedelta as _td_resume_w
+        _company_lower = job_company.lower()
+        _today_w = _dt_resume_w.utcnow().date()
+        _activity_lines: list[str] = []
+        # 1. Tracker apps for this company
+        try:
+            _apps_w = _ga_resume(email) or []
+        except Exception:
+            _apps_w = []
+        for a in _apps_w:
+            if not isinstance(a, dict):
+                continue
+            if (a.get("company") or "").lower() != _company_lower:
+                continue
+            status = (a.get("status") or "").lower()
+            role = (a.get("role") or "").strip()
+            dl = (a.get("deadline") or "")[:10]
+            applied = (a.get("applied_at") or "")[:10]
+            line = f"  - Tracker: {role or 'app'} (status: {status}"
+            if dl:    line += f", deadline {dl}"
+            if applied: line += f", applied {applied}"
+            line += ")"
+            _activity_lines.append(line)
+        # 2. Calendar deadlines for this company
+        try:
+            _profile_w = _gp_resume(email) or {}
+            for d in _profile_w.get("deadlines") or []:
+                if not isinstance(d, dict):
+                    continue
+                d_company = (d.get("company") or "").lower()
+                d_label = (d.get("label") or d.get("title") or "")
+                if d_company != _company_lower and _company_lower not in d_label.lower():
+                    continue
+                d_date = (d.get("date") or "")[:10]
+                if not d_date:
+                    continue
+                try:
+                    d_d = _dt_resume_w.strptime(d_date, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                if d_d < _today_w:
+                    continue
+                days_out = (d_d - _today_w).days
+                when = "today" if days_out == 0 else (f"in {days_out} days" if days_out <= 30 else d_date)
+                d_type = d.get("type") or "event"
+                _activity_lines.append(f"  - Calendar: {d_type} \"{d_label}\" ({when})")
+        except Exception:
+            pass
+        if _activity_lines:
+            _company_activity_block = (
+                f"IN-FLIGHT ACTIVITY AT {job_company.upper()} (the user already has signal here — "
+                "tailor the resume to what's been happening, not as a cold-start tailor):\n"
+                + "\n".join(_activity_lines[:5])
+                + "\n"
+            )
+    except Exception:
+        pass
+
     system_prompt = f"""You are Dilly's resume generation AI. Your single job is to turn a student's verified profile into a tailored resume that (a) is 100% true to the profile and (b) passes the target company's ATS.
 
 {_path_block}
@@ -3513,6 +3581,7 @@ TARGET JOB:
   Company: {job_company}
   Cohort/Template: {cohort}{finance_note}
 
+{_company_activity_block}
 JOB DESCRIPTION:
 {job_description[:4000] if job_description else "(Not provided — tailor based on job title and company reputation.)"}
 

@@ -891,11 +891,41 @@ def _build_rich_system_prompt(r: dict) -> str:
                 trk_lines.append(f"  - {company} — {role} ({status})")
         if trk_lines:
             woven_lines.append("IN-FLIGHT APPLICATIONS (highest-priority tracker entries — be ready to coach on these specifically):\n" + "\n".join(trk_lines))
+    # ── Per-path framing of the woven snapshot ──────────────────────
+    # Each user_path values the same data differently. A senior_reset
+    # hates "pipeline" language; a dropout has no degree; a visa user
+    # is on an OPT clock; a parent_returning is rebuilding identity.
+    # This postscript tells Dilly HOW to frame the snapshot in their
+    # voice. Path-aware tone makes the organism feel like it knows
+    # WHO it's talking to, not just what they typed.
+    _woven_framing = {
+        "i_have_a_job":   "Frame the snapshot as field intel + side bets, not job-hunt momentum. They're not applying.",
+        "exploring":      "Frame the snapshot as narrowing the funnel — every event is a data point about what they actually want.",
+        "student":        "Frame the snapshot as a learning loop. Teach the unwritten rules behind each event when relevant.",
+        "international_grad": "Frame against their OPT/visa clock. Time-sensitive. Sponsor-ability is implicit context for every event.",
+        "dropout":        "Never frame as 'pipeline' or 'recruiter funnel'. Frame as 'shipping' — what they built, who saw it.",
+        "senior_reset":   "Frame as momentum, not pursuit. They have the experience; this is positioning, not chasing. Calm voice, no hype.",
+        "career_switch":  "Frame as a translation in progress. Each event is them learning the new field's language.",
+        "first_gen_college": "Frame as making the unwritten rules explicit. Each event is one more rule they're learning.",
+        "parent_returning": "Frame as re-entering, not re-starting. Their prior experience is not expired. Avoid 'gap' language.",
+        "veteran":        "Frame as continuing service in a different uniform. Translate civilian-coded events back to the discipline they already have.",
+        "trades_to_white_collar": "Frame as adding language, not replacing skill. They already know how to work; they're learning how the office talks.",
+        "formerly_incarcerated": "Frame as a clean slate plus real experience. Highlight fair-chance signals; never flag the gap.",
+        "neurodivergent": "Frame as direct, literal, scriptable. No metaphors. State exactly what each event is for.",
+        "disabled_professional": "Frame around their actual capabilities, not accommodation logistics. Disclosure is their call.",
+        "lgbtq":          "Frame neutrally. Don't bring up identity unless they bring it up first.",
+        "rural_remote_only": "Frame around remote-readiness signals. Never suggest relocation.",
+        "ex_founder":     "Frame as operator → operator, not 'returning to the workforce'. Their founder time is real experience.",
+        "refugee":        "Frame in plain English, no idioms. Translate experience to US-equivalent terms when relevant.",
+    }
+    woven_path_framing = _woven_framing.get(_user_path, "")
+
     woven_block = ""
     if woven_lines:
         woven_block = (
             "═══ WOVEN CONTEXT (this is what makes Dilly feel like one organism — every other surface of the app already knows these things, so the chat has to as well) ═══\n"
             + "\n\n".join(woven_lines)
+            + (f"\n\nFRAMING FOR THIS USER: {woven_path_framing}" if woven_path_framing else "")
             + "\n══════════\n"
         )
 

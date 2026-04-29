@@ -885,6 +885,33 @@ export default function CalendarScreen() {
   // avoid a redundant CTA - the user can always unsubscribe via
   // Settings → Calendar → Account, which is where iOS owns the state.
   const [calSubscribed, setCalSubscribed] = useState(false);
+  // ORGANISM Calendar v2 — source filter pills. Lets the user see
+  // "what Dilly composed for me" vs "what I added myself" so the
+  // calendar reads as a collaborative artifact, not a generic
+  // to-do list. 'all' is the default; the count badges on each
+  // pill update as events stream in.
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'dilly' | 'tracker' | 'manual'>('all');
+  // Target companies pulled from /memory once on mount; used in the
+  // empty-state to suggest "Dilly knows you target X — want typical
+  // application dates?" so a blank calendar reads as "Dilly is ready
+  // to compose for you" instead of "this surface is dead."
+  const [profileTargets, setProfileTargets] = useState<string[]>([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dilly.fetch('/memory');
+        if (!res?.ok) return;
+        const json = await res.json();
+        const items = (json?.items || []) as any[];
+        const t = items
+          .filter(it => String(it?.category || '').toLowerCase() === 'target_company')
+          .map(it => String(it?.value || it?.label || '').trim())
+          .filter(Boolean)
+          .slice(0, 3);
+        setProfileTargets(t);
+      } catch {}
+    })();
+  }, []);
   useFocusEffect(useCallback(() => {
     isCalendarSubscribed().then(setCalSubscribed);
   }, []));
@@ -1244,19 +1271,55 @@ export default function CalendarScreen() {
     setSelectedDay(null);
   }
 
-  // Filter events for selected day or upcoming
-  const displayEvents = useMemo(() => {
-    if (selectedDay) {
-      return events.filter(e => e.date === selectedDay).sort((a, b) => a.title.localeCompare(b.title));
+  // ORGANISM Calendar v2 — bucket events by source so the user
+  // sees Dilly's contributions distinct from manual entries. The
+  // counts feed both the hero band AND the source filter pills.
+  // Dilly bucket = anything Dilly composed (profile_fact, auto_prep,
+  // cohort_intel, chapter, or legacy createdBy='dilly*').
+  const sourceCounts = useMemo(() => {
+    const isDilly = (e: CalendarEvent) =>
+      e.source === 'profile_fact' || e.source === 'auto_prep' ||
+      e.source === 'cohort_intel' || e.source === 'chapter' ||
+      (e.createdBy || '').startsWith('dilly');
+    const isTracker = (e: CalendarEvent) =>
+      e.source === 'tracker' || e.createdBy === 'tracker';
+    let dilly = 0, tracker = 0, manual = 0;
+    for (const e of events) {
+      if (isDilly(e))        dilly++;
+      else if (isTracker(e)) tracker++;
+      else                   manual++;
     }
-    // Upcoming 14 days
+    return { dilly, tracker, manual, total: events.length };
+  }, [events]);
+
+  // Filter events for selected day or upcoming, then narrow by the
+  // active source pill.
+  const displayEvents = useMemo(() => {
+    const isDilly = (e: CalendarEvent) =>
+      e.source === 'profile_fact' || e.source === 'auto_prep' ||
+      e.source === 'cohort_intel' || e.source === 'chapter' ||
+      (e.createdBy || '').startsWith('dilly');
+    const isTracker = (e: CalendarEvent) =>
+      e.source === 'tracker' || e.createdBy === 'tracker';
+    const matchesSource = (e: CalendarEvent) => {
+      if (sourceFilter === 'all')      return true;
+      if (sourceFilter === 'dilly')    return isDilly(e);
+      if (sourceFilter === 'tracker')  return isTracker(e);
+      if (sourceFilter === 'manual')   return !isDilly(e) && !isTracker(e);
+      return true;
+    };
+    if (selectedDay) {
+      return events
+        .filter(e => e.date === selectedDay && matchesSource(e))
+        .sort((a, b) => a.title.localeCompare(b.title));
+    }
     return events
       .filter(e => {
         const days = daysUntil(e.date);
-        return days >= -1 && days <= 14 && !e.completedAt;
+        return days >= -1 && days <= 14 && !e.completedAt && matchesSource(e);
       })
       .sort((a, b) => daysUntil(a.date) - daysUntil(b.date));
-  }, [events, selectedDay]);
+  }, [events, selectedDay, sourceFilter]);
 
   if (loading) {
     return (
@@ -1286,6 +1349,112 @@ export default function CalendarScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[cs.scroll, { paddingBottom: insets.bottom + 40 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
+
+        {/* ── ORGANISM Calendar v2 — Hero band ────────────────────
+            "This week with Dilly" frame: tells the user how many
+            events Dilly composed for them vs how many they added.
+            This is what makes the calendar feel like a collaboration
+            with Dilly, not a generic scheduler. The pencil DillyFace
+            sits next to the count to anchor the "Dilly is doing
+            this" identity. */}
+        <FadeInView delay={20}>
+          <View style={{
+            marginTop: 12,
+            marginHorizontal: spacing.lg,
+            padding: 16, borderRadius: 18,
+            backgroundColor: theme.surface.s1,
+            borderWidth: 1, borderColor: theme.surface.border,
+            flexDirection: 'row', alignItems: 'center', gap: 14,
+          }}>
+            <DillyFace size={48} mood="thoughtful" accessory="pencil" />
+            <View style={{ flex: 1 }}>
+              <Text style={{
+                fontSize: 9, fontWeight: '900', letterSpacing: 1.4,
+                color: theme.surface.t3, marginBottom: 4,
+              }}>
+                THIS WEEK WITH DILLY
+              </Text>
+              <Text style={{
+                fontSize: 18, fontWeight: '800',
+                color: theme.surface.t1, lineHeight: 22,
+                fontFamily: theme.type.display,
+              }}>
+                {sourceCounts.total === 0
+                  ? 'A clean slate.'
+                  : sourceCounts.dilly > 0
+                    ? `Dilly composed ${sourceCounts.dilly} ${sourceCounts.dilly === 1 ? 'event' : 'events'} for you.`
+                    : `${sourceCounts.total} ${sourceCounts.total === 1 ? 'event' : 'events'} on deck.`}
+              </Text>
+              {sourceCounts.dilly + sourceCounts.tracker > 0 && (
+                <Text style={{ fontSize: 12, color: theme.surface.t2, marginTop: 4, lineHeight: 16 }}>
+                  {[
+                    sourceCounts.tracker > 0 ? `${sourceCounts.tracker} from your Tracker` : null,
+                    sourceCounts.manual  > 0 ? `${sourceCounts.manual} you added`         : null,
+                  ].filter(Boolean).join(' · ') || 'All composed from your Profile.'}
+                </Text>
+              )}
+            </View>
+          </View>
+        </FadeInView>
+
+        {/* ── Source filter pills ──────────────────────────────
+            Lets the user toggle to see only Dilly's contributions
+            vs only their own additions. Pure presentation filter —
+            doesn't mutate any data. The All pill always shows even
+            when total=0 so the user has a clear default. */}
+        <FadeInView delay={60}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: spacing.lg, paddingTop: 12, paddingBottom: 4,
+              gap: 8,
+            }}
+          >
+            {([
+              { key: 'all',     label: 'All',           n: sourceCounts.total,   color: theme.accent },
+              { key: 'dilly',   label: 'Dilly suggested', n: sourceCounts.dilly,   color: PURPLE },
+              { key: 'tracker', label: 'From Tracker',  n: sourceCounts.tracker, color: GREEN },
+              { key: 'manual',  label: 'You added',     n: sourceCounts.manual,  color: theme.surface.t2 },
+            ] as const).map(p => {
+              const active = sourceFilter === p.key;
+              return (
+                <AnimatedPressable
+                  key={p.key}
+                  onPress={() => setSourceFilter(p.key as any)}
+                  scaleDown={0.92}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 6,
+                    paddingHorizontal: 12, paddingVertical: 7,
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                    borderColor: active ? p.color : theme.surface.border,
+                    backgroundColor: active ? p.color + '15' : 'transparent',
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 12, fontWeight: '700',
+                    color: active ? p.color : theme.surface.t2,
+                  }}>
+                    {p.label}
+                  </Text>
+                  {p.n > 0 && (
+                    <View style={{
+                      paddingHorizontal: 6, paddingVertical: 1,
+                      borderRadius: 8,
+                      backgroundColor: active ? p.color : theme.surface.s2,
+                    }}>
+                      <Text style={{
+                        fontSize: 10, fontWeight: '900',
+                        color: active ? '#FFF' : theme.surface.t3,
+                      }}>{p.n}</Text>
+                    </View>
+                  )}
+                </AnimatedPressable>
+              );
+            })}
+          </ScrollView>
+        </FadeInView>
 
         {/* Dilly Calendar sync card */}
         {!calSubscribed ? (
@@ -1408,23 +1577,85 @@ export default function CalendarScreen() {
             )}
           </View>
 
-          {/* Build-78: smart empty state */}
+          {/* ── ORGANISM Calendar v2 — smart empty state ─────────
+              The empty state is the single biggest "is this thing
+              alive?" moment for new users. v2 reads the user's
+              Profile to suggest WHY their calendar is empty + a
+              concrete next action. Three flavors:
+                a) Source filter narrowed everything out → suggest
+                   widening the filter (no Profile read needed).
+                b) Genuine empty + user has target_company facts →
+                   "Dilly knows you target X, Y. Want typical
+                   application dates?"
+                c) Genuine empty + thin Profile → "Tell Dilly more
+                   about what you're working toward — the calendar
+                   composes itself once she knows."
+              Every flavor includes a one-tap action so the user
+              never sees a dead end. */}
           {displayEvents.length === 0 ? (
-            <View style={cs.emptyWrap}>
-              <Ionicons name="calendar-outline" size={32} color={theme.surface.t3 + '40'} />
-              <Text style={[cs.emptyText, { color: theme.surface.t3 }]}>
-                {selectedDay ? 'Nothing on this day' : 'No upcoming events'}
-              </Text>
-              {!selectedDay && events.length === 0 && (
-                <Text style={[cs.emptyHint, { color: theme.surface.t3 }]}>
-                  Track an application with a deadline, or add an interview date  -  Dilly will build your prep plan automatically.
-                </Text>
-              )}
-              <AnimatedPressable style={cs.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
-                <Ionicons name="add" size={14} color={GOLD} />
-                <Text style={cs.emptyBtnText}>Add an event</Text>
-              </AnimatedPressable>
-            </View>
+            (() => {
+              const filterNarrowed =
+                events.length > 0 && sourceFilter !== 'all';
+              const targets: string[] = profileTargets;
+              return (
+                <View style={cs.emptyWrap}>
+                  <DillyFace size={64} mood="curious" />
+                  <Text style={[cs.emptyText, { color: theme.surface.t1, fontWeight: '700', marginTop: 4 }]}>
+                    {selectedDay
+                      ? 'Nothing on this day'
+                      : filterNarrowed
+                        ? `Nothing here under "${sourceFilter}"`
+                        : targets.length > 0
+                          ? `Dilly knows you target ${targets.join(', ')}.`
+                          : 'A clean slate.'}
+                  </Text>
+                  {filterNarrowed ? (
+                    <>
+                      <Text style={[cs.emptyHint, { color: theme.surface.t3 }]}>
+                        Switch back to All to see everything Dilly is composing for you.
+                      </Text>
+                      <AnimatedPressable
+                        style={cs.emptyBtn}
+                        onPress={() => setSourceFilter('all')}
+                        scaleDown={0.97}
+                      >
+                        <Ionicons name="apps" size={14} color={GOLD} />
+                        <Text style={cs.emptyBtnText}>Show all</Text>
+                      </AnimatedPressable>
+                    </>
+                  ) : !selectedDay && events.length === 0 && targets.length > 0 ? (
+                    <>
+                      <Text style={[cs.emptyHint, { color: theme.surface.t3 }]}>
+                        Open the AI chat and tell Dilly when {targets[0]}'s applications typically open — she'll add the placeholders for you.
+                      </Text>
+                      <AnimatedPressable
+                        style={cs.emptyBtn}
+                        onPress={() => router.push('/(app)' as any)}
+                        scaleDown={0.97}
+                      >
+                        <Ionicons name="sparkles" size={14} color={GOLD} />
+                        <Text style={cs.emptyBtnText}>Talk to Dilly</Text>
+                      </AnimatedPressable>
+                    </>
+                  ) : !selectedDay && events.length === 0 ? (
+                    <>
+                      <Text style={[cs.emptyHint, { color: theme.surface.t3 }]}>
+                        Tell Dilly about a deadline or an interview — she'll add it here automatically. The more she knows, the more this surface fills itself in.
+                      </Text>
+                      <AnimatedPressable style={cs.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
+                        <Ionicons name="add" size={14} color={GOLD} />
+                        <Text style={cs.emptyBtnText}>Add an event</Text>
+                      </AnimatedPressable>
+                    </>
+                  ) : (
+                    <AnimatedPressable style={cs.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
+                      <Ionicons name="add" size={14} color={GOLD} />
+                      <Text style={cs.emptyBtnText}>Add an event</Text>
+                    </AnimatedPressable>
+                  )}
+                </View>
+              );
+            })()
           ) : (
             <>
               {/* Group events by day for agenda-style rendering when no

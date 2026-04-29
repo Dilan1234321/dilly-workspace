@@ -305,7 +305,7 @@ function buildNoticedLines(jobs: Listing[], profile: Profile | null): string[] {
   const userCities = (profile?.job_locations || []).map(c => c.toLowerCase());
   if (userCities.length) {
     const inCity = jobs.filter(j => userCities.includes((j.location_city || '').toLowerCase())).length;
-    if (inCity >= 2) lines.push(`${inCity} matches are in the cities you told Dilly you want.`);
+    if (inCity >= 2) lines.push(`${inCity} roles in the cities you told Dilly you want.`);
   }
   if (lines.length === 0) lines.push('Dilly is watching this feed for you. Check back anytime.');
   return lines;
@@ -918,7 +918,7 @@ export default function JobsScreen() {
         mood="confident"
         accessory="briefcase"
         messages={[
-          'Dilly is pulling fresh matches…',
+          'Dilly is pulling fresh roles…',
           'Reading new postings…',
           'Checking your profile against today\'s roles…',
           'Almost ready…',
@@ -978,8 +978,8 @@ export default function JobsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.pageTitle, { color: theme.surface.t1 }]}>Jobs</Text>
               <Text style={[styles.pageSub, { color: theme.surface.t3 }]}>
-                {filteredJobs.length} {filteredJobs.length === 1 ? 'match' : 'matches'}
-                {activeFilterCount > 0 ? ` of ${jobs.length}` : ' today'}
+                {filteredJobs.length} {filteredJobs.length === 1 ? 'role' : 'roles'}
+                {activeFilterCount > 0 ? ` of ${jobs.length}` : ''}
               </Text>
             </View>
           </View>
@@ -1232,7 +1232,7 @@ export default function JobsScreen() {
 
       {jobs.length === 0 ? (
         <View style={{ padding: 32, alignItems: 'center' }}>
-          <Text style={[styles.errorTitle, { color: theme.surface.t1 }]}>No matches yet</Text>
+          <Text style={[styles.errorTitle, { color: theme.surface.t1 }]}>Nothing here yet</Text>
           <Text style={[styles.errorBody, { color: theme.surface.t2 }]}>
             Dilly is still indexing your profile. Check back in a bit.
           </Text>

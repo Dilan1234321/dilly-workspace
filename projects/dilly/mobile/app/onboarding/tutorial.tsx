@@ -44,115 +44,131 @@ type CardSpec = {
 // Hand-written. Every word has to earn its keep.
 
 const CARDS: Record<AppMode, CardSpec[]> = {
+  // Holder organism showcase — same arc as seeker/student but framed
+  // for someone who already has a job: Dilly remembers their role,
+  // wins, and the field shifts that matter to them; every chat tunes
+  // her sharper; she uses what she knows in the weekly brief, the
+  // raise brief, the escape hatch, the trajectory tracker.
   holder: [
     {
-      eyebrow: 'YOU HAVE A JOB',
-      headline: "AI is reshaping your field\nwhether you move or not.",
-      body: 'Dilly watches your industry for you. What is changing, what is safe, what to learn next. for your exact role.',
-      cta: "Show me what's next",
+      eyebrow: 'YOUR DILLY PROFILE',
+      headline: "Dilly remembers\nyour wins, your thinking, your role.",
+      body: "Every conversation, every win logged, every decision. Stored on your Profile — the spine she runs on. Nothing slips.",
+      cta: 'Show me',
+      illustration: 'profile',
+    },
+    {
+      eyebrow: 'EVERY CHAT MAKES HER SHARPER',
+      headline: "Tell her what just happened.\nShe carries it forward.",
+      body: "Mention a hard week, a new project, a shift in your field. Dilly captures it. Next time you open the app, those facts shape what she shows you.",
+      cta: 'Next',
       illustration: 'arena',
     },
     {
-      eyebrow: 'EVERY MONDAY',
-      headline: "One signal from your field.\nNo spam.",
-      body: 'Dilly delivers one real market move each week. A headline, a data point, one thing to do about it.',
-      cta: 'Got it',
-      illustration: 'week',
-    },
-    {
-      eyebrow: 'THE MARKET TAB',
-      headline: 'Know what your role\nis worth right now.',
-      body: 'Not a job board. A live read on salary bands, emerging titles, and which skills are suddenly in demand.',
+      eyebrow: 'ONE LIVING ORGANISM',
+      headline: 'Weekly brief, raise brief,\ntrajectory — all from your Profile.',
+      body: "The weekly Monday signal is tuned to your exact role. Your raise brief reads from your wins. Your escape hatch knows what you've been telling Dilly. One Profile, every surface.",
       cta: 'Keep going',
       illustration: 'market',
     },
     {
-      eyebrow: 'PRIVATE TO YOU',
-      headline: 'Dilly learns you\nwith every chat.',
-      body: 'Your wins, your decisions, your thinking. all tracked privately so Dilly gets sharper about you over time.',
-      cta: 'Next',
+      eyebrow: 'YOU FUEL THE ENGINE',
+      headline: "The more she knows,\nthe sharper everything gets.",
+      body: "Log a win. Drop a chat about a hard call you made. Mention what shifted in your field. Each thing you give her makes the rest of the app more powerful for you.",
+      cta: 'Almost there',
+      illustration: 'ritual',
+    },
+    {
+      eyebrow: 'WATCH HER WORK',
+      headline: "Open the chat.\nTell her one thing.",
+      body: "What you shipped this week. What's worrying you. What you're noticing about your field. She'll start composing — in front of you.",
+      cta: 'Start',
+      illustration: 'week',
+    },
+  ],
+  // Seeker organism showcase: 5 cards that demonstrate Dilly is one
+  // living system, not a feature list. The story arc is intentional:
+  //   1. Dilly remembers (the spine exists)
+  //   2. Every chat makes her smarter (the spine grows)
+  //   3. She uses what she knows everywhere (the spine feeds limbs)
+  //   4. The more you tell her, the more she does (call to action)
+  //   5. Watch her work (immediate value)
+  // No feature lists. Each card answers "what is Dilly DOING right now,
+  // and how does that compound the more I use her?"
+  seeker: [
+    {
+      eyebrow: 'YOUR DILLY PROFILE',
+      headline: "Dilly remembers\neverything you tell her.",
+      body: "Every conversation, every fact, every win — written down on your Profile. It's the spine she runs on. Nothing gets lost.",
+      cta: 'Show me',
       illustration: 'profile',
     },
     {
-      eyebrow: 'THE RITUAL',
-      headline: "You'll never open Dilly\nand wonder why.",
-      body: 'Every week: one move to make. Every month: a clearer picture of where you are headed.',
-      cta: "Let's start",
-      illustration: 'ritual',
-    },
-  ],
-  seeker: [
-    {
-      eyebrow: 'YOUR JOB SEARCH',
-      headline: "Jobs ranked by fit,\nnot by keywords.",
-      body: 'Dilly reads the full job description against your full profile and tells you honestly how you line up.',
-      cta: 'Show me',
-      illustration: 'jobs',
-    },
-    {
-      eyebrow: 'FIT NARRATIVES',
-      headline: 'What you have.\nWhat is missing.\nWhat to do.',
-      body: 'Every job card opens into a personal read. No scores. No fake confidence. Just the honest picture.',
+      eyebrow: 'EVERY CHAT MAKES HER SMARTER',
+      headline: "Talk to Dilly once,\nshe knows you forever.",
+      body: 'When you mention a target company, an interview, a deadline, a fear, a goal — Dilly captures it. The next time you open the app, that fact shows up everywhere.',
       cta: 'Next',
       illustration: 'fit',
     },
     {
-      eyebrow: 'TAILORED RESUMES',
-      headline: 'A resume written\nfor each role.',
-      body: 'Dilly generates a resume tuned to the specific company and job, pulling the right bullets from your profile.',
+      eyebrow: 'ONE LIVING ORGANISM',
+      headline: 'She uses what she knows,\neverywhere.',
+      body: 'Calendar pre-fills with your interview dates. Jobs feed surfaces companies you mentioned. Resumes pull from facts you shared. Every surface reads from one Profile.',
       cta: 'Keep going',
-      illustration: 'resume',
+      illustration: 'jobs',
     },
     {
-      eyebrow: 'INTERVIEW PREP',
-      headline: 'Practice the interview\nbefore it happens.',
-      body: 'Role-specific drills, company-aware questions, and feedback that makes you sharper with each round.',
-      cta: 'Next',
-      illustration: 'interview',
-    },
-    {
-      eyebrow: 'APPLY SMARTER',
-      headline: 'One tap to apply.\nOne tap to save.\nOne tap to tailor.',
-      body: 'Dilly keeps your pipeline clean. Know what you applied to, what responded, what to follow up on.',
-      cta: "Let's go",
+      eyebrow: 'YOU FUEL THE ENGINE',
+      headline: "The more she knows,\nthe more she does.",
+      body: 'Add a target. Drop a chat about your last interview. Let her read your resume. Each thing you give her unlocks more of the rest of the app.',
+      cta: 'Almost there',
       illustration: 'apply',
     },
+    {
+      eyebrow: 'WATCH HER WORK',
+      headline: "Open the chat.\nTell her one thing.",
+      body: "Anything. A company you're chasing. An interview you have Wednesday. A skill you're trying to build. She'll do the rest, in front of you.",
+      cta: 'Start',
+      illustration: 'interview',
+    },
   ],
+  // Student organism showcase — same organism arc, framed for someone
+  // building their first profile from coursework + clubs + projects.
   student: [
     {
-      eyebrow: 'DILLY FOR STUDENTS',
-      headline: "A career coach\nin your pocket.",
-      body: 'Dilly knows you. your major, your clubs, your coursework. and guides you through the job market for people like you.',
+      eyebrow: 'YOUR DILLY PROFILE',
+      headline: "Dilly remembers\nevery class, every project.",
+      body: "Your major, your minor, the side project, the club you lead. Every fact lives on your Profile and feeds everything else Dilly does for you.",
       cta: 'Show me',
+      illustration: 'profile',
+    },
+    {
+      eyebrow: 'EVERY CHAT TEACHES HER',
+      headline: "Tell her once.\nShe carries it forever.",
+      body: "Mention you're targeting Goldman, took CS 201, want to break into PM. She captures every signal. The next time you open the app, those facts already shape what she shows you.",
+      cta: 'Next',
       illustration: 'journey',
     },
     {
-      eyebrow: 'INTERNSHIPS THAT FIT',
-      headline: 'Matched to your cohort\nand your story.',
-      body: 'Not every internship posting. The ones recruiters in your field actually hire from. filtered and ranked.',
-      cta: 'Next',
+      eyebrow: 'ONE LIVING ORGANISM',
+      headline: 'Internships, resumes, prep —\nall pulled from your Profile.',
+      body: "Internships filtered to your cohort. Resumes built from your coursework. Mock interviews tuned to the company. Every surface reads from one place: what Dilly knows about you.",
+      cta: 'Keep going',
       illustration: 'internships',
     },
     {
-      eyebrow: 'YOUR FIRST RESUME',
-      headline: 'Written for the\ncompanies you want.',
-      body: 'Dilly turns your coursework, projects, and clubs into a resume tailored to each role you care about.',
-      cta: 'Keep going',
-      illustration: 'resumes_student',
-    },
-    {
-      eyebrow: 'AI IS CHANGING WORK',
-      headline: 'Graduate into the right\nthings to learn.',
-      body: "The Arena shows you which skills in your field are safe, which are vanishing, and what to build now.",
-      cta: 'Next',
-      illustration: 'wow',
-    },
-    {
-      eyebrow: 'FIRST JOB, SORTED',
-      headline: "Internship. Return offer.\nFirst full-time role.",
-      body: "Dilly walks the path with you. Every week has one move. Every month you know where you stand.",
-      cta: "Let's start",
+      eyebrow: 'YOU FUEL THE ENGINE',
+      headline: "The more she knows,\nthe sharper everything gets.",
+      body: 'Add a target company. Tell her about a class you loved. Drop a project. Each thing you share unlocks more of what the rest of the app can do for you.',
+      cta: 'Almost there',
       illustration: 'first_job',
+    },
+    {
+      eyebrow: 'WATCH HER WORK',
+      headline: "Open the chat.\nTell her one thing.",
+      body: "A class you're worried about. A company you want to land. A project you're proud of. She'll start composing your week, your applications, your prep — in front of you.",
+      cta: 'Start',
+      illustration: 'wow',
     },
   ],
 };
