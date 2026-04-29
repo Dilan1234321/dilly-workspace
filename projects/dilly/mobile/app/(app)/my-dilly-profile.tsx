@@ -3324,10 +3324,22 @@ const hc = StyleSheet.create({
 // Dispatcher. isHolder gets the career dashboard, everyone else the
 // original identity-facts profile. Keeping the two bodies in separate
 // components preserves hook order when the mode flips mid-session.
+//
+// Wrapped in a screen-level ErrorBoundary so any crash inside Seeker
+// or Holder surfaces visibly instead of bubbling to the AppLayout
+// boundary (which catches but resets on next pathname change, often
+// looking to the user like the tab "redirected to home"). When this
+// boundary trips, the user sees a SadDilly with the actual error
+// message — far easier to debug than a silent fallback.
+import { ErrorBoundary as _ScreenErrorBoundary } from '../../components/ErrorBoundary';
+
 export default function MyDillyProfileScreen() {
   const appMode = useAppMode();
-  if (appMode === 'holder') return <HolderCareer />;
-  return <SeekerProfileScreen />;
+  return (
+    <_ScreenErrorBoundary surface="My Dilly">
+      {appMode === 'holder' ? <HolderCareer /> : <SeekerProfileScreen />}
+    </_ScreenErrorBoundary>
+  );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
