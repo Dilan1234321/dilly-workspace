@@ -1336,12 +1336,41 @@ function JobDetailSheet({
           <TouchableOpacity onPress={onClose} hitSlop={12}>
             <Ionicons name="close" size={24} color={theme.surface.t1} />
           </TouchableOpacity>
-          <View style={{ flexDirection: 'row', gap: 16 }}>
-            <TouchableOpacity hitSlop={10} onPress={() => onAsk(job)}>
-              <Ionicons name="sparkles-outline" size={20} color={theme.surface.t2} />
+          {/* Clearer top-bar actions: labeled pills with DillyFace
+              for "Ask Dilly" and document icon for "Tailor". The
+              previous bare-icon row read as ambiguous chrome — users
+              didn't know what each icon did. Now the action is on
+              the pill itself. */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              hitSlop={6}
+              activeOpacity={0.85}
+              onPress={() => onAsk(job)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                paddingHorizontal: 10, paddingVertical: 6,
+                borderRadius: 16,
+                backgroundColor: theme.accentSoft,
+                borderWidth: 1, borderColor: theme.accentBorder,
+              }}
+            >
+              <DillyFace size={20} mood="curious" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.accent }}>Ask Dilly</Text>
             </TouchableOpacity>
-            <TouchableOpacity hitSlop={10} onPress={() => onTailor(job)}>
-              <Ionicons name="document-text-outline" size={20} color={theme.surface.t2} />
+            <TouchableOpacity
+              hitSlop={6}
+              activeOpacity={0.85}
+              onPress={() => onTailor(job)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                paddingHorizontal: 10, paddingVertical: 6,
+                borderRadius: 16,
+                backgroundColor: theme.surface.s1,
+                borderWidth: 1, borderColor: theme.surface.border,
+              }}
+            >
+              <Ionicons name="document-text-outline" size={14} color={theme.surface.t1} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.surface.t1 }}>Tailor resume</Text>
             </TouchableOpacity>
           </View>
         </View>

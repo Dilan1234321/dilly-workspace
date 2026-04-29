@@ -274,6 +274,70 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
+/* MoatCard — every per-path home gets the same organism reveal.    */
+/* "Dilly knows X things about you. Tap to see the moat."           */
+/* This is what makes EVERY situation feel like a living organism   */
+/* of the user, not just a generic landing page. Proves the moat is */
+/* real to first-time users immediately and gives an explicit       */
+/* invitation to add more.                                          */
+/* ─────────────────────────────────────────────────────────────── */
+export function MoatCard({ factCount, accent, framing }: {
+  factCount: number;
+  accent: string;
+  /** Path-specific framing line. E.g. for visa: "Each fact tunes
+   *  your sponsor map." For dropout: "Every win counts as proof." */
+  framing?: string;
+}) {
+  const t = useResolvedTheme();
+  const isThin = factCount < 10;
+  return (
+    <AnimatedPressable
+      onPress={() => router.push('/(app)/memory' as any)}
+      scaleDown={0.97}
+      style={{
+        flexDirection: 'row', alignItems: 'center', gap: 14,
+        padding: 16,
+        borderRadius: 18,
+        backgroundColor: t.surface.s1,
+        borderWidth: 1, borderColor: accent + '40',
+      }}
+    >
+      <View style={{
+        width: 56, height: 56, borderRadius: 28,
+        borderWidth: 2.5, borderColor: accent,
+        backgroundColor: accent + '15',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Text style={{ fontSize: 18, fontWeight: '900', color: accent, letterSpacing: -0.4 }}>
+          {factCount}
+        </Text>
+        <Text style={{ fontSize: 7, fontWeight: '800', color: accent, marginTop: -1, letterSpacing: 0.4 }}>
+          FACTS
+        </Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 9, fontWeight: '900', letterSpacing: 1.4, color: t.surface.t3, marginBottom: 3 }}>
+          DILLY KNOWS YOU
+        </Text>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: t.surface.t1, lineHeight: 20, fontFamily: t.type.display }}>
+          {isThin
+            ? "She's just getting started."
+            : factCount < 30
+              ? `${factCount} things — and growing.`
+              : `${factCount} things she remembers about you.`}
+        </Text>
+        {framing ? (
+          <Text style={{ fontSize: 12, color: t.surface.t2, marginTop: 4, lineHeight: 16 }}>
+            {framing}
+          </Text>
+        ) : null}
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={accent} />
+    </AnimatedPressable>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 /* 1. Exploring Home - "Your next move."                           */
 /* ─────────────────────────────────────────────────────────────── */
 
@@ -306,6 +370,15 @@ export function ExploringHome() {
         line="let's narrow it down."
         eyebrowColor={accent}
       />
+
+      {/* Organism reveal — proves Dilly is learning before any nav. */}
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={accent}
+          framing="Each fact she captures narrows the funnel another notch."
+        />
+      </FadeInView>
 
       {/* Your Plan for this week - always top. */}
       <FadeInView delay={10}>
@@ -419,6 +492,14 @@ export function DropoutHome() {
         eyebrowColor={PROOF}
       />
 
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={PROOF}
+          framing="Every win you log becomes proof. Every project, every shipped thing — captured."
+        />
+      </FadeInView>
+
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
       </FadeInView>
@@ -530,6 +611,14 @@ export function LaidOffHome() {
         line="momentum matters more than perfect."
         eyebrowColor={RESET}
       />
+
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={RESET}
+          framing="Each fact is positioning, not chasing. She's tracking what you bring to the room."
+        />
+      </FadeInView>
 
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
@@ -652,6 +741,14 @@ export function VisaHome() {
         eyebrowColor={VISA}
       />
 
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={VISA}
+          framing="Every fact she captures tightens your sponsor map."
+        />
+      </FadeInView>
+
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
       </FadeInView>
@@ -771,6 +868,14 @@ export function VeteranHome() {
         eyebrowColor={VET_TONE}
       />
 
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={VET_TONE}
+          framing="Every mission, every team you led, every call you made — translated to civilian terms here."
+        />
+      </FadeInView>
+
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
       </FadeInView>
@@ -869,6 +974,14 @@ export function ParentReturningHome() {
         line="the work is still yours."
         eyebrowColor={RETURN_TONE}
       />
+
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={RETURN_TONE}
+          framing="Every fact she captures is proof your experience didn't expire. The work travels with you."
+        />
+      </FadeInView>
 
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
@@ -969,6 +1082,14 @@ export function InternationalGradHome() {
         eyebrowColor={INTL_TONE}
       />
 
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={INTL_TONE}
+          framing="Every fact she captures sharpens the sponsor map and the academic timeline at once."
+        />
+      </FadeInView>
+
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
       </FadeInView>
@@ -1067,6 +1188,14 @@ export function RefugeeHome() {
         line="your work counts here too."
         eyebrowColor={BRIDGE_TONE}
       />
+
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={BRIDGE_TONE}
+          framing="Every fact she captures gets translated into US-equivalent terms automatically."
+        />
+      </FadeInView>
 
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
@@ -1173,6 +1302,14 @@ export function TieredSeekerHome({ userPath }: { userPath: string }) {
         line={spec.greetingLine}
         eyebrowColor={tone}
       />
+
+      <FadeInView delay={5}>
+        <MoatCard
+          factCount={factCount}
+          accent={tone}
+          framing={spec.moatFraming || "Every fact she captures shapes what the rest of the app does for you."}
+        />
+      </FadeInView>
 
       <FadeInView delay={10}>
         <YourPlanCard plan={plan} firstName={firstName} />
